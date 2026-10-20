@@ -1,0 +1,17 @@
+appId: com.cargorun.desktop
+productName: Cargo Run
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - resources/icon.svg
+  - resources/icon.ico
+win:
+  target: nsis
+  icon: resources/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
