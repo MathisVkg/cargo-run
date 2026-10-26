@@ -1,7 +1,8 @@
 export type ContractStatus = "Active" | "Completed" | "Abandoned";
 export type ContractSource = "Log" | "OCR" | "Manual";
 export type DataOrigin = "Sample" | "Manual" | "Log";
-export type Page = "Dashboard" | "Manifest" | "History" | "Settings";
+export type Page =
+  "Dashboard" | "Manifest" | "History" | "Settings" | "Scan Review";
 export interface Ship {
   id: string;
   name: string;

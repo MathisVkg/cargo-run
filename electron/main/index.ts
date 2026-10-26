@@ -1,6 +1,22 @@
-import { app, BrowserWindow, ipcMain, nativeImage, dialog } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  nativeImage,
+  dialog,
+  protocol,
+} from "electron";
 import { join } from "node:path";
 import { TrackingService } from "./trackingService";
+import { createOcrQueue, registerCaptureProtocol } from "./ocr/integration";
+import type { OcrQueue } from "./ocr/queue";
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "cargo-capture",
+    privileges: { standard: true, secure: true, supportFetchAPI: true },
+  },
+]);
+let ocr: OcrQueue;
 let service: TrackingService;
 let trackingQueue: Promise<unknown> = Promise.resolve();
 let quitting = false;
@@ -71,6 +87,13 @@ else
       service = new TrackingService(
         join(app.getPath("userData"), "cargo-run.sqlite"),
       );
+      ocr = createOcrQueue(service.database);
+      ocr.onChange = (state) => {
+        if (mainWindow && !mainWindow.isDestroyed())
+          mainWindow.webContents.send("ocr:state", state);
+      };
+      registerCaptureProtocol(ocr);
+      await ocr.initialize();
       service.onChange = (state) => {
         if (mainWindow && !mainWindow.isDestroyed())
           mainWindow.webContents.send("cargo:state", state);
@@ -88,6 +111,13 @@ else
           return next;
         });
       };
+      register("ocr:state", () => ocr.snapshot());
+      register("ocr:configure", (settings) => ocr.configure(settings));
+      register("ocr:capture", () => ocr.capture("Manual"));
+      register("ocr:retry", (id) => ocr.retry(id));
+      register("ocr:delete", (id) => ocr.delete(id));
+      register("ocr:clear", () => ocr.clear());
+      register("ocr:displays", () => ocr.refreshDisplays());
       register("cargo:getState", () => service.snapshot());
       register("cargo:saveContract", (input) => service.saveContract(input));
       register("cargo:selectShip", (id) => service.selectShip(id));
@@ -158,7 +188,12 @@ app.on("before-quit", (event) => {
   if (quitting || !service) return;
   event.preventDefault();
   quitting = true;
-  void trackingQueue.then(() => service.close()).finally(() => app.quit());
+  void trackingQueue
+    .then(async () => {
+      if (ocr) await ocr.close();
+      await service.close();
+    })
+    .finally(() => app.quit());
 });
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard";
 import Manifest from "./pages/Manifest";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
+import ScanReview from "./pages/ScanReview";
+import { initializeOcrStore } from "./stores/useOcrStore";
 export default function App() {
   const page = useCargoStore((s) => s.page);
   const setPage = useCargoStore((s) => s.setPage);
@@ -15,7 +17,14 @@ export default function App() {
   const ready = useCargoStore((s) => s.ready);
   const error = useCargoStore((s) => s.actionError);
   const dismissError = useCargoStore((s) => s.dismissError);
-  useEffect(() => initializeCargoStore(), []);
+  useEffect(() => {
+    const cargo = initializeCargoStore();
+    const ocr = initializeOcrStore();
+    return () => {
+      cargo();
+      ocr();
+    };
+  }, []);
   return (
     <div className="app-shell">
       <TopBar onMenu={() => setNav(true)} />
@@ -58,6 +67,8 @@ export default function App() {
             <Manifest />
           ) : page === "History" ? (
             <History />
+          ) : page === "Scan Review" ? (
+            <ScanReview />
           ) : (
             <Settings />
           )}
@@ -78,7 +89,7 @@ export default function App() {
           >
             <CircleHelp size={13} />
           </button>
-          <span className="status-divider">/</span>v0.2.0
+          <span className="status-divider">/</span>v0.3.0
         </span>
       </footer>
       <Navigation open={nav} onClose={() => setNav(false)} />

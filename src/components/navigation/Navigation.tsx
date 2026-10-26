@@ -3,6 +3,7 @@ import {
   List,
   History,
   Settings,
+  ScanLine,
   ArrowUpRight,
   Box,
 } from "lucide-react";
@@ -13,6 +14,7 @@ const entries = [
   { page: "Dashboard", icon: LayoutDashboard, detail: "Current operations" },
   { page: "Manifest", icon: List, detail: "Cargo & delivery stops" },
   { page: "History", icon: History, detail: "Contracts & closed runs" },
+  { page: "Scan Review", icon: ScanLine, detail: "Local OCR observations" },
   { page: "Settings", icon: Settings, detail: "Application configuration" },
 ] as const;
 export function Navigation({
@@ -56,7 +58,7 @@ export function Navigation({
       <div className="nav-footer">
         <Box size={19} />
         <span>
-          Cargo Run <span className="muted">/ 0.2.0</span>
+          Cargo Run <span className="muted">/ 0.3.0</span>
           <small>Local desktop companion</small>
         </span>
       </div>

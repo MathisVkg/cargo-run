@@ -10,7 +10,10 @@ import {
   Rocket,
 } from "lucide-react";
 import { useCargoStore } from "../../stores/useCargoStore";
+import { useOcrStore } from "../../stores/useOcrStore";
 export function TopBar({ onMenu }: { onMenu(): void }) {
+  const ocr = useOcrStore((s) => s.state);
+  const setPage = useCargoStore((s) => s.setPage);
   const shipId = useCargoStore((s) => s.selectedShipId);
   const selectShip = useCargoStore((s) => s.selectShip);
   const ships = useCargoStore((s) => s.ships);
@@ -36,6 +39,24 @@ export function TopBar({ onMenu }: { onMenu(): void }) {
         <span className="top-label">FLEET OPERATIONS</span>
       </div>
       <div className="top-right">
+        <button
+          className={
+            "capture-indicator " +
+            (ocr?.lastCapture?.success === false ? "capture-failed" : "")
+          }
+          onClick={() => setPage("Scan Review")}
+          title={ocr?.lastCapture?.message ?? "Open Scan Review"}
+        >
+          {ocr?.lastCapture?.success === false
+            ? "Capture failed"
+            : ocr?.processing
+              ? "OCR processing"
+              : ocr?.queued
+                ? ocr.queued + " queued"
+                : ocr?.lastCapture?.success
+                  ? "Capture saved"
+                  : "Scan Review"}
+        </button>
         <div className="ship-picker">
           <Rocket size={16} />
           <label className="sr-only" htmlFor="ship">

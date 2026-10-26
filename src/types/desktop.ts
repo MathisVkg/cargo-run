@@ -1,5 +1,14 @@
 import type { AppSnapshot, SaveContractRequest } from "./tracking";
+import type { OcrSnapshot, CaptureSettings } from "./ocr";
 export interface DesktopBridge {
+  ocrState(): Promise<OcrSnapshot>;
+  ocrConfigure(settings: CaptureSettings): Promise<OcrSnapshot>;
+  ocrCapture(): Promise<OcrSnapshot>;
+  ocrRetry(id: string): Promise<OcrSnapshot>;
+  ocrDelete(id: string): Promise<OcrSnapshot>;
+  ocrClear(): Promise<OcrSnapshot>;
+  ocrDisplays(): Promise<OcrSnapshot>;
+  onOcrState(callback: (state: OcrSnapshot) => void): () => void;
   minimize(): Promise<void>;
   toggleMaximize(): Promise<void>;
   close(): Promise<void>;

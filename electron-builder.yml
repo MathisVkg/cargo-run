@@ -9,6 +9,15 @@ files:
 extraResources:
   - resources/icon.svg
   - resources/icon.ico
+  - from: resources/native
+    to: native
+    filter:
+      - "*.exe"
+      - "*.wav"
+asarUnpack:
+  - node_modules/tesseract.js/**/*
+  - node_modules/tesseract.js-core/**/*
+  - node_modules/@tesseract.js-data/**/*
 win:
   target: nsis
   icon: resources/icon.ico

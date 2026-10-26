@@ -1,7 +1,23 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { DesktopBridge } from "../../src/types/desktop";
 import type { AppSnapshot } from "../../src/types/tracking";
+import type { OcrSnapshot } from "../../src/types/ocr";
 const bridge: DesktopBridge = {
+  ocrState: () => ipcRenderer.invoke("ocr:state"),
+  ocrConfigure: (settings) => ipcRenderer.invoke("ocr:configure", settings),
+  ocrCapture: () => ipcRenderer.invoke("ocr:capture"),
+  ocrRetry: (id) => ipcRenderer.invoke("ocr:retry", id),
+  ocrDelete: (id) => ipcRenderer.invoke("ocr:delete", id),
+  ocrClear: () => ipcRenderer.invoke("ocr:clear"),
+  ocrDisplays: () => ipcRenderer.invoke("ocr:displays"),
+  onOcrState: (callback) => {
+    const listener = (
+      _event: Electron.IpcRendererEvent,
+      state: OcrSnapshot,
+    ): void => callback(state);
+    ipcRenderer.on("ocr:state", listener);
+    return () => ipcRenderer.removeListener("ocr:state", listener);
+  },
   minimize: () => ipcRenderer.invoke("window:command", "minimize"),
   toggleMaximize: () => ipcRenderer.invoke("window:command", "toggleMaximize"),
   close: () => ipcRenderer.invoke("window:command", "close"),

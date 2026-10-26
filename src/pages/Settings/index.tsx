@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Rocket, ScanLine, Database, Info, Trash2 } from "lucide-react";
+import { Rocket, Database, Info, Trash2 } from "lucide-react";
 import { PageHeader, Badge } from "../../components/ui";
 import { Overlay } from "../../components/ui/Overlay";
 import { useCargoStore } from "../../stores/useCargoStore";
 import { LogMonitoring } from "./LogMonitoring";
+import { OcrSettings } from "./OcrSettings";
 export default function Settings() {
   const ships = useCargoStore((s) => s.ships);
   const databasePath = useCargoStore((s) => s.databasePath);
@@ -48,17 +49,6 @@ export default function Settings() {
         </section>
         <section className="panel setting-card">
           <div className="setting-icon">
-            <ScanLine size={21} />
-          </div>
-          <h2>OCR configuration</h2>
-          <p>
-            Screen recognition will complement log events in a future phase. No
-            screen capture is performed.
-          </p>
-          <Badge>Coming Later</Badge>
-        </section>
-        <section className="panel setting-card">
-          <div className="setting-icon">
             <Database size={21} />
           </div>
           <h2>Local application data</h2>
@@ -94,15 +84,16 @@ export default function Settings() {
             run together.
           </p>
         </section>
+        <OcrSettings />
         <section className="panel setting-card app-info">
           <div className="setting-icon">
             <Info size={21} />
           </div>
           <div>
             <h2>
-              Cargo Run <Badge>0.2.0</Badge>
+              Cargo Run <Badge>0.3.0</Badge>
             </h2>
-            <p>Fleet Operations · SQLite & automatic Game.log tracking</p>
+            <p>Fleet Operations · SQLite, Game.log & local OCR prototype</p>
             <p className="form-note">
               Independent companion application. Not affiliated with Cloud
               Imperium Games or Roberts Space Industries.
