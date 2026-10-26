@@ -12,7 +12,7 @@ extraResources:
   - from: resources/native
     to: native
     filter:
-      - "*.exe"
+      - "CargoRun.CaptureHost.exe"
       - "*.wav"
 asarUnpack:
   - node_modules/tesseract.js/**/*

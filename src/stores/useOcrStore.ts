@@ -5,6 +5,11 @@ interface OcrState {
   state: OcrSnapshot | null;
   error: string | null;
   busy: boolean;
+  beginRecording(): Promise<void>;
+  endRecording(): Promise<void>;
+  probeShortcut(): Promise<void>;
+  resetShortcutDiagnostics(): Promise<void>;
+  reparse(id: string): Promise<void>;
   refresh(): Promise<void>;
   configure(settings: CaptureSettings): Promise<void>;
   capture(): Promise<void>;
@@ -33,6 +38,12 @@ async function action(run: () => Promise<OcrSnapshot>) {
   }
 }
 export const ocrStore = createStore<OcrState>(() => ({
+  beginRecording: () => action(() => window.cargoRun.ocrBeginRecording()),
+  endRecording: () => action(() => window.cargoRun.ocrEndRecording()),
+  probeShortcut: () => action(() => window.cargoRun.ocrProbeShortcut()),
+  resetShortcutDiagnostics: () =>
+    action(() => window.cargoRun.ocrResetShortcutDiagnostics()),
+  reparse: (id) => action(() => window.cargoRun.ocrReparse(id)),
   state: null,
   error: null,
   busy: false,

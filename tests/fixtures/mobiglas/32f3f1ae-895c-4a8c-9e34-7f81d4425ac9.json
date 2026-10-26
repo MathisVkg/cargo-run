@@ -1,0 +1,921 @@
+{
+  "source": {
+    "filename": "32f3f1ae-895c-4a8c-9e34-7f81d4425ac9.png",
+    "sha256": "be8f7620e27c5f5b75d2166cecc3de62cd9458240656d1c493f02b3d01dcdf24",
+    "width": 3840,
+    "height": 2160,
+    "provenance": "Actual user-provided Star Citizen screenshot; rerun offline Tesseract 7 on original 3840x2160 image. Contract/navigation lines only; player HUD excluded. OCR text/boxes/confidences below are unchanged engine output."
+  },
+  "result": {
+    "provider": "Tesseract 7 · offline English",
+    "language": "eng",
+    "text": "[7\n@ MARK ALL READ\n(J\nVERIFIED\nBEACONS\n~) Comes)\n2)\n1: UBER LOG\nTEU i:\nI: USER LUG\nArEy-In\nACCEPTED “gy\nReward\nA 48,500\nCOLLECTION\n2\nContract Availability\n1h 9m\nRookie Rank - Small Cargo Haul\nContracted By\nCovalex Independent Contractors\n£¥ BOUNTY HUNTER\nDETAILS\nPRIMARY OBJECTIVES\nHi,\n“ oa\n<$ Deliver 0/7 SCU of Stims to Sakura Sun Goldenrod\n| 8 HAULING - PLANETARY\nWorkcenter on microTech.\nThere's a load of stims at Port Tressler above microTech ready to\nbe picked up from a freight elevator and delivered to a few spots.\n¢ Collect Stims from Port Tressler.\nROOKIE RANK - EXTRA SMALL CARGO\n61k\nThey will be packaged up in containers 4 SCU or smaller. Any\nHAUL\n1h 9m\nchance you can knock this one out for me?\n<> Deliver 0/6 SCU of Stims to Covalex Distribution Center\nCOVALEX INDEPENDENT CONTRACTORS\nS4DCO0S on\nDoesn't matter what order you drop them off.\n¢ Collect Stims from Port Tressler.\nROOKIE RANK - DIRECT EXTRA SMALL\n50k\nDROP OFF LOCATIONS (ANY ORDER)\nCARGO HAUL\nCOVALEX INDEPENDENT CONTRACTORS\nlh 12m\n- Freight elevator at Sakura Sun Goldenrod Workcenter on\nmicroTech\n- Freight elevator at Covalex Distribution Center S4DCO5 on\nROOKIE RANK - EXTRA SMALL CARGO\nmicroTech\nHAUL\n61k\nCOVALEX INDEPENDENT CONTRACTORS\n59m 39s\nGlad | never picked up the habit myself because | swear | get more\ndelivery update requests for “where are my stims?!?” than any\nother kind of shipment.\nROOKIE RANK - SMALL CARGO HAUL\n48k\nBy the way, we strongly encourage contractors to bring a\nCOVALEX INDEPENDENT CONTRACTORS\n1h 9m\nhandheld tractor beam along.\nTalk to you soon,\nJUNIOR RANK - SMALL CARGO HAUL\n59k\nCOVALEX INDEPENDENT CONTRACTORS\n1h Om\nChase Hewitt\nROOKIE RANK - EXTRA SMALL CARGO\nuf\n]\nDEPENDENT CO\n_—\nNTRACTORS\nA\nSo\n\\ ACCEPT OFFER }",
+    "lines": [
+      {
+        "id": "line-0",
+        "text": "[7",
+        "box": {
+          "x": 245,
+          "y": 166,
+          "width": 43,
+          "height": 55
+        },
+        "confidence": 30
+      },
+      {
+        "id": "line-1",
+        "text": "@ MARK ALL READ",
+        "box": {
+          "x": 309,
+          "y": 215,
+          "width": 334,
+          "height": 39
+        },
+        "confidence": 75
+      },
+      {
+        "id": "line-2",
+        "text": "(J",
+        "box": {
+          "x": 745,
+          "y": 222,
+          "width": 28,
+          "height": 29
+        },
+        "confidence": 54
+      },
+      {
+        "id": "line-3",
+        "text": "VERIFIED",
+        "box": {
+          "x": 874,
+          "y": 224,
+          "width": 151,
+          "height": 26
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-4",
+        "text": "BEACONS",
+        "box": {
+          "x": 2289,
+          "y": 228,
+          "width": 156,
+          "height": 26
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-5",
+        "text": "~) Comes)",
+        "box": {
+          "x": 1157,
+          "y": 173,
+          "width": 372,
+          "height": 109
+        },
+        "confidence": 66
+      },
+      {
+        "id": "line-6",
+        "text": "2)",
+        "box": {
+          "x": 3450,
+          "y": 180,
+          "width": 111,
+          "height": 111
+        },
+        "confidence": 11
+      },
+      {
+        "id": "line-7",
+        "text": "1: UBER LOG",
+        "box": {
+          "x": 280,
+          "y": 303,
+          "width": 70,
+          "height": 8
+        },
+        "confidence": 46
+      },
+      {
+        "id": "line-8",
+        "text": "TEU i:",
+        "box": {
+          "x": 1149,
+          "y": 305,
+          "width": 74,
+          "height": 8
+        },
+        "confidence": 2
+      },
+      {
+        "id": "line-9",
+        "text": "I: USER LUG",
+        "box": {
+          "x": 1298,
+          "y": 305,
+          "width": 70,
+          "height": 9
+        },
+        "confidence": 71
+      },
+      {
+        "id": "line-10",
+        "text": "ArEy-In",
+        "box": {
+          "x": 3458,
+          "y": 310,
+          "width": 67,
+          "height": 9
+        },
+        "confidence": 0
+      },
+      {
+        "id": "line-11",
+        "text": "ACCEPTED “gy",
+        "box": {
+          "x": 1600,
+          "y": 211,
+          "width": 568,
+          "height": 126
+        },
+        "confidence": 70
+      },
+      {
+        "id": "line-12",
+        "text": "Reward",
+        "box": {
+          "x": 2606,
+          "y": 399,
+          "width": 109,
+          "height": 24
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-13",
+        "text": "A 48,500",
+        "box": {
+          "x": 3322,
+          "y": 401,
+          "width": 139,
+          "height": 27
+        },
+        "confidence": 52
+      },
+      {
+        "id": "line-14",
+        "text": "COLLECTION",
+        "box": {
+          "x": 398,
+          "y": 430,
+          "width": 254,
+          "height": 32
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-15",
+        "text": "2",
+        "box": {
+          "x": 1030,
+          "y": 435,
+          "width": 17,
+          "height": 24
+        },
+        "confidence": 92
+      },
+      {
+        "id": "line-16",
+        "text": "Contract Availability",
+        "box": {
+          "x": 2602,
+          "y": 444,
+          "width": 294,
+          "height": 31
+        },
+        "confidence": 84
+      },
+      {
+        "id": "line-17",
+        "text": "1h 9m",
+        "box": {
+          "x": 3360,
+          "y": 447,
+          "width": 95,
+          "height": 25
+        },
+        "confidence": 92
+      },
+      {
+        "id": "line-18",
+        "text": "Rookie Rank - Small Cargo Haul",
+        "box": {
+          "x": 1369,
+          "y": 439,
+          "width": 714,
+          "height": 65
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-19",
+        "text": "Contracted By",
+        "box": {
+          "x": 2603,
+          "y": 493,
+          "width": 205,
+          "height": 29
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-20",
+        "text": "Covalex Independent Contractors",
+        "box": {
+          "x": 2956,
+          "y": 493,
+          "width": 495,
+          "height": 30
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-21",
+        "text": "£¥ BOUNTY HUNTER",
+        "box": {
+          "x": 329,
+          "y": 557,
+          "width": 423,
+          "height": 52
+        },
+        "confidence": 66
+      },
+      {
+        "id": "line-22",
+        "text": "DETAILS",
+        "box": {
+          "x": 1371,
+          "y": 633,
+          "width": 197,
+          "height": 33
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-23",
+        "text": "PRIMARY OBJECTIVES",
+        "box": {
+          "x": 2456,
+          "y": 634,
+          "width": 516,
+          "height": 33
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-24",
+        "text": "Hi,",
+        "box": {
+          "x": 1370,
+          "y": 712,
+          "width": 30,
+          "height": 25
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-25",
+        "text": "“ oa",
+        "box": {
+          "x": 1021,
+          "y": 657,
+          "width": 174,
+          "height": 110
+        },
+        "confidence": 60
+      },
+      {
+        "id": "line-26",
+        "text": "<$ Deliver 0/7 SCU of Stims to Sakura Sun Goldenrod",
+        "box": {
+          "x": 2454,
+          "y": 712,
+          "width": 837,
+          "height": 29
+        },
+        "confidence": 87
+      },
+      {
+        "id": "line-27",
+        "text": "| 8 HAULING - PLANETARY",
+        "box": {
+          "x": 307,
+          "y": 665,
+          "width": 575,
+          "height": 113
+        },
+        "confidence": 77
+      },
+      {
+        "id": "line-28",
+        "text": "Workcenter on microTech.",
+        "box": {
+          "x": 2504,
+          "y": 751,
+          "width": 413,
+          "height": 26
+        },
+        "confidence": 91
+      },
+      {
+        "id": "line-29",
+        "text": "There's a load of stims at Port Tressler above microTech ready to",
+        "box": {
+          "x": 1370,
+          "y": 779,
+          "width": 870,
+          "height": 28
+        },
+        "confidence": 90
+      },
+      {
+        "id": "line-30",
+        "text": "be picked up from a freight elevator and delivered to a few spots.",
+        "box": {
+          "x": 1372,
+          "y": 813,
+          "width": 859,
+          "height": 28
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-31",
+        "text": "¢ Collect Stims from Port Tressler.",
+        "box": {
+          "x": 2511,
+          "y": 805,
+          "width": 561,
+          "height": 28
+        },
+        "confidence": 87
+      },
+      {
+        "id": "line-32",
+        "text": "ROOKIE RANK - EXTRA SMALL CARGO",
+        "box": {
+          "x": 390,
+          "y": 834,
+          "width": 520,
+          "height": 23
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-33",
+        "text": "61k",
+        "box": {
+          "x": 1091,
+          "y": 846,
+          "width": 54,
+          "height": 24
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-34",
+        "text": "They will be packaged up in containers 4 SCU or smaller. Any",
+        "box": {
+          "x": 1371,
+          "y": 847,
+          "width": 796,
+          "height": 28
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-35",
+        "text": "HAUL",
+        "box": {
+          "x": 390,
+          "y": 868,
+          "width": 73,
+          "height": 22
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-36",
+        "text": "1h 9m",
+        "box": {
+          "x": 1067,
+          "y": 887,
+          "width": 79,
+          "height": 19
+        },
+        "confidence": 88
+      },
+      {
+        "id": "line-37",
+        "text": "chance you can knock this one out for me?",
+        "box": {
+          "x": 1371,
+          "y": 880,
+          "width": 560,
+          "height": 28
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-38",
+        "text": "<> Deliver 0/6 SCU of Stims to Covalex Distribution Center",
+        "box": {
+          "x": 2453,
+          "y": 873,
+          "width": 913,
+          "height": 28
+        },
+        "confidence": 88
+      },
+      {
+        "id": "line-39",
+        "text": "COVALEX INDEPENDENT CONTRACTORS",
+        "box": {
+          "x": 390,
+          "y": 903,
+          "width": 430,
+          "height": 16
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-40",
+        "text": "S4DCO0S on",
+        "box": {
+          "x": 2505,
+          "y": 912,
+          "width": 169,
+          "height": 25
+        },
+        "confidence": 68
+      },
+      {
+        "id": "line-41",
+        "text": "Doesn't matter what order you drop them off.",
+        "box": {
+          "x": 1372,
+          "y": 946,
+          "width": 603,
+          "height": 29
+        },
+        "confidence": 89
+      },
+      {
+        "id": "line-42",
+        "text": "¢ Collect Stims from Port Tressler.",
+        "box": {
+          "x": 2512,
+          "y": 966,
+          "width": 561,
+          "height": 28
+        },
+        "confidence": 82
+      },
+      {
+        "id": "line-43",
+        "text": "ROOKIE RANK - DIRECT EXTRA SMALL",
+        "box": {
+          "x": 387,
+          "y": 1018,
+          "width": 524,
+          "height": 23
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-44",
+        "text": "50k",
+        "box": {
+          "x": 1090,
+          "y": 1029,
+          "width": 53,
+          "height": 24
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-45",
+        "text": "DROP OFF LOCATIONS (ANY ORDER)",
+        "box": {
+          "x": 1371,
+          "y": 1013,
+          "width": 465,
+          "height": 25
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-46",
+        "text": "CARGO HAUL",
+        "box": {
+          "x": 386,
+          "y": 1052,
+          "width": 182,
+          "height": 22
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-47",
+        "text": "COVALEX INDEPENDENT CONTRACTORS",
+        "box": {
+          "x": 385,
+          "y": 1086,
+          "width": 431,
+          "height": 18
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-48",
+        "text": "lh 12m",
+        "box": {
+          "x": 1047,
+          "y": 1071,
+          "width": 97,
+          "height": 19
+        },
+        "confidence": 90
+      },
+      {
+        "id": "line-49",
+        "text": "- Freight elevator at Sakura Sun Goldenrod Workcenter on",
+        "box": {
+          "x": 1370,
+          "y": 1081,
+          "width": 774,
+          "height": 29
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-50",
+        "text": "microTech",
+        "box": {
+          "x": 1370,
+          "y": 1116,
+          "width": 136,
+          "height": 22
+        },
+        "confidence": 91
+      },
+      {
+        "id": "line-51",
+        "text": "- Freight elevator at Covalex Distribution Center S4DCO5 on",
+        "box": {
+          "x": 1369,
+          "y": 1148,
+          "width": 790,
+          "height": 30
+        },
+        "confidence": 89
+      },
+      {
+        "id": "line-52",
+        "text": "ROOKIE RANK - EXTRA SMALL CARGO",
+        "box": {
+          "x": 377,
+          "y": 1203,
+          "width": 526,
+          "height": 24
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-53",
+        "text": "microTech",
+        "box": {
+          "x": 1368,
+          "y": 1184,
+          "width": 137,
+          "height": 22
+        },
+        "confidence": 91
+      },
+      {
+        "id": "line-54",
+        "text": "HAUL",
+        "box": {
+          "x": 374,
+          "y": 1238,
+          "width": 75,
+          "height": 22
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-55",
+        "text": "61k",
+        "box": {
+          "x": 1084,
+          "y": 1214,
+          "width": 54,
+          "height": 24
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-56",
+        "text": "COVALEX INDEPENDENT CONTRACTORS",
+        "box": {
+          "x": 372,
+          "y": 1272,
+          "width": 436,
+          "height": 18
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-57",
+        "text": "59m 39s",
+        "box": {
+          "x": 1022,
+          "y": 1256,
+          "width": 117,
+          "height": 19
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-58",
+        "text": "Glad | never picked up the habit myself because | swear | get more",
+        "box": {
+          "x": 1367,
+          "y": 1249,
+          "width": 879,
+          "height": 30
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-59",
+        "text": "delivery update requests for “where are my stims?!?” than any",
+        "box": {
+          "x": 1365,
+          "y": 1282,
+          "width": 840,
+          "height": 32
+        },
+        "confidence": 92
+      },
+      {
+        "id": "line-60",
+        "text": "other kind of shipment.",
+        "box": {
+          "x": 1364,
+          "y": 1319,
+          "width": 307,
+          "height": 28
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-61",
+        "text": "ROOKIE RANK - SMALL CARGO HAUL",
+        "box": {
+          "x": 360,
+          "y": 1387,
+          "width": 514,
+          "height": 25
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-62",
+        "text": "48k",
+        "box": {
+          "x": 1075,
+          "y": 1384,
+          "width": 55,
+          "height": 24
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-63",
+        "text": "By the way, we strongly encourage contractors to bring a",
+        "box": {
+          "x": 1362,
+          "y": 1386,
+          "width": 778,
+          "height": 32
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-64",
+        "text": "COVALEX INDEPENDENT CONTRACTORS",
+        "box": {
+          "x": 356,
+          "y": 1426,
+          "width": 440,
+          "height": 18
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-65",
+        "text": "1h 9m",
+        "box": {
+          "x": 1048,
+          "y": 1426,
+          "width": 82,
+          "height": 20
+        },
+        "confidence": 92
+      },
+      {
+        "id": "line-66",
+        "text": "handheld tractor beam along.",
+        "box": {
+          "x": 1360,
+          "y": 1423,
+          "width": 395,
+          "height": 28
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-67",
+        "text": "Talk to you soon,",
+        "box": {
+          "x": 1357,
+          "y": 1494,
+          "width": 223,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-68",
+        "text": "JUNIOR RANK - SMALL CARGO HAUL",
+        "box": {
+          "x": 338,
+          "y": 1544,
+          "width": 521,
+          "height": 25
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-69",
+        "text": "59k",
+        "box": {
+          "x": 1065,
+          "y": 1540,
+          "width": 56,
+          "height": 25
+        },
+        "confidence": 87
+      },
+      {
+        "id": "line-70",
+        "text": "COVALEX INDEPENDENT CONTRACTORS",
+        "box": {
+          "x": 334,
+          "y": 1584,
+          "width": 447,
+          "height": 19
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-71",
+        "text": "1h Om",
+        "box": {
+          "x": 1037,
+          "y": 1584,
+          "width": 82,
+          "height": 20
+        },
+        "confidence": 86
+      },
+      {
+        "id": "line-72",
+        "text": "Chase Hewitt",
+        "box": {
+          "x": 1354,
+          "y": 1564,
+          "width": 179,
+          "height": 25
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-73",
+        "text": "ROOKIE RANK - EXTRA SMALL CARGO",
+        "box": {
+          "x": 312,
+          "y": 1710,
+          "width": 549,
+          "height": 26
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-75",
+        "text": "uf",
+        "box": {
+          "x": 301,
+          "y": 1749,
+          "width": 99,
+          "height": 52
+        },
+        "confidence": 42
+      },
+      {
+        "id": "line-76",
+        "text": "]",
+        "box": {
+          "x": 357,
+          "y": 1798,
+          "width": 3,
+          "height": 7
+        },
+        "confidence": 0
+      },
+      {
+        "id": "line-77",
+        "text": "DEPENDENT CO",
+        "box": {
+          "x": 436,
+          "y": 1788,
+          "width": 174,
+          "height": 17
+        },
+        "confidence": 79
+      },
+      {
+        "id": "line-78",
+        "text": "_—",
+        "box": {
+          "x": 517,
+          "y": 1788,
+          "width": 25,
+          "height": 5
+        },
+        "confidence": 24
+      },
+      {
+        "id": "line-79",
+        "text": "NTRACTORS",
+        "box": {
+          "x": 617,
+          "y": 1787,
+          "width": 136,
+          "height": 16
+        },
+        "confidence": 92
+      },
+      {
+        "id": "line-80",
+        "text": "A",
+        "box": {
+          "x": 1172,
+          "y": 1753,
+          "width": 135,
+          "height": 58
+        },
+        "confidence": 53
+      },
+      {
+        "id": "line-81",
+        "text": "So",
+        "box": {
+          "x": 2088,
+          "y": 1793,
+          "width": 38,
+          "height": 2
+        },
+        "confidence": 22
+      },
+      {
+        "id": "line-82",
+        "text": "\\ ACCEPT OFFER }",
+        "box": {
+          "x": 3206,
+          "y": 1658,
+          "width": 394,
+          "height": 138
+        },
+        "confidence": 71
+      }
+    ],
+    "width": 3840,
+    "height": 2160,
+    "durationMs": 4032
+  }
+}

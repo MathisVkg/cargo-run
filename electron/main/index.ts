@@ -54,6 +54,12 @@ function createWindow(): void {
   });
   const win = mainWindow;
   win.setMenu(null);
+  win.on("blur", () => {
+    if (ocr) ocr.endShortcutRecording();
+  });
+  win.webContents.on("did-start-loading", () => {
+    if (ocr) ocr.endShortcutRecording();
+  });
   win.once("ready-to-show", () => win.show());
   win.on("maximize", () => win.webContents.send("window:maximized", true));
   win.on("unmaximize", () => win.webContents.send("window:maximized", false));
@@ -111,6 +117,13 @@ else
           return next;
         });
       };
+      register("ocr:beginRecording", () => ocr.beginShortcutRecording());
+      register("ocr:endRecording", () => ocr.endShortcutRecording());
+      register("ocr:probeShortcut", () => ocr.probeShortcut());
+      register("ocr:resetShortcutDiagnostics", () =>
+        ocr.resetShortcutDiagnostics(),
+      );
+      register("ocr:reparse", (id) => ocr.reparse(id));
       register("ocr:state", () => ocr.snapshot());
       register("ocr:configure", (settings) => ocr.configure(settings));
       register("ocr:capture", () => ocr.capture("Manual"));

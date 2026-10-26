@@ -36,7 +36,26 @@ class CaptureHost {
   static List<KeyValuePair<IntPtr,MONITORINFOEX>> Monitors() { var list=new List<KeyValuePair<IntPtr,MONITORINFOEX>>();EnumDisplayMonitors(IntPtr.Zero,IntPtr.Zero,delegate(IntPtr h,IntPtr dc,ref RECT rect,IntPtr data){list.Add(new KeyValuePair<IntPtr,MONITORINFOEX>(h,Info(h)));return true;},IntPtr.Zero);return list; }
   static object[] Displays() { return Monitors().Select(m=>(object)new { id=m.Value.device,label=m.Value.device+(m.Value.flags==1?" (primary)":""),width=m.Value.rcMonitor.Right-m.Value.rcMonitor.Left,height=m.Value.rcMonitor.Bottom-m.Value.rcMonitor.Top,primary=m.Value.flags==1 }).ToArray(); }
   static void Feedback(bool good) { try { (good?success:warning).Play(); } catch { /* Capture result is independent of output-device availability. */ } }
-  static object Capture(Dictionary<string,object> input) {
+
+  [DllImport("advapi32.dll",SetLastError=true)] static extern bool OpenProcessToken(IntPtr process,uint access,out IntPtr token);
+  [DllImport("advapi32.dll",SetLastError=true)] static extern bool GetTokenInformation(IntPtr token,int infoClass,out int data,int length,out int returned);
+  static bool? Elevated(uint pid) {
+    IntPtr process=OpenProcess(0x1000,false,pid);if(process==IntPtr.Zero)return null;
+    IntPtr token=IntPtr.Zero;try{if(!OpenProcessToken(process,0x0008,out token))return null;int elevation,returned;return GetTokenInformation(token,20,out elevation,4,out returned)?(bool?)(elevation!=0):null;}finally{if(token!=IntPtr.Zero)CloseHandle(token);CloseHandle(process);}
+  }
+  static string ProcessName(uint pid) {
+    IntPtr process=OpenProcess(0x1000,false,pid);if(process==IntPtr.Zero)return null;
+    try{var text=new StringBuilder(2048);uint length=2048;return QueryFullProcessImageName(process,0,text,ref length)?Path.GetFileName(text.ToString()):null;}finally{CloseHandle(process);}
+  }
+  static uint ParentPid(Dictionary<string,object> input){return input.ContainsKey("parentPid")?Convert.ToUInt32(input["parentPid"]):(uint)System.Diagnostics.Process.GetCurrentProcess().Id;}
+  static object Context(uint appPid) {
+    uint pid;GetWindowThreadProcessId(GetForegroundWindow(),out pid);string name=ProcessName(pid);
+    bool visible=String.Equals(name,"StarCitizen.exe",StringComparison.OrdinalIgnoreCase);bool? gameElevation=visible?Elevated(pid):null;
+    if(!visible){var games=new HashSet<uint>();EnumWindows(delegate(IntPtr window,IntPtr data){if(IsWindowVisible(window)&&IsGame(window)){uint game;GetWindowThreadProcessId(window,out game);games.Add(game);}return true;},IntPtr.Zero);visible=games.Count>0;if(games.Count==1)gameElevation=Elevated(games.First());}
+    return new {inspectedAt=DateTime.UtcNow.ToString("o"),foregroundProcess=name,foregroundPid=pid==0?(uint?)null:pid,appElevated=Elevated(appPid),foregroundElevated=pid==0?(bool?)null:Elevated(pid),gameElevated=gameElevation,gameVisible=visible};
+  }
+
+  static object Capture(Dictionary<string,object> input,object context) {
     Guid id;if(!Guid.TryParse(Convert.ToString(input["captureId"]),out id))throw new Exception("Invalid CaptureId.");
     string selected=Convert.ToString(input["displayId"]);
     var displays=Monitors();MONITORINFOEX target=new MONITORINFOEX();bool found=false;
@@ -66,7 +85,7 @@ class CaptureHost {
         using(var small=new Bitmap(bitmap,new Size(tw,th)))small.Save(thumb,ImageFormat.Png);
       }
       // Success audio is requested only after the main process commits queue metadata.
-      return new { displayId=target.device,displayLabel=target.device,width=w,height=h,bytes=new FileInfo(output).Length,soundRequested=input.ContainsKey("sounds")&&Convert.ToBoolean(input["sounds"]) };
+      return new { context=context,displayId=target.device,displayLabel=target.device,width=w,height=h,bytes=new FileInfo(output).Length,soundRequested=input.ContainsKey("sounds")&&Convert.ToBoolean(input["sounds"]) };
     } catch { foreach(string f in new[]{output,thumb,partial})try{if(File.Exists(f))File.Delete(f);}catch{}throw; }
   }
   static void Main(string[] args) {
@@ -77,18 +96,19 @@ class CaptureHost {
     try{SetProcessDpiAwarenessContext(new IntPtr(-4));SetThreadDpiAwarenessContext(new IntPtr(-4));}catch{}
     string line;
     while((line=Console.ReadLine())!=null) {
-      string requestId=null;Dictionary<string,object> request=null;
+      string requestId=null;Dictionary<string,object> request=null;object context=null;
       try {
         request=json.Deserialize<Dictionary<string,object>>(line);requestId=Convert.ToString(request["id"]);string op=Convert.ToString(request["op"]);object result;
         if(op=="displays")result=Displays();
-        else if(op=="capture")result=Capture(request);
+        else if(op=="capture"){context=Context(ParentPid(request));result=Capture(request,context);}
+        else if(op=="context")result=Context(ParentPid(request));
         else if(op=="feedback"){Feedback(request.ContainsKey("success")&&Convert.ToBoolean(request["success"]));result=new{played=true};}
         else if(op=="quit")break;
         else throw new Exception("Unsupported capture operation.");
         Console.WriteLine(json.Serialize(new{id=requestId,ok=true,result=result}));
       } catch(Exception e) {
         if(request!=null&&request.ContainsKey("sounds")&&Convert.ToBoolean(request["sounds"]))Feedback(false);
-        Console.WriteLine(json.Serialize(new{id=requestId,ok=false,error=e.Message}));
+        Console.WriteLine(json.Serialize(new{id=requestId,ok=false,error=e.Message,context=context}));
       }
     }
     success.Dispose();warning.Dispose();

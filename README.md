@@ -1,4 +1,4 @@
-# Cargo Run 0.3.0
+# Cargo Run 0.3.2
 
 Cargo Run is a local Windows desktop companion for Star Citizen hauling contracts. It preserves the Phase 1 Fleet Operations interface and provides persistent Game.log tracking plus Windows screenshot capture and offline OCR observations.
 
@@ -19,7 +19,7 @@ For a production launch: run npm run build, then npm start.
 | npm run dev          | Build main/preload, start Vite, open Electron                                    |
 | npm run typecheck    | Strict TypeScript validation                                                     |
 | npm run lint         | ESLint                                                                           |
-| npm test             | 64 domain, parser, storage, streaming and OCR tests                              |
+| npm test             | 101 domain, parser, storage, streaming and OCR tests                             |
 | npm run build        | Production Electron main/preload and React bundles                               |
 | npm start            | Launch the production build                                                      |
 | npm run test:desktop | Build, then run Phase 1 and Phase 2 Windows Electron workflows                   |
@@ -89,7 +89,7 @@ The SQLite implementation uses [Node's built-in module](https://nodejs.org/downl
 
 ## Verification
 
-TypeScript, lint, 64 unit/integration tests, production build, both actual Windows Electron workflow suites, and a separate development launch smoke check passed. Phase 2 desktop tests verified three application restarts, persisted manual contracts and ship selection, saved monitoring configuration, forward-only first start, partial-line resume, automatic completion without unconfirmed earnings, repeated imports without duplicates, parser failure inspection, log replacement, ERROR recovery, and retained run snapshots.
+TypeScript, lint, 101 unit/integration tests, production build, both actual Windows Electron workflow suites, and a separate development launch smoke check passed. Phase 2 desktop tests verified three application restarts, persisted manual contracts and ship selection, saved monitoring configuration, forward-only first start, partial-line resume, automatic completion without unconfirmed earnings, repeated imports without duplicates, parser failure inspection, log replacement, ERROR recovery, and retained run snapshots.
 
 The desktop picker test stubs only the native dialog's returned file selection; it exercises the actual IPC, validation, file reader, parser, SQLite, and React updates. No personal or actual Star Citizen log was used. Real-game validation remains a user testing step against the supplied format assumptions.
 
@@ -140,7 +140,7 @@ All observations are marked potentially incomplete because the objectives list m
 
 **No automatic OCR contract creation, status update, Game.log reconciliation, or timed automatic capture is implemented.** OCR observations do not appear as contracts in Dashboard, Manifest or History.
 
-No reference game screenshots were attached to Task 03A. The parser and image integration tests therefore use synthetic text/layout fixtures. Actual Mobiglas fonts, backgrounds, HDR, localization, scroll clipping, UI changes and selected-tab styling still need real-game validation.
+Task 03A initially used synthetic fixtures. Task 03A.2 adds five genuine screenshot-derived OCR fixtures, as documented below. HDR, localization, further UI scales, scroll clipping and selected-tab styling still need broader game validation.
 
 ### OCR architecture and tests
 
@@ -172,3 +172,78 @@ npm run test:ocr:desktop
 The OCR desktop test displays only its synthetic test form on the primary display, exercises the genuine registered shortcut while that separate application is focused and Cargo Run is minimized, captures three 3840×2160 images, verifies four objectives and raw boxes, rejects a black frame, opens the protected preview, restarts metadata/settings, disables the binding and clears captures. Its keyboard simulation is restricted to its own fixture window; the application itself contains no player-input automation. No real-game capture test was performed.
 
 Recommended Phase 3B work: obtain explicit game screenshot fixtures, validate fonts/HDR/UI scales and tabs, improve region preprocessing and evidence overlays, add correction/review tools, benchmark retention/performance, and design explicit reviewed OCR/log association using real IDs and timestamps. Revisit a Windows.Media.Ocr provider if MSIX package identity is introduced. Do not merge independent missions solely by identical visible cargo.
+
+## Task 03A.1 / 03A.2 reliability update (v0.3.2)
+
+Structured extraction now uses the real Mobiglas header arrangement: title above Details, metadata in the adjacent right-hand panel, label/value pairs sharing a row, and separate Details/Primary Objectives columns. The reward value can be far to the right of its label. Checkbox glyphs recognized as `<>`, `¢`, `&`, or similar symbols are stripped only from the parser's working text immediately before a Deliver/Collect verb. Original OCR lines and confidence remain unchanged. Collect rows following each delivery can supply that delivery's pickup even when one commodity has multiple pickup locations. Internal destination punctuation remains intact. Missing/clipped destinations retain valid quantities and visible evidence with warnings. Both visible tab labels remain Ambiguous unless explicit selection evidence exists; OCR text does not recover the highlighted tab's color.
+
+**Scan Review → Reprocess saved OCR** reruns only structured extraction from the selected capture's existing OCR result. It keeps the CaptureId, screenshot, raw text/boxes/confidences, status, timestamp and OCR attempts. It does not capture another image, rerun Tesseract, or change contracts. New observations identify parser version 0.3.2.
+
+### Evidence and fixture provenance
+
+Five original 3840×2160 screenshots were found in the user's supplied Cargo Run captures folder. They were read without changing the live database or images and recognized again with the existing offline Tesseract engine. Regression JSON under `tests/fixtures/mobiglas` records original image SHA-256, dimensions, and genuine engine text/boxes/confidences. The player HUD was excluded from the exported line subset; original screenshots and full temporary exports are not committed.
+
+The available 65,250 aUEC image visibly contains **7+6+7+5 = 25 SCU**, four delivery objectives across Pressurized Ice and Processed Food, two Rayari destinations and Port Tressler pickups. It is deliberately tested as 25, rather than rewritten to match an earlier reported total. The other available images show 48,500 aUEC / 13 SCU (three captures) and 50,250 aUEC / 11 SCU (one capture). All five now produce title/company/reward and their visible delivery rows.
+
+The original 61,500 / 8 SCU image and an actual 65,250 / 18 SCU image were not present. Their reported data are covered separately: the 61,500 / 8 SCU case uses reconstructed text in both the earlier representative fixture and the real header/panel geometry; the 65,250 / 18 SCU variant uses explicitly modified quantities with no claimed engine confidence for edited lines. The original synthetic 18 SCU / four-objective tests also remain. These variants are not claimed as original screenshot OCR.
+
+### Shortcut registration, recording and diagnostics
+
+Electron remains the default capture backend. Registration only proves the binding was reserved at that moment. A callback proves delivery in the foreground context being tested; `CaptureRequested`, `CaptureSaved` and `CaptureError` establish what happened afterwards. A registered shortcut with zero callbacks is shown as **invocation unverified**. Settings keeps at most 50 diagnostic events, plus counts and the latest read-only Windows process/elevation context. No window titles, process paths or typed text are logged by shortcut diagnostics. A possible privilege mismatch is a clue, not a confirmed explanation; Cargo Run does not elevate itself.
+
+Use **Record Shortcut**, press the combination, inspect it, then **Save shortcut**. Escape/Cancel/focus loss restores the saved binding; a 45-second lease also releases recording. Both input observers and capture are paused while recording, including the confirmation step. Standalone F8/F9 and supported Ctrl/Alt combinations can also be typed manually. F12 is rejected because Windows reserves it for debugging. Conflicts are visible and never silently treated as operational shortcuts. Keyboard recording uses logical letters for the active layout.
+
+### Optional development Raw Input prototype
+
+The prototype is **off by default and excluded from packaged releases**. It runs in its own Windows process with a hidden message-only window. It registers keyboard usage page 1 / usage 6 through `RegisterRawInputDevices` with `RIDEV_INPUTSINK` and device notifications, processes `WM_INPUT`, and performs normal default message cleanup. It does not use NOLEGACY or input-suppression flags. Raw Input observes the configured chord and leaves the foreground application's input available.
+
+Only configured-key pressed/released state and modifier state live transiently in memory. Repeat makes do not invoke again until target-key release. Left/right modifiers are handled, current foreground keyboard layout determines scan-code mapping, layout/device changes clear transient state, and AltGr is rejected to avoid matching text entry. Release all keys after starting/reconfiguring or changing layouts; keys already held before registration cannot be reconstructed reliably. Printable letters/digits require Ctrl or Alt. Only readiness/errors and configured-chord notifications cross the local pipe; no raw keystroke history, device history, key text, network telemetry, hooks, DLL injection, game memory reads, game-file changes or anti-cheat workarounds are introduced.
+
+Build it explicitly, then launch an unpackaged development session:
+
+```powershell
+npm run native:raw-input
+$env:CARGO_RUN_INPUT_PROTOTYPE = "1"
+$env:CARGO_RUN_SHORTCUT_BACKEND = "electron"
+$env:CARGO_RUN_SHORTCUT_COMPARE = "1"
+npm run dev
+```
+
+Settings shows the selected capture backend, comparison setting, Raw Input Starting/Listening/Error state and each backend's invocation count for the current configuration. Listening requires the native helper's successful registration acknowledgement; it does not prove input delivery. Counts reset on settings/registration changes and can be reset with **Reset diagnostics**. The diagnostic event list remains capped at 50.
+
+To select Raw Input as the only capture trigger, stop that development session and relaunch with:
+
+```powershell
+$env:CARGO_RUN_SHORTCUT_BACKEND = "raw-input"
+$env:CARGO_RUN_SHORTCUT_COMPARE = "0"
+npm run dev
+```
+
+Set comparison to `"1"` only when deliberately comparing both observers. Both may count the same physical press, but **only the explicitly selected backend can invoke capture**. The Electron observer reserves its binding even in comparison mode; use Raw Input alone to assess non-consuming input. A failing Raw Input helper does not switch capture backends automatically. Close the experiment and relaunch with the Electron selection, or unset all three environment variables to restore the normal default session. Manual capture stays available.
+
+Microsoft describes [Raw Input registration/readout](https://learn.microsoft.com/en-us/windows/win32/inputdev/using-raw-input), [INPUTSINK flags](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawinputdevice), and [keyboard make/break data](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-rawkeyboard). Electron documents [globalShortcut](https://www.electronjs.org/docs/latest/api/global-shortcut) as an out-of-focus API; its registration return value still cannot establish delivery in a particular game.
+
+### Exact next Star Citizen test
+
+1. Close other Cargo Run instances so they do not reserve the same chord. Choose an unused key such as F8, and use the existing manual capture path as a baseline. Keep the game display/borderless mode configured as in the working manual capture test.
+2. Start Electron-only mode (prototype off, or Electron selected with comparison `"0"`). Save F8, check registration, reset diagnostics, and release every key. Focus a normal app, press/release F8 once, then return to Cargo Run. Check one Invocation and one CaptureSaved, or the exact CaptureError.
+3. Reset diagnostics again, focus Star Citizen, open the desired Mobiglas contract and press/release F8 once. Return and record callback count, capture result, selected binding, backend, foreground/elevation metadata and screenshot. Zero Invocation means no delivery was observed; Invocation followed by CaptureError is a capture problem.
+4. Stop the app. Build/launch the optional Raw Input mode above with comparison `"0"`. Confirm **Listening** before testing. If Error/launch blocked appears, stop and report it; do not disable security controls or attempt a bypass.
+5. Release all keys and repeat the normal-app test with the physical keyboard. If Raw Input stays at zero, stop the Raw Input trial and use Electron/manual capture; do not infer game compatibility from Listening. Only after normal-app delivery succeeds, reset diagnostics and repeat the Star Citizen test. Test a held key and release/repress: one match per physical press is expected. Verify gameplay still receives its normal input. Test the actual keyboard layout; avoid AltGr chords.
+6. Optionally restart in comparison mode, reset counters, press/release once in each foreground app and record both counts. Only the selected backend should create a capture. Comparison is diagnostic and is not a claim of game compatibility.
+7. Use Scan Review → Reprocess saved OCR on retained captures. Check the visible title, reward, objectives, quantities, pickups and evidence against the screenshot. Do not interpret a scrolled/partial objectives panel as the complete mission.
+
+**No Star Citizen-focused shortcut test was performed by the agent. Raw Input game delivery is unverified.** Vulkan/borderless mode, anti-cheat behavior and privilege mismatch are not established root causes from these tests.
+
+### Verification for v0.3.2
+
+- TypeScript, lint, **101 automated tests across 10 files**, optional Raw Input compilation and production build passed.
+- Actual Windows manual-contract/security/navigation suite and SQLite/Game.log workflow suite passed.
+- Using the computer-use skill, a separate synthetic Windows application was focused with Cargo Run minimized. Electron F8 and Ctrl+Shift+F9 each delivered a real OS callback and saved/processed a screenshot; focus stayed outside Cargo Run. Ctrl+Shift+S initially reported a conflict while another Cargo Run instance was open. After that instance closed, the retained full WinForms capture/OCR harness passed for Ctrl+Shift+S, F8 and Ctrl+Shift+F9, including three 4K queued captures, OCR/evidence, black-frame rejection, restart, disable/clear and zero contract creation.
+- Saved real-game OCR was tested in an isolated Windows UI profile: Reprocess preserved raw evidence and attempts, protected image preview loaded, F8 recorder save and Escape cancellation created no captures, and no contracts were created.
+- Earlier helper builds were blocked by Windows Code Integrity (event 3077), and the Error path was verified without changing any security settings. The final build successfully registered and reached **Listening**. With a separate Windows app focused, an automated F8 press produced Electron=1, RawInput=0. The user then confirmed a physical F8 test in that window: Electron's cumulative count rose to 8, while RawInput stayed 0. With Raw Input selected there were no captures and no duplicate/fallback trigger. **Raw Input is unreliable in this tested setup despite successful registration.** The receive/match failure has not been isolated further; game compatibility is unverified. Electron remains the production default. The WinForms capture/OCR harness was initially blocked but passed on the final rerun; no security setting was changed.
+- Dependency audit reports zero vulnerabilities. Installer signing/packaging and in-game delivery remain unverified.
+
+`npm run test:ocr:review` runs the saved OCR review/recorder workflow in an isolated profile. It uses the committed OCR JSON and optionally previews the original image if that file is still in the local captures folder. `npm run test:ocr:desktop` remains the full synthetic capture/OCR harness for hosts that permit its compiled WinForms test executable.
+
+Game.log creation, OCR-to-contract persistence/reconciliation and automatic scanning behavior are unchanged. No Phase 3B work was started.

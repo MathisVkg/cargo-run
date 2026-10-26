@@ -47,9 +47,8 @@ function Extracted<T>({ label, field }: { label: string; field: Field<T> }) {
   );
 }
 export default function ScanReview() {
-  const { state, error, busy, capture, retry, remove, clear } = useOcrStore(
-      (s) => s,
-    ),
+  const { state, error, busy, capture, retry, remove, clear, reparse } =
+      useOcrStore((s) => s),
     setPage = useCargoStore((s) => s.setPage);
   const [id, setId] = useState<string | null>(null),
     [large, setLarge] = useState(false),
@@ -80,7 +79,7 @@ export default function ScanReview() {
         </button>
         <button
           className="button primary"
-          disabled={busy || !state?.captureAvailable}
+          disabled={busy || state?.recording || !state?.captureAvailable}
           onClick={() => void capture()}
         >
           <Camera size={15} />
@@ -167,6 +166,15 @@ export default function ScanReview() {
                       </p>
                     </div>
                     <div className="monitor-buttons">
+                      {selected.result && (
+                        <button
+                          className="button"
+                          disabled={busy}
+                          onClick={() => void reparse(selected.id)}
+                        >
+                          Reprocess saved OCR
+                        </button>
+                      )}
                       {selected.status === "Failed" && (
                         <button
                           className="button"

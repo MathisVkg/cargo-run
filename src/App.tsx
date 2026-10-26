@@ -89,7 +89,7 @@ export default function App() {
           >
             <CircleHelp size={13} />
           </button>
-          <span className="status-divider">/</span>v0.3.0
+          <span className="status-divider">/</span>v0.3.2
         </span>
       </footer>
       <Navigation open={nav} onClose={() => setNav(false)} />

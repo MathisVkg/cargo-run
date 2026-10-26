@@ -3,7 +3,9 @@ import { existsSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { join } from "node:path";
 import type { CaptureDisplay } from "../../../src/types/ocr";
+import type { ShortcutContext } from "../../../src/types/shortcut";
 export interface CapturedImage {
+  context?: ShortcutContext;
   displayId: string;
   displayLabel: string;
   width: number;
@@ -19,6 +21,7 @@ export interface CaptureBackend {
     displayId: string,
     sounds: boolean,
   ): Promise<CapturedImage>;
+  context?(): Promise<ShortcutContext>;
   feedback(success: boolean): Promise<void>;
   close(): Promise<void>;
 }
@@ -72,13 +75,19 @@ export class WindowsCaptureHost implements CaptureBackend {
           ok: boolean;
           result: unknown;
           error?: string;
+          context?: ShortcutContext;
         };
         const pending = this.pending.get(result.id);
         if (!pending) return;
         clearTimeout(pending.timer);
         this.pending.delete(result.id);
         if (result.ok) pending.resolve(result.result);
-        else pending.reject(Error(result.error ?? "Windows capture failed."));
+        else
+          pending.reject(
+            Object.assign(Error(result.error ?? "Windows capture failed."), {
+              shortcutContext: result.context,
+            }),
+          );
       } catch {
         /* Only a bounded JSON protocol is accepted. */
       }
@@ -135,7 +144,13 @@ export class WindowsCaptureHost implements CaptureBackend {
       captureId,
       displayId,
       sounds,
+      parentPid: process.pid,
     })) as CapturedImage;
+  }
+  async context() {
+    return (await this.request("context", {
+      parentPid: process.pid,
+    })) as ShortcutContext;
   }
   async feedback(success: boolean) {
     await this.request("feedback", { success });

@@ -3,6 +3,12 @@ import type { DesktopBridge } from "../../src/types/desktop";
 import type { AppSnapshot } from "../../src/types/tracking";
 import type { OcrSnapshot } from "../../src/types/ocr";
 const bridge: DesktopBridge = {
+  ocrBeginRecording: () => ipcRenderer.invoke("ocr:beginRecording"),
+  ocrEndRecording: () => ipcRenderer.invoke("ocr:endRecording"),
+  ocrProbeShortcut: () => ipcRenderer.invoke("ocr:probeShortcut"),
+  ocrResetShortcutDiagnostics: () =>
+    ipcRenderer.invoke("ocr:resetShortcutDiagnostics"),
+  ocrReparse: (id) => ipcRenderer.invoke("ocr:reparse", id),
   ocrState: () => ipcRenderer.invoke("ocr:state"),
   ocrConfigure: (settings) => ipcRenderer.invoke("ocr:configure", settings),
   ocrCapture: () => ipcRenderer.invoke("ocr:capture"),

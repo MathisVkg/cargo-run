@@ -8,6 +8,23 @@ export const defaultCaptureSettings: CaptureSettings = {
 };
 export class CaptureRepository {
   constructor(private database: CargoDatabase) {}
+  diagnostics(): import("../../../src/types/shortcut").ShortcutDiagnostics {
+    return (
+      this.database.getSetting<
+        import("../../../src/types/shortcut").ShortcutDiagnostics
+      >("ocr.shortcutDiagnostics") ?? {
+        totalInvocations: 0,
+        lastInvocationAt: null,
+        context: null,
+        events: [],
+      }
+    );
+  }
+  saveDiagnostics(
+    value: import("../../../src/types/shortcut").ShortcutDiagnostics,
+  ) {
+    this.database.setSetting("ocr.shortcutDiagnostics", value);
+  }
   settings(): CaptureSettings {
     return (
       this.database.getSetting<CaptureSettings>("ocr.settings") ?? {

@@ -1,0 +1,668 @@
+{
+  "source": {
+    "filename": "9ccc7ea4-c6f6-49bc-8bfc-701980e610da.png",
+    "sha256": "c705963a99918c9a5c98622be7bc2c85b4c4a36fe7dd079e4820db066f518c53",
+    "width": 3840,
+    "height": 2160,
+    "provenance": "Actual user-provided Star Citizen screenshot; rerun offline Tesseract 7 on original 3840x2160 image. Contract/navigation lines only; player HUD excluded. OCR text/boxes/confidences below are unchanged engine output."
+  },
+  "result": {
+    "provider": "Tesseract 7 · offline English",
+    "language": "eng",
+    "text": "7\n@ MARK ALL READ\nOFFERS\nACCEPTED (1/1\nISTORY\nBEACONS\n®\n1: use LG\nATTEN I\n1: USER Lvs\nPEU-BTo0 1.\nReward\na 65,250\n\\# HAULING - PLANETARY\nContract Deadline\nN/A\nDa\nJunior Rank - Small Cargo Haul\nContracted By\nCovalex Independent Contractors\nJUNIOR RANK - SMALL CARGO HAUL\n65k\nCOVALEX INDEPENDENT CONTRACTORS\nlh 2m\nDETAILS\nPRIMARY OBJECTIVES\nGreetings,\n<> Deliver 0/7 SCU of Pressurized Ice to Rayari Cantwell\nResearch Outpost on Clio.\nSeems like Port Tressler above microTech currently has some 4\nSCU or smaller cargo that needs to be separated and delivered to\n¢ Collect Pressurized Ice from Port Tressler.\na few different spots.\n<> Deliver 0/6 SCU of Pressurized Ice to Rayari McGrath\nDROP OFF LOCATIONS (ANY ORDER)\nResearch Outpost on Clio.\n¢ Collect Pressurized Ice from Port Tressler.\n- Freight elevator at Rayari Cantwell Research Outpost on Clio\n- Freight elevator at Rayari McGrath Research Outpost on Clio\n< Deliver 0/7 SCU of Processed Food to Rayari Cantwell\nDrop-offs can be done in whatever order works best for you.\nResearch Outpost on Clio.\n¢ Collect Processed Food from Port Tressler.\nBy the way, we strongly encourage contractors to bring a\nhandheld tractor beam along.\n<> Deliver 0/5 SCU of Processed Food to Rayari McGrath\nResearch Outpost on Clio.\nThanks in advance for ensuring prompt service,\n¢ Collect Processed Food from Port Tressler.\nChase Hewitt\nJr. Logistics Coordinator\nCovalex Shipping\n‘Anything you need, anywhere you need it.’\n/{\nABANDON\nTRACK\na\n\\\nA",
+    "lines": [
+      {
+        "id": "line-0",
+        "text": "7",
+        "box": {
+          "x": 246,
+          "y": 163,
+          "width": 43,
+          "height": 48
+        },
+        "confidence": 69
+      },
+      {
+        "id": "line-1",
+        "text": "@ MARK ALL READ",
+        "box": {
+          "x": 306,
+          "y": 209,
+          "width": 335,
+          "height": 38
+        },
+        "confidence": 75
+      },
+      {
+        "id": "line-2",
+        "text": "OFFERS",
+        "box": {
+          "x": 1345,
+          "y": 220,
+          "width": 130,
+          "height": 25
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-3",
+        "text": "ACCEPTED (1/1",
+        "box": {
+          "x": 1598,
+          "y": 219,
+          "width": 262,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-4",
+        "text": "ISTORY",
+        "box": {
+          "x": 2046,
+          "y": 222,
+          "width": 121,
+          "height": 26
+        },
+        "confidence": 90
+      },
+      {
+        "id": "line-5",
+        "text": "BEACONS",
+        "box": {
+          "x": 2288,
+          "y": 223,
+          "width": 156,
+          "height": 26
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-6",
+        "text": "®",
+        "box": {
+          "x": 3449,
+          "y": 175,
+          "width": 110,
+          "height": 111
+        },
+        "confidence": 26
+      },
+      {
+        "id": "line-7",
+        "text": "1: use LG",
+        "box": {
+          "x": 277,
+          "y": 296,
+          "width": 71,
+          "height": 9
+        },
+        "confidence": 29
+      },
+      {
+        "id": "line-8",
+        "text": "ATTEN I",
+        "box": {
+          "x": 1147,
+          "y": 299,
+          "width": 74,
+          "height": 8
+        },
+        "confidence": 0
+      },
+      {
+        "id": "line-9",
+        "text": "1: USER Lvs",
+        "box": {
+          "x": 1297,
+          "y": 299,
+          "width": 70,
+          "height": 9
+        },
+        "confidence": 57
+      },
+      {
+        "id": "line-10",
+        "text": "PEU-BTo0 1.",
+        "box": {
+          "x": 3464,
+          "y": 305,
+          "width": 60,
+          "height": 9
+        },
+        "confidence": 0
+      },
+      {
+        "id": "line-11",
+        "text": "Reward",
+        "box": {
+          "x": 2605,
+          "y": 394,
+          "width": 109,
+          "height": 23
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-12",
+        "text": "a 65,250",
+        "box": {
+          "x": 3321,
+          "y": 395,
+          "width": 138,
+          "height": 28
+        },
+        "confidence": 56
+      },
+      {
+        "id": "line-13",
+        "text": "\\# HAULING - PLANETARY",
+        "box": {
+          "x": 310,
+          "y": 419,
+          "width": 558,
+          "height": 43
+        },
+        "confidence": 79
+      },
+      {
+        "id": "line-14",
+        "text": "Contract Deadline",
+        "box": {
+          "x": 2601,
+          "y": 438,
+          "width": 261,
+          "height": 25
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-15",
+        "text": "N/A",
+        "box": {
+          "x": 3394,
+          "y": 442,
+          "width": 60,
+          "height": 24
+        },
+        "confidence": 85
+      },
+      {
+        "id": "line-16",
+        "text": "Da",
+        "box": {
+          "x": 1030,
+          "y": 379,
+          "width": 156,
+          "height": 115
+        },
+        "confidence": 27
+      },
+      {
+        "id": "line-17",
+        "text": "Junior Rank - Small Cargo Haul",
+        "box": {
+          "x": 1366,
+          "y": 433,
+          "width": 709,
+          "height": 66
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-18",
+        "text": "Contracted By",
+        "box": {
+          "x": 2602,
+          "y": 488,
+          "width": 204,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-19",
+        "text": "Covalex Independent Contractors",
+        "box": {
+          "x": 2955,
+          "y": 487,
+          "width": 495,
+          "height": 31
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-20",
+        "text": "JUNIOR RANK - SMALL CARGO HAUL",
+        "box": {
+          "x": 376,
+          "y": 554,
+          "width": 508,
+          "height": 23
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-21",
+        "text": "65k",
+        "box": {
+          "x": 1083,
+          "y": 534,
+          "width": 66,
+          "height": 43
+        },
+        "confidence": 33
+      },
+      {
+        "id": "line-22",
+        "text": "COVALEX INDEPENDENT CONTRACTORS",
+        "box": {
+          "x": 378,
+          "y": 592,
+          "width": 435,
+          "height": 18
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-23",
+        "text": "lh 2m",
+        "box": {
+          "x": 1061,
+          "y": 595,
+          "width": 80,
+          "height": 19
+        },
+        "confidence": 88
+      },
+      {
+        "id": "line-24",
+        "text": "DETAILS",
+        "box": {
+          "x": 1370,
+          "y": 628,
+          "width": 197,
+          "height": 33
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-25",
+        "text": "PRIMARY OBJECTIVES",
+        "box": {
+          "x": 2455,
+          "y": 629,
+          "width": 516,
+          "height": 33
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-26",
+        "text": "Greetings,",
+        "box": {
+          "x": 1369,
+          "y": 707,
+          "width": 137,
+          "height": 27
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-27",
+        "text": "<> Deliver 0/7 SCU of Pressurized Ice to Rayari Cantwell",
+        "box": {
+          "x": 2453,
+          "y": 707,
+          "width": 883,
+          "height": 32
+        },
+        "confidence": 88
+      },
+      {
+        "id": "line-28",
+        "text": "Research Outpost on Clio.",
+        "box": {
+          "x": 2505,
+          "y": 746,
+          "width": 400,
+          "height": 32
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-29",
+        "text": "Seems like Port Tressler above microTech currently has some 4",
+        "box": {
+          "x": 1370,
+          "y": 774,
+          "width": 846,
+          "height": 28
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-30",
+        "text": "SCU or smaller cargo that needs to be separated and delivered to",
+        "box": {
+          "x": 1370,
+          "y": 808,
+          "width": 865,
+          "height": 28
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-31",
+        "text": "¢ Collect Pressurized Ice from Port Tressler.",
+        "box": {
+          "x": 2510,
+          "y": 800,
+          "width": 715,
+          "height": 28
+        },
+        "confidence": 90
+      },
+      {
+        "id": "line-32",
+        "text": "a few different spots.",
+        "box": {
+          "x": 1369,
+          "y": 842,
+          "width": 286,
+          "height": 27
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-33",
+        "text": "<> Deliver 0/6 SCU of Pressurized Ice to Rayari McGrath",
+        "box": {
+          "x": 2452,
+          "y": 868,
+          "width": 882,
+          "height": 31
+        },
+        "confidence": 90
+      },
+      {
+        "id": "line-34",
+        "text": "DROP OFF LOCATIONS (ANY ORDER)",
+        "box": {
+          "x": 1370,
+          "y": 907,
+          "width": 465,
+          "height": 25
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-35",
+        "text": "Research Outpost on Clio.",
+        "box": {
+          "x": 2504,
+          "y": 906,
+          "width": 401,
+          "height": 32
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-36",
+        "text": "¢ Collect Pressurized Ice from Port Tressler.",
+        "box": {
+          "x": 2511,
+          "y": 960,
+          "width": 715,
+          "height": 28
+        },
+        "confidence": 88
+      },
+      {
+        "id": "line-37",
+        "text": "- Freight elevator at Rayari Cantwell Research Outpost on Clio",
+        "box": {
+          "x": 1370,
+          "y": 975,
+          "width": 819,
+          "height": 29
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-38",
+        "text": "- Freight elevator at Rayari McGrath Research Outpost on Clio",
+        "box": {
+          "x": 1370,
+          "y": 1008,
+          "width": 820,
+          "height": 29
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-39",
+        "text": "< Deliver 0/7 SCU of Processed Food to Rayari Cantwell",
+        "box": {
+          "x": 2454,
+          "y": 1028,
+          "width": 890,
+          "height": 31
+        },
+        "confidence": 91
+      },
+      {
+        "id": "line-40",
+        "text": "Drop-offs can be done in whatever order works best for you.",
+        "box": {
+          "x": 1369,
+          "y": 1075,
+          "width": 806,
+          "height": 30
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-41",
+        "text": "Research Outpost on Clio.",
+        "box": {
+          "x": 2506,
+          "y": 1066,
+          "width": 403,
+          "height": 32
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-42",
+        "text": "¢ Collect Processed Food from Port Tressler.",
+        "box": {
+          "x": 2514,
+          "y": 1120,
+          "width": 725,
+          "height": 29
+        },
+        "confidence": 85
+      },
+      {
+        "id": "line-43",
+        "text": "By the way, we strongly encourage contractors to bring a",
+        "box": {
+          "x": 1368,
+          "y": 1143,
+          "width": 767,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-44",
+        "text": "handheld tractor beam along.",
+        "box": {
+          "x": 1367,
+          "y": 1178,
+          "width": 389,
+          "height": 27
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-45",
+        "text": "<> Deliver 0/5 SCU of Processed Food to Rayari McGrath",
+        "box": {
+          "x": 2457,
+          "y": 1187,
+          "width": 897,
+          "height": 32
+        },
+        "confidence": 86
+      },
+      {
+        "id": "line-46",
+        "text": "Research Outpost on Clio.",
+        "box": {
+          "x": 2511,
+          "y": 1227,
+          "width": 405,
+          "height": 32
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-47",
+        "text": "Thanks in advance for ensuring prompt service,",
+        "box": {
+          "x": 1365,
+          "y": 1244,
+          "width": 636,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-48",
+        "text": "¢ Collect Processed Food from Port Tressler.",
+        "box": {
+          "x": 2519,
+          "y": 1281,
+          "width": 731,
+          "height": 30
+        },
+        "confidence": 81
+      },
+      {
+        "id": "line-49",
+        "text": "Chase Hewitt",
+        "box": {
+          "x": 1363,
+          "y": 1314,
+          "width": 175,
+          "height": 23
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-50",
+        "text": "Jr. Logistics Coordinator",
+        "box": {
+          "x": 1361,
+          "y": 1348,
+          "width": 336,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-51",
+        "text": "Covalex Shipping",
+        "box": {
+          "x": 1361,
+          "y": 1383,
+          "width": 223,
+          "height": 29
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-52",
+        "text": "‘Anything you need, anywhere you need it.’",
+        "box": {
+          "x": 1361,
+          "y": 1415,
+          "width": 567,
+          "height": 32
+        },
+        "confidence": 83
+      },
+      {
+        "id": "line-53",
+        "text": "/{",
+        "box": {
+          "x": 1190,
+          "y": 1699,
+          "width": 72,
+          "height": 34
+        },
+        "confidence": 0
+      },
+      {
+        "id": "line-54",
+        "text": "ABANDON",
+        "box": {
+          "x": 1328,
+          "y": 1706,
+          "width": 176,
+          "height": 26
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-55",
+        "text": "TRACK",
+        "box": {
+          "x": 3409,
+          "y": 1694,
+          "width": 121,
+          "height": 25
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-56",
+        "text": "a",
+        "box": {
+          "x": 1457,
+          "y": 1792,
+          "width": 28,
+          "height": 1
+        },
+        "confidence": 31
+      },
+      {
+        "id": "line-57",
+        "text": "\\",
+        "box": {
+          "x": 208,
+          "y": 1764,
+          "width": 40,
+          "height": 48
+        },
+        "confidence": 36
+      },
+      {
+        "id": "line-58",
+        "text": "A",
+        "box": {
+          "x": 1169,
+          "y": 1746,
+          "width": 131,
+          "height": 60
+        },
+        "confidence": 17
+      }
+    ],
+    "width": 3840,
+    "height": 2160,
+    "durationMs": 3214
+  }
+}

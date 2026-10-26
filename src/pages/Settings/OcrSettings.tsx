@@ -1,18 +1,15 @@
-import { useEffect, useState } from "react";
-import { ScanLine, Camera, RefreshCw, Trash2, Keyboard } from "lucide-react";
+import { useState } from "react";
+import { ScanLine, Camera, RefreshCw, Trash2 } from "lucide-react";
 import { useOcrStore } from "../../stores/useOcrStore";
 import { useCargoStore } from "../../stores/useCargoStore";
 import { Badge } from "../../components/ui";
 import { Overlay } from "../../components/ui/Overlay";
+import { ShortcutControls } from "./ShortcutControls";
 export function OcrSettings() {
   const { state, error, busy, configure, capture, clear, displays } =
       useOcrStore((s) => s),
     setPage = useCargoStore((s) => s.setPage);
-  const [shortcut, setShortcut] = useState(""),
-    [confirm, setConfirm] = useState(false);
-  useEffect(() => {
-    if (state) setShortcut(state.settings.accelerator);
-  }, [state?.settings.accelerator]);
+  const [confirm, setConfirm] = useState(false);
   if (!state)
     return (
       <section className="panel setting-card">
@@ -41,50 +38,7 @@ export function OcrSettings() {
       )}
       <div className="ocr-settings-grid">
         <div>
-          <label htmlFor="ocr-shortcut">
-            <Keyboard size={14} />
-            Global shortcut
-          </label>
-          <div className="monitor-buttons">
-            <input
-              id="ocr-shortcut"
-              value={shortcut}
-              onChange={(e) => setShortcut(e.target.value)}
-              maxLength={80}
-            />
-            <button
-              className="button"
-              disabled={busy}
-              onClick={() => void configure({ ...s, accelerator: shortcut })}
-            >
-              Save shortcut
-            </button>
-          </div>
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={s.enabled}
-              disabled={busy}
-              onChange={(e) =>
-                void configure({ ...s, enabled: e.target.checked })
-              }
-            />
-            Enable global capture shortcut
-          </label>
-          <p className="form-note">
-            <Badge
-              tone={state.registered ? "green" : s.enabled ? "red" : "neutral"}
-            >
-              {state.registered
-                ? "Registered"
-                : s.enabled
-                  ? "Registration failed"
-                  : "Disabled"}
-            </Badge>
-          </p>
-          {state.shortcutError && (
-            <p className="form-error">{state.shortcutError}</p>
-          )}
+          <ShortcutControls />
           <label className="checkbox-label">
             <input
               type="checkbox"
@@ -148,7 +102,7 @@ export function OcrSettings() {
       <div className="monitor-buttons">
         <button
           className="button primary"
-          disabled={busy || !state.captureAvailable}
+          disabled={busy || state.recording || !state.captureAvailable}
           onClick={() => void capture()}
         >
           <Camera size={15} />

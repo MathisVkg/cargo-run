@@ -1,3 +1,4 @@
+import type { InputPrototype } from "./rawInput";
 import { randomUUID } from "node:crypto";
 import {
   mkdirSync,
@@ -24,6 +25,11 @@ import type {
 export interface ImageLoader {
   (path: string): Promise<{ image: Buffer; width: number; height: number }>;
 }
+import type {
+  ShortcutContext,
+  ShortcutDiagnostics,
+  ShortcutStage,
+} from "../../../src/types/shortcut";
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export class OcrQueue {
   readonly shortcut: CaptureShortcut;
@@ -35,6 +41,9 @@ export class OcrQueue {
   private captureTail: Promise<void> = Promise.resolve();
   private processor: Promise<void> | null = null;
   private closing = false;
+  private recording = false;
+  private recordingLease: ReturnType<typeof setTimeout> | null = null;
+  private shortcutDiagnostics: ShortcutDiagnostics;
   onChange: (state: OcrSnapshot) => void = () => {};
   constructor(
     private repository: CaptureRepository,
@@ -43,20 +52,82 @@ export class OcrQueue {
     api: ShortcutApi,
     readonly directory: string,
     private loadImage: ImageLoader,
+    private inputPrototype?: InputPrototype,
   ) {
     mkdirSync(directory, { recursive: true });
     this.settings = repository.settings();
+    this.shortcutDiagnostics = repository.diagnostics();
     this.shortcut = new CaptureShortcut(api, () => {
-      void this.capture("Shortcut").catch(() => {});
+      if (this.recording || this.closing) return;
+      if (this.inputPrototype) {
+        this.inputPrototype.state.electronInvocations++;
+        this.recordDiagnostic(
+          "BackendInvocation",
+          "Electron callback observed (capture backend: " +
+            this.inputPrototype.state.selected +
+            ").",
+        );
+        if (this.inputPrototype.state.selected !== "Electron") {
+          this.publish();
+          return;
+        }
+      }
+      this.invokeCapture();
     });
+    if (this.inputPrototype) {
+      this.inputPrototype.onChange = (message) => {
+        this.recordDiagnostic("Registration", message);
+        this.publish();
+      };
+      this.inputPrototype.onInvoke = () => {
+        if (this.recording || this.closing) return;
+        this.recordDiagnostic(
+          "BackendInvocation",
+          "Raw Input configured chord observed (capture backend: " +
+            this.inputPrototype!.state.selected +
+            ").",
+        );
+        if (this.inputPrototype!.state.selected === "RawInput")
+          this.invokeCapture("RawInput");
+        else this.publish();
+      };
+    }
+  }
+  private invokeCapture(backend: "Electron" | "RawInput" = "Electron") {
+    this.shortcutDiagnostics.totalInvocations++;
+    this.shortcutDiagnostics.lastInvocationAt = new Date().toISOString();
+    this.recordDiagnostic(
+      "Invocation",
+      backend + " delivered the configured shortcut invocation.",
+      null,
+      null,
+      "Shortcut",
+    );
+    this.publish();
+    void this.capture("Shortcut").catch(() => {});
   }
   snapshot(): OcrSnapshot {
     const captures = this.repository.list();
     return {
       revision: this.revision,
+      recording: this.recording,
+      inputPrototype: this.inputPrototype
+        ? { ...this.inputPrototype.state }
+        : undefined,
+      shortcutInvocations:
+        this.inputPrototype?.state.selected === "RawInput"
+          ? this.inputPrototype.state.rawInvocations
+          : this.shortcut.invocations,
+      shortcutDiagnostics: this.shortcutDiagnostics,
       settings: this.settings,
-      registered: this.shortcut.registered,
-      shortcutError: this.shortcut.error,
+      registered:
+        this.inputPrototype?.state.selected === "RawInput"
+          ? this.inputPrototype.state.status === "Listening"
+          : this.shortcut.registered,
+      shortcutError:
+        this.inputPrototype?.state.selected === "RawInput"
+          ? this.inputPrototype.state.error
+          : this.shortcut.error,
       engine: { name: this.provider.name, ...this.provider.available() },
       captureAvailable: this.backend.available().available,
       captureError: this.nativeError ?? this.backend.available().error,
@@ -109,7 +180,7 @@ export class OcrQueue {
         }
     }
     await this.refreshDisplays();
-    this.shortcut.apply(this.settings);
+    this.registerShortcut();
     this.publish();
     this.kick();
   }
@@ -133,11 +204,14 @@ export class OcrQueue {
       );
     this.repository.saveSettings(next);
     this.settings = next;
-    this.shortcut.apply(next);
+    this.releaseRecording();
+    this.registerShortcut();
     return this.publish();
   }
   async capture(source: "Shortcut" | "Manual"): Promise<OcrSnapshot> {
     if (this.closing) throw Error("Capture service is shutting down.");
+    if (this.recording)
+      throw Error("Finish or cancel shortcut recording before capturing.");
     const records = this.repository.list();
     const reject = async (message: string) => {
       this.lastCapture = {
@@ -145,6 +219,7 @@ export class OcrQueue {
         success: false,
         message,
       };
+      this.recordDiagnostic("CaptureError", message, null, null, source);
       this.publish();
       if (this.settings.sounds)
         await this.backend.feedback(false).catch(() => {});
@@ -200,6 +275,13 @@ export class OcrQueue {
       observation: null,
     };
     this.repository.put(record);
+    this.recordDiagnostic(
+      "CaptureRequested",
+      "Screenshot request accepted into the capture queue.",
+      id,
+      null,
+      source,
+    );
     this.publish();
     this.captureTail = this.captureTail.then(async () => {
       if (this.closing || !this.repository.get(id)) return;
@@ -212,7 +294,11 @@ export class OcrQueue {
         }
         this.repository.put({
           ...current,
-          ...image,
+          displayId: image.displayId,
+          displayLabel: image.displayLabel,
+          width: image.width,
+          height: image.height,
+          bytes: image.bytes,
           status: "Captured",
           error: null,
           screenshot: id + ".png",
@@ -223,6 +309,13 @@ export class OcrQueue {
           message: "Screenshot saved and queued. OCR recognition is separate.",
         };
         this.nativeError = null;
+        this.recordDiagnostic(
+          "CaptureSaved",
+          "Screenshot saved; this is independent from OCR recognition.",
+          id,
+          image.context ?? null,
+          source,
+        );
         this.publish();
         if (settings.sounds) await this.backend.feedback(true).catch(() => {});
         this.kick();
@@ -236,12 +329,153 @@ export class OcrQueue {
         });
         this.lastCapture = { at: record.capturedAt, success: false, message };
         this.nativeError = message;
+        const context =
+          error && typeof error === "object" && "shortcutContext" in error
+            ? ((error as { shortcutContext?: ShortcutContext })
+                .shortcutContext ?? null)
+            : null;
+        this.recordDiagnostic("CaptureError", message, id, context, source);
         this.publish();
         if (settings.sounds && !this.closing)
           await this.backend.feedback(false).catch(() => {});
       }
     });
     return this.snapshot();
+  }
+  private recordDiagnostic(
+    stage: ShortcutStage,
+    message: string,
+    captureId: string | null = null,
+    context: ShortcutContext | null = null,
+    source: "Shortcut" | "Manual" | null = null,
+  ) {
+    if (this.closing) return;
+    if (context) this.shortcutDiagnostics.context = context;
+    this.shortcutDiagnostics.events = [
+      {
+        id: randomUUID(),
+        at: new Date().toISOString(),
+        stage,
+        accelerator: this.settings.accelerator,
+        source,
+        captureId,
+        message,
+        context,
+      },
+      ...this.shortcutDiagnostics.events,
+    ].slice(0, 50);
+    this.repository.saveDiagnostics(this.shortcutDiagnostics);
+  }
+  private registerShortcut() {
+    const prototype = this.inputPrototype;
+    this.shortcut.apply({
+      ...this.settings,
+      enabled:
+        this.settings.enabled &&
+        (!prototype ||
+          prototype.state.selected === "Electron" ||
+          prototype.state.comparison),
+    });
+    if (prototype)
+      prototype.configure({
+        ...this.settings,
+        enabled:
+          this.settings.enabled &&
+          (prototype.state.selected === "RawInput" ||
+            prototype.state.comparison),
+      });
+    this.recordDiagnostic(
+      "Registration",
+      this.inputPrototype?.state.selected === "RawInput" &&
+        !this.inputPrototype.state.comparison
+        ? "Electron backend inactive because Raw Input is explicitly selected. See prototype readiness and invocation counters."
+        : this.settings.enabled
+          ? this.shortcut.registered
+            ? "Registered with Windows through Electron. Callback delivery has not yet been observed for this registration."
+            : (this.shortcut.error ?? "Registration failed.")
+          : "Global capture shortcut disabled.",
+    );
+  }
+  beginShortcutRecording() {
+    if (this.closing) throw Error("Application is shutting down.");
+    this.releaseRecording();
+    this.recording = true;
+    this.shortcut.close();
+    this.inputPrototype?.close();
+    this.recordDiagnostic(
+      "Recording",
+      "Shortcut released while recording; capture is suppressed.",
+    );
+    this.recordingLease = setTimeout(() => {
+      if (!this.closing) this.endShortcutRecording();
+    }, 45000);
+    return this.publish();
+  }
+  private releaseRecording() {
+    if (this.recordingLease) clearTimeout(this.recordingLease);
+    this.recordingLease = null;
+    this.recording = false;
+  }
+  endShortcutRecording() {
+    if (!this.recording) return this.snapshot();
+    this.releaseRecording();
+    if (!this.closing) {
+      this.registerShortcut();
+      this.recordDiagnostic(
+        "Recording",
+        "Recording ended; saved shortcut restored.",
+      );
+    }
+    return this.publish();
+  }
+  async probeShortcut() {
+    if (this.closing) throw Error("Application is shutting down.");
+    try {
+      const context = this.backend.context
+        ? await this.backend.context()
+        : null;
+      this.recordDiagnostic(
+        "Environment",
+        context
+          ? "Read-only Windows foreground/process elevation metadata collected."
+          : "This capture backend does not expose environment diagnostics.",
+        null,
+        context,
+      );
+    } catch (error) {
+      this.recordDiagnostic(
+        "Environment",
+        "Windows metadata query failed: " + String(error),
+      );
+    }
+    return this.publish();
+  }
+  resetShortcutDiagnostics() {
+    this.shortcutDiagnostics = {
+      totalInvocations: 0,
+      lastInvocationAt: null,
+      context: null,
+      events: [],
+    };
+    this.shortcut.resetInvocations();
+    this.inputPrototype?.resetCounts();
+    this.recordDiagnostic(
+      "Registration",
+      "Diagnostics reset. Registration remains " +
+        (this.snapshot().registered ? "registered/listening" : "inactive") +
+        "; now test the binding in the intended foreground application.",
+    );
+    return this.publish();
+  }
+  reparse(id: unknown) {
+    const record = this.record(id);
+    if (!record.result)
+      throw Error("No saved OCR text exists for this capture.");
+    this.repository.put({
+      ...record,
+      observation: extractContract(record.result, record.id, record.capturedAt),
+    });
+    return this.publish();
   }
   private kick() {
     if (this.processor || this.closing) return;
@@ -379,7 +613,9 @@ export class OcrQueue {
   }
   async close() {
     this.closing = true;
+    this.releaseRecording();
     this.shortcut.close();
+    this.inputPrototype?.close();
     await this.backend.close();
     await this.provider.close();
     await this.captureTail.catch(() => {});

@@ -41,6 +41,7 @@ export interface ScanObjective {
   deliveredSCU: Field<number>;
 }
 export interface ContractObservation {
+  parserVersion?: string;
   title: Field<string>;
   company: Field<string>;
   reward: Field<number>;
@@ -82,7 +83,12 @@ export interface CaptureDisplay {
   height: number;
   primary: boolean;
 }
+import type { ShortcutDiagnostics } from "./shortcut";
 export interface OcrSnapshot {
+  inputPrototype?: import("./inputPrototype").InputPrototypeSnapshot;
+  recording: boolean;
+  shortcutInvocations: number;
+  shortcutDiagnostics: ShortcutDiagnostics;
   revision: number;
   settings: CaptureSettings;
   registered: boolean;

@@ -64,13 +64,13 @@ async function navigate(name) {
 async function command(text) {
   fixtureLines.length = 0;
   fixture.stdin.write(text + "\n");
-  await until(
-    () =>
-      fixtureLines.includes(
-        text === "keys" ? "KEYS_SENT" : text === "black" ? "BLACK" : text,
-      ),
-    10000,
-  );
+  await until(() => {
+    if (fixtureLines.includes("NOT_FOCUSED"))
+      throw Error("Synthetic fixture is not focused for " + text);
+    return fixtureLines.includes(
+      text.startsWith("keys") ? "KEYS_SENT" : text === "black" ? "BLACK" : text,
+    );
+  }, 10000);
 }
 async function run() {
   try {
@@ -95,6 +95,27 @@ async function run() {
       true,
       "Default shortcut must be registered for this integration test",
     );
+    await navigate("Settings");
+    await page
+      .getByRole("button", { name: "Record Shortcut", exact: true })
+      .click();
+    await until(async () => (await state()).recording);
+    await page.keyboard.press("F8");
+    await page
+      .getByRole("button", { name: "Save shortcut", exact: true })
+      .click();
+    await until(async () => !(await state()).recording);
+    assert.equal((await state()).settings.accelerator, "F8");
+    assert.equal((await state()).captures.length, 0);
+    await page
+      .getByRole("button", { name: "Record Shortcut", exact: true })
+      .click();
+    await until(async () => (await state()).recording);
+    await page.keyboard.press("Control+Shift+S");
+    await page.keyboard.press("Escape");
+    await until(async () => !(await state()).recording);
+    assert.equal((await state()).settings.accelerator, "F8");
+    assert.equal((await state()).captures.length, 0);
     await app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].minimize(),
     );
@@ -107,8 +128,21 @@ async function run() {
     );
     fixture.stderr.on("data", (b) => console.error(String(b)));
     await until(() => fixtureLines.includes("READY"), 10000);
-    for (let i = 0; i < 3; i++) {
-      await command("keys");
+    for (const [accelerator, keyCommand] of [
+      ["Ctrl+Shift+S", "keys-s"],
+      ["F8", "keys-f8"],
+      ["Ctrl+Shift+F9", "keys"],
+    ]) {
+      await page.evaluate(
+        (settings) => window.cargoRun.ocrConfigure(settings),
+        { ...configured, accelerator },
+      );
+      assert.equal(
+        (await state()).registered,
+        true,
+        accelerator + " registration",
+      );
+      await command(keyCommand);
       await new Promise((r) => setTimeout(r, 200));
     }
     await until(async () => {
@@ -119,6 +153,21 @@ async function run() {
       );
     });
     s = await state();
+    assert.equal(s.shortcutDiagnostics.totalInvocations, 3);
+    assert.equal(
+      s.shortcutDiagnostics.events.filter((e) => e.stage === "Invocation")
+        .length,
+      3,
+    );
+    assert.equal(
+      s.shortcutDiagnostics.events.filter((e) => e.stage === "CaptureSaved")
+        .length,
+      3,
+    );
+    await page.evaluate(() => window.cargoRun.ocrProbeShortcut());
+    const context = (await state()).shortcutDiagnostics.context;
+    assert.match(context.foregroundProcess, /OcrFixture/i);
+    assert.equal(typeof context.appElevated, "boolean");
     assert.equal(
       s.captures.every((c) => c.source === "Shortcut"),
       true,
@@ -191,6 +240,15 @@ async function run() {
       path: "work/ocr-review.png",
       animations: "disabled",
     });
+    const selected = (await state()).captures.find(
+      (c) => c.status === "Processed",
+    );
+    await page.evaluate((id) => window.cargoRun.ocrReparse(id), selected.id);
+    assert.equal(
+      (await state()).captures.find((c) => c.id === selected.id).observation
+        .parserVersion,
+      "0.3.2",
+    );
     const before = (await state()).captures;
     await app.close();
     await launch();
@@ -210,6 +268,7 @@ async function run() {
         exact: true,
       })
       .scrollIntoViewIfNeeded();
+    await page.locator(".shortcut-diagnostics > summary").click();
     await page.screenshot({
       path: "work/ocr-settings.png",
       animations: "disabled",

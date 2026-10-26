@@ -16,12 +16,16 @@ import {
   validateCaptureSettings,
 } from "../electron/main/ocr/shortcut";
 import { ocrFixture } from "./fixtures/ocr";
+import { observedAluminumFixture } from "./fixtures/ocr-observed";
 import type { CaptureBackend } from "../electron/main/ocr/nativeHost";
 import type { OcrProvider } from "../electron/main/ocr/provider";
 const folders: string[] = [],
   queues: OcrQueue[] = [],
   databases: CargoDatabase[] = [];
-function setup(persist?: string) {
+function setup(
+  persist?: string,
+  prototype?: import("../electron/main/ocr/rawInput").InputPrototype,
+) {
   mkdirSync("work", { recursive: true });
   const folder = mkdtempSync(join(resolve("work"), "ocr-unit-"));
   folders.push(folder);
@@ -30,6 +34,8 @@ function setup(persist?: string) {
   const repository = new CaptureRepository(db);
   const order: string[] = [],
     sounds: boolean[] = [];
+  let captureFail = false,
+    handler = () => {};
   let fail = false,
     active = 0,
     overlap = false;
@@ -45,6 +51,7 @@ function setup(persist?: string) {
       },
     ],
     capture: async (id) => {
+      if (captureFail) throw Error("Synthetic capture failure");
       order.push(id);
       writeFileSync(join(folder, id + ".png"), "synthetic");
       writeFileSync(join(folder, id + ".thumb.png"), "synthetic");
@@ -79,7 +86,10 @@ function setup(persist?: string) {
     close: async () => {},
   };
   const api = {
-    register: () => true,
+    register: (_key: string, callback: () => void) => {
+      handler = callback;
+      return true;
+    },
     unregister: () => {},
     isRegistered: () => true,
   };
@@ -93,6 +103,7 @@ function setup(persist?: string) {
       if (!existsSync(path)) throw Error("Missing screenshot");
       return { image: Buffer.from("fixture"), width: 1920, height: 1080 };
     },
+    prototype,
   );
   queues.push(queue);
   return {
@@ -102,6 +113,10 @@ function setup(persist?: string) {
     folder,
     order,
     sounds,
+    fireShortcut: () => handler(),
+    setCaptureFail: (value: boolean) => {
+      captureFail = value;
+    },
     setFail: (value: boolean) => {
       fail = value;
     },
@@ -312,7 +327,7 @@ describe("capture queue and scoped shortcuts", () => {
     expect(() =>
       validateCaptureSettings({
         enabled: true,
-        accelerator: "F9",
+        accelerator: "S",
         sounds: true,
         displayId: "auto",
       }),
@@ -367,5 +382,180 @@ describe("schema compatibility", () => {
       2,
     );
     upgraded.close();
+  });
+});
+
+describe("shortcut lifecycle diagnostics and recording", () => {
+  it("traces actual invocation separately from registration and saved capture", async () => {
+    const s = setup();
+    await s.queue.initialize();
+    expect(s.queue.snapshot().shortcutInvocations).toBe(0);
+    s.fireShortcut();
+    await until(() => s.repository.list()[0]?.status === "Processed");
+    const d = s.queue.snapshot();
+    expect(d.shortcutInvocations).toBe(1);
+    expect(d.shortcutDiagnostics.totalInvocations).toBe(1);
+    for (const stage of [
+      "Registration",
+      "Invocation",
+      "CaptureRequested",
+      "CaptureSaved",
+    ])
+      expect(d.shortcutDiagnostics.events.some((e) => e.stage === stage)).toBe(
+        true,
+      );
+  });
+  it("blocks capture during recording and restores the saved binding on cancellation", async () => {
+    const s = setup();
+    await s.queue.initialize();
+    s.queue.beginShortcutRecording();
+    expect(s.queue.snapshot()).toMatchObject({
+      recording: true,
+      registered: false,
+    });
+    s.fireShortcut();
+    await expect(s.queue.capture("Manual")).rejects.toThrow("recording");
+    expect(s.repository.list()).toEqual([]);
+    expect(s.queue.snapshot().shortcutDiagnostics.totalInvocations).toBe(0);
+    s.queue.endShortcutRecording();
+    expect(s.queue.snapshot()).toMatchObject({
+      recording: false,
+      registered: true,
+    });
+    s.fireShortcut();
+    await until(() => s.repository.list()[0]?.status === "Processed");
+  });
+  it("saves a recorded standalone key without capturing and bounds persistent diagnostics", async () => {
+    const s = setup();
+    await s.queue.initialize();
+    s.queue.beginShortcutRecording();
+    s.queue.configure({ ...s.queue.snapshot().settings, accelerator: "F8" });
+    expect(s.queue.snapshot()).toMatchObject({
+      recording: false,
+      registered: true,
+      settings: { accelerator: "F8" },
+    });
+    expect(s.repository.list()).toEqual([]);
+    for (let i = 0; i < 55; i++) await s.queue.probeShortcut();
+    expect(s.queue.snapshot().shortcutDiagnostics.events).toHaveLength(50);
+    expect(
+      s.db.getSetting<{ events: unknown[] }>("ocr.shortcutDiagnostics")?.events,
+    ).toHaveLength(50);
+    s.queue.resetShortcutDiagnostics();
+    expect(s.queue.snapshot().shortcutDiagnostics.events).toHaveLength(1);
+    expect(s.queue.snapshot().shortcutInvocations).toBe(0);
+  });
+  it("distinguishes a received callback whose screenshot capture fails", async () => {
+    const s = setup();
+    s.setCaptureFail(true);
+    await s.queue.initialize();
+    s.fireShortcut();
+    await until(() => s.repository.list()[0]?.status === "Failed");
+    const events = s.queue.snapshot().shortcutDiagnostics.events;
+    expect(events.some((e) => e.stage === "Invocation")).toBe(true);
+    expect(events.some((e) => e.stage === "CaptureError")).toBe(true);
+    expect(events.some((e) => e.stage === "CaptureSaved")).toBe(false);
+  });
+  it("reparses existing saved OCR without another screenshot or contract changes", async () => {
+    const s = setup();
+    await s.queue.initialize();
+    await s.queue.capture("Manual");
+    await until(() => s.repository.list()[0]?.status === "Processed");
+    const r = s.repository.list()[0];
+    s.repository.put({
+      ...r,
+      result: observedAluminumFixture(),
+      observation: null,
+    });
+    s.queue.reparse(r.id);
+    const fixed = s.repository.get(r.id)!;
+    expect(fixed.observation?.reward.value).toBe(61500);
+    expect(fixed.observation?.objectives).toHaveLength(2);
+    expect(fixed.result).toEqual(observedAluminumFixture());
+    expect(fixed.screenshot).toBe(r.screenshot);
+    expect(fixed.observation?.parserVersion).toBe("0.3.2");
+    expect(fixed.attempts).toBe(r.attempts);
+    expect(s.order).toHaveLength(1);
+    expect(
+      s.db.db.prepare("SELECT COUNT(*) AS n FROM contracts").get()?.n,
+    ).toBe(0);
+  });
+});
+
+describe("development-only backend comparison capture gating", () => {
+  function prototype(
+    selected: "Electron" | "RawInput",
+    comparison = true,
+  ): import("../electron/main/ocr/rawInput").InputPrototype {
+    const p: import("../electron/main/ocr/rawInput").InputPrototype = {
+      state: {
+        selected,
+        comparison,
+        status: "Disabled",
+        error: null,
+        rawInvocations: 0,
+        electronInvocations: 0,
+      },
+      onChange: () => {},
+      onInvoke: () => {},
+      configure(settings) {
+        this.state.status = settings.enabled ? "Listening" : "Disabled";
+        this.onChange("Synthetic readiness");
+      },
+      close() {
+        this.state.status = "Disabled";
+      },
+      resetCounts() {
+        this.state.rawInvocations = 0;
+        this.state.electronInvocations = 0;
+      },
+    };
+    return p;
+  }
+  it("counts both observers but captures only Electron when Electron is selected", async () => {
+    const p = prototype("Electron"),
+      s = setup(undefined, p);
+    await s.queue.initialize();
+    p.state.rawInvocations++;
+    p.onInvoke();
+    expect(s.repository.list()).toHaveLength(0);
+    s.fireShortcut();
+    await until(() => s.repository.list()[0]?.status === "Processed");
+    expect(s.order).toHaveLength(1);
+    expect(p.state.electronInvocations).toBe(1);
+    expect(p.state.rawInvocations).toBe(1);
+  });
+  it("counts both observers but captures only Raw Input when Raw Input is selected", async () => {
+    const p = prototype("RawInput"),
+      s = setup(undefined, p);
+    await s.queue.initialize();
+    s.fireShortcut();
+    expect(s.repository.list()).toHaveLength(0);
+    p.state.rawInvocations++;
+    p.onInvoke();
+    await until(() => s.repository.list()[0]?.status === "Processed");
+    expect(s.order).toHaveLength(1);
+    expect(s.queue.snapshot().shortcutDiagnostics.totalInvocations).toBe(1);
+    expect(s.queue.snapshot().registered).toBe(true);
+    expect(
+      s.queue
+        .snapshot()
+        .shortcutDiagnostics.events.find((e) => e.stage === "Invocation")
+        ?.message,
+    ).toContain("RawInput");
+  });
+  it("pauses both observers and suppresses capture while recording, then restores", async () => {
+    const p = prototype("RawInput"),
+      s = setup(undefined, p);
+    await s.queue.initialize();
+    s.queue.beginShortcutRecording();
+    p.onInvoke();
+    s.fireShortcut();
+    expect(p.state.status).toBe("Disabled");
+    expect(s.repository.list()).toHaveLength(0);
+    s.queue.endShortcutRecording();
+    expect(p.state.status).toBe("Listening");
+    s.queue.resetShortcutDiagnostics();
+    expect(p.state.rawInvocations).toBe(0);
   });
 });

@@ -8,6 +8,7 @@ import { CaptureRepository } from "./repository";
 import { WindowsCaptureHost } from "./nativeHost";
 import { OfflineTesseract } from "./provider";
 import { OcrQueue } from "./queue";
+import { WindowsRawInput } from "./rawInput";
 export function createOcrQueue(database: CargoDatabase) {
   const directory = join(app.getPath("userData"), "captures");
   const resources = app.isPackaged
@@ -21,6 +22,18 @@ export function createOcrQueue(database: CargoDatabase) {
       : file;
   };
   const provider = new OfflineTesseract(local);
+  const prototype =
+    !app.isPackaged &&
+    process.platform === "win32" &&
+    process.env.CARGO_RUN_INPUT_PROTOTYPE === "1"
+      ? new WindowsRawInput(
+          join(resources, "CargoRun.RawInputHost.exe"),
+          process.env.CARGO_RUN_SHORTCUT_BACKEND === "raw-input"
+            ? "RawInput"
+            : "Electron",
+          process.env.CARGO_RUN_SHORTCUT_COMPARE === "1",
+        )
+      : undefined;
   return new OcrQueue(
     new CaptureRepository(database),
     new WindowsCaptureHost(resources, directory),
@@ -56,6 +69,7 @@ export function createOcrQueue(database: CargoDatabase) {
         height: dimensions.height,
       };
     },
+    prototype,
   );
 }
 export function registerCaptureProtocol(queue: OcrQueue) {

@@ -1,4 +1,5 @@
 import type { CaptureSettings } from "../../../src/types/ocr";
+import { normalizeShortcut } from "../../../src/utils/shortcut";
 export interface ShortcutApi {
   register(accelerator: string, callback: () => void): boolean;
   unregister(accelerator: string): void;
@@ -16,44 +17,18 @@ export function validateCaptureSettings(input: unknown): CaptureSettings {
     s.accelerator.length > 80
   )
     throw Error("Invalid OCR settings fields.");
-  const parts = s.accelerator.split("+"),
-    key = parts.pop() ?? "",
-    modifiers = parts.map((p) => p.toLowerCase());
-  if (
-    parts.length < 1 ||
-    parts.length > 3 ||
-    !modifiers.some((p) =>
-      ["ctrl", "control", "commandorcontrol", "alt"].includes(p),
-    ) ||
-    modifiers.some(
-      (p) =>
-        ![
-          "ctrl",
-          "control",
-          "commandorcontrol",
-          "alt",
-          "shift",
-          "super",
-          "meta",
-        ].includes(p),
-    ) ||
-    new Set(modifiers).size !== modifiers.length ||
-    !/^([a-z0-9]|F(?:[1-9]|1\d|2[0-4]))$/i.test(key)
-  )
-    throw Error(
-      "Use Ctrl or Alt plus a letter, digit or F1–F24, optionally with Shift. Example: Ctrl+Shift+F9.",
-    );
   return {
     enabled: s.enabled,
     sounds: s.sounds,
     displayId: s.displayId,
-    accelerator: s.accelerator,
+    accelerator: normalizeShortcut(s.accelerator),
   };
 }
 export class CaptureShortcut {
   private current: string | null = null;
   registered = false;
   error: string | null = null;
+  invocations = 0;
   constructor(
     private api: ShortcutApi,
     private capture: () => void,
@@ -61,20 +36,29 @@ export class CaptureShortcut {
   apply(settings: CaptureSettings) {
     this.close();
     this.error = null;
+    this.invocations = 0;
     if (!settings.enabled) return;
     try {
-      const registered = this.api.register(settings.accelerator, this.capture);
-      if (!registered || !this.api.isRegistered(settings.accelerator)) {
-        if (registered) this.api.unregister(settings.accelerator);
+      const accelerator = normalizeShortcut(settings.accelerator);
+      const registered = this.api.register(accelerator, () => {
+        if (this.current !== accelerator || !this.registered) return;
+        this.invocations++;
+        this.capture();
+      });
+      if (!registered || !this.api.isRegistered(accelerator)) {
+        if (registered) this.api.unregister(accelerator);
         this.error =
-          "Shortcut is unavailable or reserved by another application. Choose another combination or disable the shortcut.";
+          "Shortcut registration failed: the binding is unavailable and may be reserved or owned by another application. Try F8 or Ctrl+Shift+F9; registration alone does not prove game-focused delivery.";
         return;
       }
-      this.current = settings.accelerator;
+      this.current = accelerator;
       this.registered = true;
     } catch (error) {
       this.error = error instanceof Error ? error.message : String(error);
     }
+  }
+  resetInvocations() {
+    this.invocations = 0;
   }
   close() {
     if (this.current) this.api.unregister(this.current);

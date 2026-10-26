@@ -1392,10 +1392,10 @@ nav {
   overflow: auto;
   margin-top: 15px;
 }
-.diagnostic-event {
+:is(.diagnostic-event, .shortcut-event) {
   border-top: 1px solid #343f4d;
 }
-.diagnostic-event summary {
+:is(.diagnostic-event, .shortcut-event) summary {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1405,13 +1405,13 @@ nav {
   font-size: 11px;
   color: #aeb9c7;
 }
-.diagnostic-event summary time {
+:is(.diagnostic-event, .shortcut-event) summary time {
   margin-left: auto;
   font-size: 10px;
   color: #7f8b9b;
   white-space: nowrap;
 }
-.diagnostic-event dl {
+:is(.diagnostic-event, .shortcut-event) dl {
   display: grid;
   grid-template-columns: 110px 1fr;
   font-size: 10px;
@@ -1419,14 +1419,14 @@ nav {
   gap: 7px;
   margin: 0 0 12px;
 }
-.diagnostic-event dt {
+:is(.diagnostic-event, .shortcut-event) dt {
   color: #7f8b9b;
 }
-.diagnostic-event dd {
+:is(.diagnostic-event, .shortcut-event) dd {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.diagnostic-event pre {
+:is(.diagnostic-event, .shortcut-event) pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   padding: 12px;
@@ -1676,4 +1676,45 @@ nav {
     font-size: 9px;
     padding: 5px 6px;
   }
+}
+
+.shortcut-controls > label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 9px;
+}
+.shortcut-diagnostics {
+  margin: 17px 0;
+  border-top: 1px solid #343f4d;
+  padding-top: 14px;
+}
+.shortcut-diagnostics > summary {
+  cursor: pointer;
+  font-size: 11px;
+  color: #c9ad86;
+  margin-bottom: 12px;
+}
+.shortcut-context {
+  display: grid;
+  gap: 6px;
+  font-size: 10px;
+  color: #aab7c7;
+  border: 1px solid #343f4d;
+  border-radius: 4px;
+  padding: 12px;
+  margin-top: 12px;
+}
+.shortcut-controls .notice {
+  margin-top: 12px;
+}
+.shortcut-diagnostics .diagnostic-events {
+  max-height: 260px;
+}
+
+.input-prototype-notice {
+  display: block;
+}
+.input-prototype-notice p {
+  margin: 8px 0 0;
 }
