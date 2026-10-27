@@ -1718,3 +1718,20 @@ nav {
 .input-prototype-notice p {
   margin: 8px 0 0;
 }
+
+.capture-policy-controls label:not(.checkbox-label) {
+  display: block;
+  margin-top: 12px;
+}
+.automatic-request-list {
+  max-height: 220px;
+  overflow: auto;
+}
+.capture-metadata {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+}
+.capture-trigger {
+  display: block;
+  overflow-wrap: anywhere;
+}

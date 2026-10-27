@@ -98,6 +98,9 @@ else
         if (mainWindow && !mainWindow.isDestroyed())
           mainWindow.webContents.send("ocr:state", state);
       };
+      service.onLiveAcceptance = (event) => ocr.automatic.accept(event);
+      service.onMonitoringChange = (running) =>
+        ocr.automatic.setMonitoring(running);
       registerCaptureProtocol(ocr);
       await ocr.initialize();
       service.onChange = (state) => {
@@ -124,6 +127,8 @@ else
         ocr.resetShortcutDiagnostics(),
       );
       register("ocr:reparse", (id) => ocr.reparse(id));
+      register("ocr:policy", (input) => ocr.configurePolicy(input));
+      register("ocr:cleanup", () => ocr.cleanup());
       register("ocr:state", () => ocr.snapshot());
       register("ocr:configure", (settings) => ocr.configure(settings));
       register("ocr:capture", () => ocr.capture("Manual"));

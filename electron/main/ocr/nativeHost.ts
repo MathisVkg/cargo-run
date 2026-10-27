@@ -5,6 +5,9 @@ import { join } from "node:path";
 import type { CaptureDisplay } from "../../../src/types/ocr";
 import type { ShortcutContext } from "../../../src/types/shortcut";
 export interface CapturedImage {
+  backend?: "Window" | "Display";
+  fallback?: boolean;
+  fallbackReason?: string;
   context?: ShortcutContext;
   displayId: string;
   displayLabel: string;
@@ -20,6 +23,10 @@ export interface CaptureBackend {
     id: string,
     displayId: string,
     sounds: boolean,
+    options?: {
+      mode: import("../../../src/types/capturePolicy").CaptureMode;
+      allowDisplayFallback: boolean;
+    },
   ): Promise<CapturedImage>;
   context?(): Promise<ShortcutContext>;
   feedback(success: boolean): Promise<void>;
@@ -28,6 +35,7 @@ export interface CaptureBackend {
 export class WindowsCaptureHost implements CaptureBackend {
   private child: ChildProcessWithoutNullStreams | null = null;
   private sequence = 0;
+  private closed = false;
   private pending = new Map<
     string,
     {
@@ -54,6 +62,7 @@ export class WindowsCaptureHost implements CaptureBackend {
     };
   }
   private start() {
+    if (this.closed) throw Error("Capture service is shutting down.");
     if (this.child) return;
     const capability = this.available();
     if (!capability.available) throw Error(capability.error!);
@@ -93,7 +102,9 @@ export class WindowsCaptureHost implements CaptureBackend {
       }
     });
     const fail = (message: string) => {
-      if (this.child === child) this.child = null;
+      reader.close();
+      if (this.child !== child) return;
+      this.child = null;
       for (const p of this.pending.values()) {
         clearTimeout(p.timer);
         p.reject(Error(message));
@@ -147,6 +158,11 @@ export class WindowsCaptureHost implements CaptureBackend {
       parentPid: process.pid,
     })) as CapturedImage;
   }
+  async windows() {
+    return (await this.request(
+      "game-windows",
+    )) as import("./windowCapture").GameWindow[];
+  }
   async context() {
     return (await this.request("context", {
       parentPid: process.pid,
@@ -156,6 +172,7 @@ export class WindowsCaptureHost implements CaptureBackend {
     await this.request("feedback", { success });
   }
   async close() {
+    this.closed = true;
     const child = this.child;
     this.child = null;
     if (child) {

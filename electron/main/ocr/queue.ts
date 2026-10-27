@@ -1,5 +1,14 @@
 import type { InputPrototype } from "./rawInput";
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
+import {
+  defaultCapturePolicy,
+  validatePolicy,
+  type CapturePolicy,
+  type CaptureTrigger,
+  type CaptureMode,
+} from "../../../src/types/capturePolicy";
+import { AutomaticCapture, type AutoOutcome } from "./automatic";
+import { CaptureRetention, expiration } from "./retention";
 import {
   mkdirSync,
   existsSync,
@@ -33,6 +42,18 @@ import type {
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export class OcrQueue {
   readonly shortcut: CaptureShortcut;
+  readonly automatic: AutomaticCapture;
+  private policy: CapturePolicy;
+  private retention: CaptureRetention;
+  private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+  private settleWaiters = new Map<
+    string,
+    (record: CaptureRecord | null) => void
+  >();
+  private captureGuards = new Map<string, () => boolean>();
+  private shortcutQuietTimer: ReturnType<typeof setTimeout> | null = null;
+  private shortcutLatched = false;
+  private shortcutRepeatBurst = 0;
   private settings;
   private revision = 0;
   private displayList: OcrSnapshot["displays"] = [];
@@ -56,6 +77,17 @@ export class OcrQueue {
   ) {
     mkdirSync(directory, { recursive: true });
     this.settings = repository.settings();
+    this.policy = validatePolicy({
+      ...defaultCapturePolicy,
+      ...repository.database.getSetting<Partial<CapturePolicy>>("ocr.policy"),
+    });
+    this.retention = new CaptureRetention(repository, directory);
+    this.automatic = new AutomaticCapture(
+      repository.database,
+      () => this.policy,
+      (trigger, valid) => this.captureAutomatic(trigger, valid),
+    );
+    this.automatic.onChange = () => this.publish();
     this.shortcutDiagnostics = repository.diagnostics();
     this.shortcut = new CaptureShortcut(api, () => {
       if (this.recording || this.closing) return;
@@ -96,6 +128,29 @@ export class OcrQueue {
   private invokeCapture(backend: "Electron" | "RawInput" = "Electron") {
     this.shortcutDiagnostics.totalInvocations++;
     this.shortcutDiagnostics.lastInvocationAt = new Date().toISOString();
+    if (backend === "Electron") {
+      if (this.shortcutQuietTimer) clearTimeout(this.shortcutQuietTimer);
+      this.shortcutQuietTimer = setTimeout(() => {
+        this.shortcutLatched = false;
+        if (this.shortcutRepeatBurst) {
+          this.recordDiagnostic(
+            "RepeatSuppressed",
+            this.shortcutRepeatBurst +
+              " repeated shortcut callbacks suppressed by the quiet-period guard.",
+            null,
+            null,
+            "Shortcut",
+          );
+          this.shortcutRepeatBurst = 0;
+          this.publish();
+        }
+      }, 1000);
+      if (this.shortcutLatched) {
+        this.shortcutRepeatBurst++;
+        return;
+      }
+      this.shortcutLatched = true;
+    }
     this.recordDiagnostic(
       "Invocation",
       backend + " delivered the configured shortcut invocation.",
@@ -108,7 +163,27 @@ export class OcrQueue {
   }
   snapshot(): OcrSnapshot {
     const captures = this.repository.list();
+    const legacyLast = [...captures]
+      .reverse()
+      .find((c) => c.screenshot && c.width && c.height);
+    const lastSuccessful =
+      this.repository.database.getSetting<OcrSnapshot["lastSuccessful"]>(
+        "ocr.lastSuccessful",
+      ) ??
+      (legacyLast
+        ? {
+            backend: legacyLast.backend ?? "Display",
+            width: legacyLast.width!,
+            height: legacyLast.height!,
+            fallback: legacyLast.fallback ?? false,
+            fallbackReason: legacyLast.fallbackReason,
+          }
+        : undefined);
     return {
+      policy: { ...this.policy },
+      storage: this.retention.usage(),
+      automaticRequests: this.automatic.history().slice(0, 120),
+      lastSuccessful,
       revision: this.revision,
       recording: this.recording,
       inputPrototype: this.inputPrototype
@@ -133,7 +208,10 @@ export class OcrQueue {
       captureError: this.nativeError ?? this.backend.available().error,
       storagePath: this.directory,
       displays: this.displayList,
-      captures,
+      captures: captures.map((c) => ({
+        ...c,
+        expiresAt: expiration(c, this.policy),
+      })),
       queued: captures.filter((c) => c.status === "Captured").length,
       processing: captures.some((c) => c.status === "Processing"),
       lastCapture: this.lastCapture,
@@ -145,6 +223,14 @@ export class OcrQueue {
     this.revision++;
     const state = this.snapshot();
     this.onChange(state);
+    for (const [id, done] of this.settleWaiters) {
+      const record = this.repository.get(id);
+      if (!record || ["Processed", "Failed"].includes(record.status)) {
+        this.settleWaiters.delete(id);
+        this.captureGuards.delete(id);
+        done(record);
+      }
+    }
     return state;
   }
   async initialize() {
@@ -160,25 +246,12 @@ export class OcrQueue {
             : "Capture interrupted before a screenshot was saved. Capture this screen again.",
         });
       }
-    const known = new Set(
-      this.repository
-        .list()
-        .filter((r) => r.screenshot)
-        .map((r) => r.id),
-    );
-    for (const name of readdirSync(this.directory)) {
-      const match = /^([0-9a-f-]{36})(?:\.thumb)?\.png(?:\.tmp)?$/i.exec(name);
-      if (
-        match &&
-        uuid.test(match[1]) &&
-        (!known.has(match[1]) || name.endsWith(".tmp"))
-      )
-        try {
-          unlinkSync(join(this.directory, name));
-        } catch {
-          /* Never remove files outside the owned capture directory. */
-        }
-    }
+    this.automatic.recover();
+    if (this.policy.cleanupEnabled)
+      this.retention.cleanup(this.policy, this.automatic.protectedIds());
+    this.cleanupTimer = setInterval(() => {
+      if (!this.closing && this.policy.cleanupEnabled) this.cleanup();
+    }, 3600000);
     await this.refreshDisplays();
     this.registerShortcut();
     this.publish();
@@ -202,13 +275,52 @@ export class OcrQueue {
       throw Error(
         "Select a connected display or automatic Star Citizen targeting.",
       );
+    if (next.accelerator !== this.settings.accelerator) {
+      this.shortcutLatched = false;
+      this.shortcutRepeatBurst = 0;
+      if (this.shortcutQuietTimer) clearTimeout(this.shortcutQuietTimer);
+    }
     this.repository.saveSettings(next);
     this.settings = next;
     this.releaseRecording();
     this.registerShortcut();
     return this.publish();
   }
-  async capture(source: "Shortcut" | "Manual"): Promise<OcrSnapshot> {
+  configurePolicy(input: unknown) {
+    const previous = this.policy;
+    this.policy = validatePolicy(input);
+    if (
+      [
+        "autoSource",
+        "autoEnabled",
+        "maxAttempts",
+        "delaySeconds",
+        "allowDisplayFallback",
+      ].some(
+        (key) =>
+          previous[key as keyof CapturePolicy] !==
+          this.policy[key as keyof CapturePolicy],
+      )
+    )
+      this.automatic.cancel(
+        "Automatic capture settings changed; pending requests cancelled.",
+      );
+    this.repository.database.setSetting("ocr.policy", this.policy);
+    this.automatic.policyChanged();
+    return this.publish();
+  }
+  cleanup() {
+    this.retention.cleanup(this.policy, this.automatic.protectedIds());
+    return this.publish();
+  }
+  async capture(
+    source: "Shortcut" | "Manual" | "Automatic",
+    extra?: {
+      trigger: CaptureTrigger;
+      mode: CaptureMode;
+      valid: () => boolean;
+    },
+  ): Promise<OcrSnapshot> {
     if (this.closing) throw Error("Capture service is shutting down.");
     if (this.recording)
       throw Error("Finish or cancel shortcut recording before capturing.");
@@ -257,11 +369,19 @@ export class OcrQueue {
         "Screenshot storage is near its 512 MiB limit. Delete captures before continuing.",
       );
     const id = randomUUID(),
-      settings = { ...this.settings };
+      settings = { ...this.settings },
+      policy = { ...this.policy };
     const record: CaptureRecord = {
       id,
       capturedAt: new Date().toISOString(),
+      requestedAt: new Date().toISOString(),
       source,
+      requestedSource: extra?.mode ?? policy.source,
+      backend:
+        (extra?.mode ?? policy.source) === "Display" ? "Display" : "Window",
+      fallback: false,
+      trigger: extra?.trigger,
+      validation: extra ? "Pending" : undefined,
       status: "Captured",
       displayId: null,
       displayLabel: null,
@@ -275,6 +395,7 @@ export class OcrQueue {
       observation: null,
     };
     this.repository.put(record);
+    if (extra) this.captureGuards.set(id, extra.valid);
     this.recordDiagnostic(
       "CaptureRequested",
       "Screenshot request accepted into the capture queue.",
@@ -286,7 +407,26 @@ export class OcrQueue {
     this.captureTail = this.captureTail.then(async () => {
       if (this.closing || !this.repository.get(id)) return;
       try {
-        const image = await this.backend.capture(id, settings.displayId, false);
+        if (extra && !extra.valid())
+          throw Error(
+            "Automatic capture cancelled before the screen was captured.",
+          );
+        const captureStartedAt = new Date().toISOString();
+        const image = await this.backend.capture(
+          id,
+          settings.displayId,
+          false,
+          {
+            mode: extra?.mode ?? policy.source,
+            allowDisplayFallback: policy.allowDisplayFallback,
+          },
+        );
+        if (extra && !extra.valid()) {
+          this.removeFiles(id);
+          throw Error(
+            "Automatic capture cancelled while capture was in progress.",
+          );
+        }
         const current = this.repository.get(id);
         if (!current) {
           this.removeFiles(id);
@@ -294,6 +434,11 @@ export class OcrQueue {
         }
         this.repository.put({
           ...current,
+          capturedAt: captureStartedAt,
+          savedAt: new Date().toISOString(),
+          backend: image.backend ?? "Display",
+          fallback: image.fallback ?? false,
+          fallbackReason: image.fallbackReason,
           displayId: image.displayId,
           displayLabel: image.displayLabel,
           width: image.width,
@@ -303,8 +448,15 @@ export class OcrQueue {
           error: null,
           screenshot: id + ".png",
         });
+        this.repository.database.setSetting("ocr.lastSuccessful", {
+          backend: image.backend ?? "Display",
+          width: image.width,
+          height: image.height,
+          fallback: image.fallback ?? false,
+          fallbackReason: image.fallbackReason,
+        });
         this.lastCapture = {
-          at: current.capturedAt,
+          at: captureStartedAt,
           success: true,
           message: "Screenshot saved and queued. OCR recognition is separate.",
         };
@@ -325,7 +477,26 @@ export class OcrQueue {
         this.repository.put({
           ...this.repository.get(id)!,
           status: "Failed",
+          validation: extra
+            ? extra.valid()
+              ? "Rejected"
+              : "Cancelled"
+            : undefined,
+          validationMessage: extra ? message : undefined,
           error: message,
+          ...(error &&
+          typeof error === "object" &&
+          "fallback" in error &&
+          error.fallback === true
+            ? {
+                backend: "Display" as const,
+                fallback: true,
+                fallbackReason:
+                  "fallbackReason" in error
+                    ? String(error.fallbackReason)
+                    : message,
+              }
+            : {}),
         });
         this.lastCapture = { at: record.capturedAt, success: false, message };
         this.nativeError = message;
@@ -347,7 +518,7 @@ export class OcrQueue {
     message: string,
     captureId: string | null = null,
     context: ShortcutContext | null = null,
-    source: "Shortcut" | "Manual" | null = null,
+    source: "Shortcut" | "Manual" | "Automatic" | null = null,
   ) {
     if (this.closing) return;
     if (context) this.shortcutDiagnostics.context = context;
@@ -451,6 +622,7 @@ export class OcrQueue {
     return this.publish();
   }
   resetShortcutDiagnostics() {
+    this.shortcutRepeatBurst = 0;
     this.shortcutDiagnostics = {
       totalInvocations: 0,
       lastInvocationAt: null,
@@ -507,6 +679,31 @@ export class OcrQueue {
         const { image, width, height } = await this.loadImage(
           this.file(next.id),
         );
+        const imageHash = createHash("sha256").update(image).digest("hex");
+        if (
+          next.source === "Automatic" &&
+          this.repository
+            .list()
+            .some(
+              (c) =>
+                c.id !== next.id && c.imageHash === imageHash && c.screenshot,
+            )
+        ) {
+          this.removeFiles(next.id);
+          this.repository.put({
+            ...next,
+            imageHash,
+            screenshot: null,
+            bytes: 0,
+            status: "Failed",
+            validation: "Duplicate",
+            validationMessage:
+              "Unchanged screenshot skipped; no MissionId association was made.",
+            error: "Unchanged screenshot skipped.",
+          });
+          this.publish();
+          continue;
+        }
         const result = await this.provider.recognize(image, width, height);
         if (this.closing) return;
         if (!this.repository.get(next.id)) continue;
@@ -524,12 +721,70 @@ export class OcrQueue {
           observation.warnings.push(
             "The screenshot contained no recognizable text. This does not mean capture failed.",
           );
+        const signature = createHash("sha256")
+          .update(
+            JSON.stringify([
+              observation.title.value,
+              observation.reward.value,
+              observation.company.value,
+              observation.objectives.map((o) => [
+                o.commodity.value,
+                o.pickup.value,
+                o.destination.value,
+                o.requiredSCU.value,
+                o.deliveredSCU.value,
+              ]),
+            ]),
+          )
+          .digest("hex");
+        let validation: CaptureRecord["validation"],
+          validationMessage: string | undefined;
+        if (next.source === "Automatic") {
+          const valid = this.captureGuards.get(next.id)?.() ?? true;
+          const primary =
+            /PRIMARY[\s:]*OBJECTIVES/i.test(bounded.text) ||
+            (bounded.lines.some((l) => /^PRIMARY:?$/i.test(l.text)) &&
+              bounded.lines.some((l) => /^OBJECTIVES:?$/i.test(l.text)));
+          const recognizable =
+            !!observation.title.value &&
+            !!observation.title.evidence?.box &&
+            primary &&
+            observation.objectives.length > 0;
+          validation = !valid
+            ? "Cancelled"
+            : !recognizable
+              ? "Rejected"
+              : next.trigger?.expectedTitle &&
+                  observation.title.value?.toLowerCase() !==
+                    next.trigger.expectedTitle.toLowerCase()
+                ? "ReviewUnassociated"
+                : "UsableUnassociated";
+          validationMessage =
+            validation === "Cancelled"
+              ? "Automatic request cancelled."
+              : validation === "Rejected"
+                ? "No plausible contract title and Primary Objectives were recognized."
+                : validation === "ReviewUnassociated"
+                  ? "A different contract title is visible. Retained for manual review, unrelated to the candidate trigger until verified."
+                  : "Recognizable contract screen; candidate trigger is unverified and may refer to a different contract.";
+          observation.warnings.push(validationMessage);
+          if (["Rejected", "Duplicate", "Cancelled"].includes(validation))
+            this.removeFiles(next.id);
+        }
+        const rejected =
+          validation &&
+          ["Rejected", "Duplicate", "Cancelled"].includes(validation);
         this.repository.put({
           ...this.repository.get(next.id)!,
-          status: "Processed",
+          imageHash,
+          screenSignature: signature,
+          validation,
+          validationMessage,
+          ...(rejected ? { screenshot: null, bytes: 0 } : {}),
+          status: rejected ? "Failed" : "Processed",
           result: bounded,
           observation,
-          error: null,
+          error: rejected ? validationMessage! : null,
         });
       } catch (error) {
         if (this.closing) return;
@@ -538,11 +793,48 @@ export class OcrQueue {
           this.repository.put({
             ...current,
             status: "Failed",
+            validation:
+              current.source === "Automatic" ? "Rejected" : current.validation,
+            validationMessage:
+              current.source === "Automatic"
+                ? String(error)
+                : current.validationMessage,
             error: error instanceof Error ? error.message : String(error),
           });
       }
       this.publish();
     }
+  }
+  private async captureAutomatic(
+    trigger: CaptureTrigger,
+    valid: () => boolean,
+  ): Promise<AutoOutcome> {
+    const state = await this.capture("Automatic", {
+      trigger,
+      mode: this.policy.autoSource,
+      valid,
+    });
+    const id = state.captures.at(-1)!.id;
+    const record = await new Promise<CaptureRecord | null>((resolve) => {
+      const current = this.repository.get(id);
+      if (!current || ["Processed", "Failed"].includes(current.status))
+        resolve(current);
+      else this.settleWaiters.set(id, resolve);
+    });
+    this.captureGuards.delete(id);
+    return {
+      captureId: id,
+      validation:
+        record?.validation && record.validation !== "Pending"
+          ? record.validation
+          : record
+            ? "Rejected"
+            : "Cancelled",
+      message:
+        record?.validationMessage ??
+        record?.error ??
+        "Capture cancelled or removed.",
+    };
   }
   retry(id: unknown) {
     const record = this.record(id);
@@ -575,6 +867,7 @@ export class OcrQueue {
     return this.publish();
   }
   clear() {
+    this.automatic.cancel("Capture collection cleared by the user.");
     const records = this.repository.list();
     this.repository.clear();
     for (const c of records) this.removeFiles(c.id);
@@ -612,7 +905,17 @@ export class OcrQueue {
       }
   }
   async close() {
+    this.automatic.close();
+    try {
+      this.repository.saveDiagnostics(this.shortcutDiagnostics);
+    } catch {
+      /* Diagnostics must not block resource shutdown. */
+    }
+    if (this.cleanupTimer) clearInterval(this.cleanupTimer);
+    if (this.shortcutQuietTimer) clearTimeout(this.shortcutQuietTimer);
     this.closing = true;
+    for (const done of this.settleWaiters.values()) done(null);
+    this.settleWaiters.clear();
     this.releaseRecording();
     this.shortcut.close();
     this.inputPrototype?.close();

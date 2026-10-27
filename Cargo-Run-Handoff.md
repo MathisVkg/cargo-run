@@ -1,83 +1,127 @@
-# Cargo Run v0.3.2 — Task 03A.1 / 03A.2 handoff
+# Cargo Run v0.3.3 — Task 03A.3 handoff
 
-Implemented in C:\Users\zeyros\Documents\repository\cargo-run. This completes the unfinished Task 03A.1 documentation and adds the optional Task 03A.2 experiment. Existing uncommitted Task 03A.1 work was preserved; backups for edits made in this task are in ignored work/task03a2-backup. No commit or PR was created.
+Implemented in C:\Users\zeyros\Documents\repository\cargo-run. Existing v0.3.2 functionality and Fleet Operations styling are preserved. Source backups for this task are in ignored work/task03a3-backup. No commit, PR, installer or game modification was created.
 
-## Root causes and changes
+## 1. Delivered behavior and defaults
 
-Actual Mobiglas screenshots exposed parser assumptions that the previous representative fixture did not cover. The title is in a header left of the metadata and below the Reward row; the former "title must precede metadata" rule missed it or selected navigation. Reward and value are on the same row but separated by more than the old proximity threshold. Objective checkbox glyphs appear as <>, <$, ¢, &, © and related OCR symbols, preventing anchored Deliver/Collect recognition. These are now handled only in parser working text, with raw evidence preserved. Header/panel regions use normalized coordinates. Wrapped delivery and pickup entries, internal periods in NB Int. Spaceport, imperfect currency glyphs, interleaved pickups and clipped destinations are covered. Existing stacked-header and 18 SCU synthetic cases still pass.
+- Two capture backends: verified Star Citizen window surface through Electron desktopCapturer, and the existing native full-display helper.
+- Source modes: Automatic/prefer window, Window-only, Full Display. Full Display remains the default; display fallback requires explicit permission and Automatic mode.
+- Experimental acceptance capture defaults OFF; delay 3 seconds; maximum 3 total attempts; independent Window-only preference.
+- Repeat guard for Electron callbacks: one initial capture, then a required one-second callback-free interval before rearming. No key-up claim is made.
+- Cleanup defaults ON, retaining unlinked evidence for 7 days; configurable 1/7/14/30 days.
+- Extended Scan Review metadata and preserved Reprocess Saved OCR.
+- No OCR-to-contract creation, merging, reconciliation or verified MissionId association. Existing Game.log contract creation remains unchanged.
 
-The game-specific shortcut failure is still unproven. Electron registration is separated from actual delivery and subsequent capture success/errors. F8/default shortcut delivery was confirmed outside Cargo Run; Ctrl+Shift+S conflicted in that test session. Neither Vulkan nor a privilege mismatch was established as the game failure's cause. Read-only foreground/elevation diagnostics remain available without elevation or game-memory access.
+## 2. Files created and modified
 
-## Files and boundaries
+New application modules:
 
-- electron/main/ocr/parser.ts: actual header layout, same-row metadata, glyph prefixes, pickup association and partial warnings; parser version 0.3.2.
-- resources/native/RawInputHost.cs: isolated hidden message-only window; keyboard RegisterRawInputDevices / RIDEV_INPUTSINK / WM_INPUT. Configured-key/modifier state only, make/break/repeat/layout handling, no hooks/injection/suppression or arbitrary key output.
-- electron/main/ocr/rawInput.ts and src/types/inputPrototype.ts: asynchronous native readiness/error handling, bounded fixed protocol, lifecycle cleanup and per-backend counts.
-- electron/main/ocr/queue.ts and integration.ts: unpackaged opt-in environment gating, explicit capture-backend selection, comparison observers, single-trigger capture routing, pause both observers while recording.
-- src/pages/Settings/ShortcutControls.tsx: keyboard recorder, truthful registration/listening/invocation states, visible prototype controls/status via launch mode, bounded diagnostics and public elevation context.
-- Scan Review: Reprocess saved OCR (existing fixed IPC reparse action). Changes only structured observation; keeps raw result, image, CaptureId, attempts, timestamps and status.
-- tests/fixtures/mobiglas/*.json and tests/ocr-mobiglas.test.ts: five real 4K screenshot-derived OCR exports, normalized-layout tests and explicitly reported-data variants.
-- tests/raw-input.test.ts and extended ocr-queue tests: readiness, timeout, stale output, errors, observer counts, selected-backend-only capture and recorder suppression.
-- tests/ocr-review-desktop.cjs: isolated real saved-OCR review, preview, reprocess, recorder and prototype error UI.
-- scripts/build-raw-input.cjs / npm run native:raw-input: optional helper build only.
-- electron-builder.yml: includes only the existing CaptureHost EXE and sound assets; RawInputHost is excluded. Packaged builds ignore prototype flags.
-- package metadata/UI version is 0.3.2. No new dependencies were added.
+- electron/main/ocr/windowCapture.ts — window selection/quality checks, explicit fallback and saved pixels.
+- electron/main/ocr/automatic.ts — bounded persistent acceptance scheduler and retry/cancellation lifecycle.
+- electron/main/ocr/retention.ts — owned-file usage, expiration and safe cleanup.
+- src/types/capturePolicy.ts — policy, trigger, request and storage types plus runtime validation.
+- src/pages/Settings/CapturePolicyControls.tsx — source, automatic workflow and retention controls.
 
-SQLite schema remains version 2. Contract tables, Game.log processing, manual workflows, Dashboard/Manifest/History, and run finalization are unchanged. No OCR contract creation, reconciliation, deletion, scanning timer or game automation was added. Context isolation/sandbox, disabled renderer Node integration, CSP and sender validation are preserved. Native helper paths/arguments are main-process-owned and are not renderer-supplied.
+Updated application files:
 
-## Genuine OCR results and provenance
+- resources/native/CaptureHost.cs — fixed read-only game-windows operation returning eligible HWND/PID/physical bounds/foreground state for StarCitizen.exe.
+- electron/main/ocr/{nativeHost,integration,queue,repository}.ts — backend composition, serial image queue, validation, image fingerprints, metadata, lifecycle and repeat guard.
+- electron/main/storage/database.ts — schema 3 automatic_captures table; existing payloads preserved.
+- electron/main/trackingService.ts and electron/main/index.ts — post-commit live acceptance callback, monitoring lifecycle and trusted policy/cleanup IPC.
+- electron/preload/index.ts, src/types/{desktop,ocr,shortcut}.ts, src/stores/useOcrStore.ts — typed fixed actions/snapshots.
+- Settings/OcrSettings, ShortcutControls, ScanReview, global styles — controls, truthful diagnostics and candidate metadata.
+- package.json/lockfile, app/navigation/settings version and native manifest — v0.3.3; no new dependencies.
 
-The supplied captures folder contained five original screenshots; the saved OCR table was empty. Original files were read only. The existing offline provider was rerun on 3840×2160 images and contract/navigation line subsets were exported with original boxes/confidences and source image hashes. Full temporary OCR exports remain in ignored work; screenshots were not committed.
+New tests:
 
-| Actual source image                      | Reward | Visible deliveries | Required SCU |
-| ---------------------------------------- | -----: | -----------------: | -----------: |
-| 9ccc7ea4-c6f6-49bc-8bfc-701980e610da.png | 65,250 |                  4 | 25 (7+6+7+5) |
-| 3544f29a-9fd0-49da-b48f-fc619d2c7172.png | 50,250 |                  1 |           11 |
-| 32f3f1ae-895c-4a8c-9e34-7f81d4425ac9.png | 48,500 |                  2 |           13 |
-| 7ab80543-0dd6-4384-9a59-d91586033683.png | 48,500 |                  2 |           13 |
-| c68b9c33-4995-4bdc-af68-e259fa1e048e.png | 48,500 |                  2 |           13 |
+- tests/window-capture.test.ts, automatic-capture.test.ts, capture-retention.test.ts.
+- tests/window-desktop.cjs and tests/native/{WindowCaptureHarness,WindowSurfaceFixture}.cjs.
+- tests/automatic-desktop.cjs.
 
-All five now yield correct visible title, company, reward, delivery quantities and Port Tressler pickups. The 65,250 image has Pressurized Ice and Processed Food to Rayari Cantwell/McGrath Research Outposts on Clio. The actual screenshot shows 25 SCU, not 18; the parser does not force a reported total over visible evidence.
+Extended existing queue, tracking and desktop bridge assertions. README and this handoff document current behavior and limits. Test profiles, native binaries, screenshots and architectural reference downloads remain ignored.
 
-The original 61,500 / 8 SCU image was absent. Reported title Rookie Rank - Extra Small Cargo Haul, Covalex Independent Contractors, reward 61,500, two Aluminum deliveries (5 and 3), Port Tressler, Greycat Stanton IV Production Complex-A and NB Int. Spaceport on microTech are covered by representative reported-data fixtures using real header/panel geometry. The 65,250 / 18 SCU variant is tested separately with edited quantities explicitly marked as such and confidence cleared for edited lines. The original synthetic four-objective / two-commodity / 18 SCU case remains. These are not misrepresented as original exports.
+## 3. Capture backend architecture
 
-OCR errors such as S4DCO0S/S4DCO05 are kept as read, not silently "corrected." One destination ending "on" is marked Ambiguous with a clipping warning. Selected tab highlight color is unavailable from OCR text; both labels stay Ambiguous. All observations remain potentially incomplete due to scroll visibility.
+The existing helper still captures physical displays using GDI. Window discovery uses public limited process queries and visible, non-minimized top-level windows at least 640×360. It verifies the executable basename StarCitizen.exe; launcher/helper titles alone cannot qualify.
 
-## Executed verification
+The window backend selects a unique foreground eligible game window, otherwise requires one eligible window. It matches the HWND to an external-process Electron source ID, excludes Cargo Run's own process, and rechecks HWND/PID/process after enumeration. Multiple ambiguous surfaces fail rather than guessing the largest title match.
+
+Window thumbnails are requested at the physical target bounds. The returned pixels are inspected: empty, black/blank, below minimum size or below 85% of expected dimensions are rejected. No low-resolution image is upscaled. Metadata records actual saved width/height. Source enumeration has a 10-second timeout; a still-pending query is not stacked with another window query. Shutdown cannot restart the native helper through a delayed capture operation.
+
+Window-only never falls back. Automatic can fall back only when the user enabled full-display fallback. The selected display remains explicit, and failures retain both window and display reasons if necessary. Used/attempted backend, fallback flag/reason, dimensions and last saved source are visible/persisted.
+
+Desktop verification returned 3840×2084 from a window on the primary 3840×2160 display. A visible magenta overlap was excluded from the saved target surface. The test uses a real separate-process window source with injected synthetic identity metadata only; it does not establish production StarCitizen.exe discovery or Vulkan compatibility.
+
+SuperCargo's capture.ts, OCR orchestration and main trigger flow were reviewed for architectural understanding. No code, assets or interface were copied. Unlike silent source substitution or title-only selection, this implementation uses verified metadata and explicit fallback.
+
+## 4. Automatic capture behavior
+
+A capture observer runs only after the existing ledger/checkpoint transaction commits. It receives only first committed Live acceptance events while monitoring is running. A conservative title check requires cargo/haul/hauling/freight; unsupported names are ignored rather than guessed. Imports and duplicate MissionId notifications do not produce fresh requests. Observer failures cannot roll back contracts or stop monitoring.
+
+The scheduler stores request state in its own table: Pending, Running, Completed, Failed, Skipped or Expired. Limits are 20 pending/running, one in flight, 100 terminal-history rows and a two-minute deadline. Delay is 1–10 seconds; maximum total attempts is 1–5. The existing capture tail serializes actual screenshot work with manual/shortcut requests; the OCR worker remains serial and offline.
+
+Each attempt creates an independent CaptureId with candidate trigger metadata: MissionId, log event time, configured delay, attempt and explicit Unverified association. Queue request, capture-start and save timestamps are separate. A scheduled capture may run later than its nominal delay.
+
+OCR must find a plausible title region plus Primary Objectives/delivery rows before an automatic image is usable. Options/home/unrelated screens are rejected; their images are removed while bounded diagnostics remain. A recognizable different title is retained as ReviewUnassociated. Even a matching title never verifies identity or links a mission. Raw OCR/evidence remain available for valid observations, and Reprocess changes only structured extraction.
+
+An unchanged normalized image fingerprint suppresses duplicate automatic evidence. Changed screenshots with identical OCR fields remain separate: a text match is not proof of mission identity. Duplicate requests stop retrying; capture failures/rejected screens retry within configured attempts/deadline. No retained screenshot is automatically assigned to several missions.
+
+Stopping/replacing the monitored log, errors, disabling/changing automatic configuration or shutdown cancel pending work. Graceful shutdown records cancellation; startup expires interrupted pending/running requests instead of replaying screenshots against a later screen. Already saved OCR work can recover independently. Manual deletion/clear does not cause an automatic observation to resurrect.
+
+## 5. Shortcut-repeat solution
+
+Electron globalShortcut exposes callbacks without key-up events. Cargo Run uses a trailing one-second quiet-period guard: every repeat extends the latch, and only the first callback invokes capture. Actual callback totals remain truthful; repeats are coalesced into a RepeatSuppressed diagnostic after the burst, with the existing 50-event bound.
+
+This is a cooldown fallback, not a physical pressed/released state machine. Quick separate presses within the interval can be ignored. An unusually long OS initial-repeat delay can permit an extra capture. Hardware held-key behavior and Star Citizen-focused delivery were not verified in this task.
+
+The recorder and configurable standalone function keys remain. Changing the binding rearms the guard. The optional Raw Input backend/comparison mode is preserved and remains experimental/off by default; its prior physical-key failure was not repaired or claimed resolved. No hooks, input interception or arbitrary key logging were introduced.
+
+## 6. Retention implementation
+
+Unlinked evidence expires after 7 days by default, with 1/7/14/30-day controls. Automatic cleanup runs at startup and hourly; disabling it suppresses those cleanup passes. Manual expired cleanup still works. Settings reports owned-file bytes, capture count, last cleanup result and bounded errors; Clear Captures remains available.
+
+Captured/Processing records and active-request evidence are protected. Expired PNGs, thumbnails, temporary files and capture metadata are removed on a best-effort basis. Missing files are harmless. A partial file-deletion failure retains metadata so later cleanup can retry. Old orphan files in the owned UUID namespace use file modification age and the same unlinked policy. Unrelated filenames, filesystem links/non-files and paths outside the owned captures directory are not deleted.
+
+A future-only evidenceLink model protects active linked evidence and expires closed evidence 30 days after completion/abandonment. No operation in this version creates an association or infers one from candidate trigger metadata. Contracts, mission events, runs and History are unaffected by cleanup or manual screenshot deletion.
+
+Schema 3 adds only automatic_captures. Existing capture JSON/image references stay readable with optional new metadata; tests cover v1/v2 migration preservation. Policy is separate from the existing shortcut/display settings.
+
+## 7. Automated verification
 
 - npm run typecheck: passed.
 - npm run lint: passed.
-- npm test: 101 tests passed across 10 files.
-- npm run native:raw-input: C# x64 prototype compilation passed.
-- npm run build: passed including native capture helper, TypeScript, main/preload/renderer. Initial rebuild was file-locked until the user closed Cargo Run.
-- Existing Windows manual-contract/security/navigation suite: passed.
-- Existing Windows SQLite/Game.log streaming/restart suite: passed.
-- Actual OS shortcut test using the computer-use skill and a separate synthetic Electron Windows process: Cargo Run remained minimized/unfocused. F8 and Ctrl+Shift+F9 each caused one delivered Electron callback, successful screenshot save and completed offline OCR. Ctrl+Shift+S initially could not register while another Cargo Run instance was open; no game-failure conclusion was drawn from it. After that instance closed, the retained WinForms capture/OCR harness passed for Ctrl+Shift+S, F8 and Ctrl+Shift+F9: three 3840×2160 queued images, offline OCR/evidence, four synthetic objectives, black-frame rejection, preview, restart persistence, disable/clear and zero contract creation.
-- Saved real OCR UI test: passed. Structured Reprocess retained raw result and attempt count, screenshot preview loaded, F8 Save and Escape cancellation caused no captures, both Raw Input Error handling and final Listening readiness were observed without automatic backend switching, contract count remained zero.
-- Dependency audit: zero vulnerabilities.
+- npm test: 138 passed across 13 files, including every existing real/synthetic OCR parsing regression.
+- npm run build: passed, including Windows helper compilation and main/preload/renderer.
+- Dependency audit: zero vulnerabilities; no new dependencies.
 
-## Blocked / not performed
+Coverage includes correct/incorrect/ambiguous/missing window sources, self-exclusion, blank/black/reduced images, actual resolution, explicit fallback and double failure, stalled source queries, shutdown, delays, bounded retries/overflow, duplicates, stale/recovered requests, stopped monitoring, invalid/unrelated screens, independent changed observations, callback bursts, policy validation, retention enable/disable/startup/hourly behavior, protected/missing/locked/orphan evidence, usage and migration preservation. Log tests verify the observer runs after commit and cannot roll back existing contract creation.
 
-Earlier RawInputHost builds were blocked by Windows Code Integrity event 3077 (spawn UNKNOWN). Error handling was verified without weakening policy or attempting a bypass. The final build successfully registered RIDEV_INPUTSINK and reached Listening. In an actual foreground-app comparison using an automated F8 press, Electron counted 1 and RawInput counted 0. The user then confirmed physical F8 testing in the same separate test window: Electron's cumulative count rose to 8, RawInput stayed 0 and no capture occurred with RawInput selected. The observer did not become a fallback capture trigger. **Raw Input is unreliable in this tested setup; registration alone did not establish a working native shortcut.** The receive/match failure is not isolated further. Electron remains the production default; the prototype stays optional/off and is excluded from packaged builds. Native repeats/layout/non-consuming gameplay behavior has not been runtime-confirmed. The WinForms capture/OCR harness was initially blocked but passed on its final rerun; no Windows security setting was changed.
+## 8. Windows desktop verification
 
-No actual Star Citizen-focused shortcut test was performed. The real screenshots supplied OCR evidence only. The physical-key normal-app test did not produce a Raw Input match, so this experiment must not be treated as a functional replacement. Raw Input compatibility with Star Citizen, its Vulkan path or anti-cheat cannot be inferred from implementation or normal-app Electron success. Installer packaging/signing and subjective sound audibility remain outside verified scope.
+Passed:
 
-## Launch and in-game verification
+- Existing manual-contract/security/navigation/manifest/history/window-control suite.
+- Existing SQLite/Game.log suite, including repeated restarts, duplicates, rotation/recovery and run snapshots.
+- Actual separate-process Electron window-source test: 3840×2084 pixels, visible overlap excluded, actual dimensions recorded, no upscaling or display fallback. Identity metadata is injected for this normal-app test only.
+- End-to-end synthetic Live Game.log acceptance → committed ledger → delayed native display capture → offline OCR. A duplicate notification did not duplicate requests; three distinct requests serialized, one unrelated-title observation was retained unassociated, two unchanged images were skipped, stop cancelled pending work, and expired cleanup removed evidence without changing four log-created contracts. Capture source/fallback settings and the Settings selector were verified after an actual application restart.
+- Saved real OCR Reprocess/preview and recorder Save/Escape workflow in an isolated profile, with zero OCR-created contracts.
 
-Follow README's full test procedure. Quick launch:
+The standalone all-in-one shortcut/OCR desktop harness failed to launch its compiled WinForms fixture (spawn UNKNOWN). Windows Code Integrity event 3077 identified that specific test executable as blocked. No security controls were changed or bypassed. The automatic desktop test independently exercised the same native full-display capture/OCR path using its isolated synthetic fixture.
 
-```powershell
-npm run native:raw-input
-$env:CARGO_RUN_INPUT_PROTOTYPE = "1"
-$env:CARGO_RUN_SHORTCUT_BACKEND = "electron"
-$env:CARGO_RUN_SHORTCUT_COMPARE = "1"
-npm run dev
-```
+No actual Star Citizen window/gameplay/Vulkan capture or in-game automatic recognition was performed. The actual game-focused shortcut issue remains unresolved. Installer signing/packaging and subjective sound audibility remain unverified.
 
-Normal packaged/default startup continues to use Electron only. For a pure Raw Input trial, stop the development process, set backend to "raw-input" and comparison to "0", then relaunch. Raw Input Starting is not Listening, and Listening is not proof of delivery. Error means do not proceed as though registration succeeded. A blocked helper is a limitation to report; do not disable security controls.
+## 9. Exact real Star Citizen test
 
-Close other Cargo Run instances to avoid chord conflicts. Choose F8, reset diagnostics, release all keys and test one physical press/release in a normal app. If the selected backend's count stays at zero, stop that backend's trial and use Electron/manual capture. Only after normal-app delivery succeeds, reset and repeat with Star Citizen focused on a contract in the already-working borderless capture configuration. Return to inspect backend invocation counts followed by CaptureRequested/Saved/Error. Repeat separately for Electron and Raw Input. Raw Input only observes the chord; choose an unused gameplay binding because the game still receives it. A held target key should cause one invocation until release/repress. After layout/device changes, release all keys. AltGr is intentionally unsupported.
+1. Keep acceptance capture off. In Settings select Full Display and the game monitor. Capture visible Mobiglas contract details manually; inspect screenshot, resolution and OCR.
+2. Select Star Citizen Window, keep the game in borderless mode and capture with Cargo Run unfocused. Verify the game render surface, correct actual dimensions, no black frame and no overlapping Cargo Run UI. A failure must remain visible.
+3. Test Automatic with fallback disabled. Then explicitly enable fallback if desired and confirm used backend, dimensions and window-failure reason. Window-only must never substitute a display.
+4. Test the chosen shortcut in a normal app first, then in the game. Hold several seconds, release, wait over a second and press again. Inspect callbacks versus CaptureRequested/Saved and RepeatSuppressed; do not call the quiet-period fallback reliable physical key-up handling.
+5. Start live monitoring. Enable acceptance capture with delay 3, attempts 3 and Window source. Accept one new hauling mission, keep the desired details visible, wait for OCR and inspect request/capture metadata. Candidate MissionId must remain Unverified.
+6. Accept another mission and switch the visible details before capture. Confirm that differing content is retained for manual review without association or OCR contract changes. Test several rapid acceptances, duplicate notifications and an unchanged screen.
+7. Test Options/home/unrelated screens, minimized/unavailable windows, black frames and explicit fallback failure. Check bounded attempts/expiry. Stop monitoring during a pending delay and verify cancellation.
+8. Restart during pending work and verify it is cancelled/expired rather than replayed. Check settings and existing captures after migration. Review storage/expiry controls and cleanup; contract/run/history rows must remain unchanged.
+9. Turn the experiment off when finished. Use Electron/manual full-display capture if window capture or input delivery is unreliable. Do not weaken Windows or anti-cheat protections to force a test.
 
-Optional comparison mode registers both observers but only the selected backend captures. Electron still reserves its chord in comparison mode, so assess Raw Input's non-consuming behavior in Raw Input-only mode. If one backend receives zero callbacks, report that exact condition alongside registration/listening state and foreground/elevation data. Do not call it a screenshot failure unless an Invocation was followed by CaptureError. Manual Capture now remains the practical fallback. End the experiment by stopping the app and removing the three prototype environment variables or selecting Electron again.
+## 10. Phase 3B boundary
 
-Use Scan Review → Reprocess saved OCR on actual retained results to inspect parser changes without another screenshot or OCR pass. No OCR observation is converted into a contract. Future Phase 3B remains unstarted.
+The app now has reliable trigger provenance, source/fallback/resolution/validation metadata and a prepared retention model. These are observations and candidate triggers only. Verified associations, OCR-to-contract persistence, automatic merging, mission identity inference and reconciliation remain unimplemented. No timed continuous scanning, game navigation, keyboard/mouse automation, memory access, injection, anti-cheat bypass or cloud OCR was added.

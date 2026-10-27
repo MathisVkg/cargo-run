@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import {
   mkdtempSync,
   mkdirSync,
@@ -36,6 +36,8 @@ function setup(
     sounds: boolean[] = [];
   let captureFail = false,
     handler = () => {};
+  let frame = "fixture";
+  let recognition = ocrFixture(true);
   let fail = false,
     active = 0,
     overlap = false;
@@ -78,7 +80,7 @@ function setup(
       try {
         await new Promise((r) => setTimeout(r, 15));
         if (fail) throw Error("Synthetic OCR failure");
-        return ocrFixture(true);
+        return recognition;
       } finally {
         active--;
       }
@@ -101,7 +103,7 @@ function setup(
     folder,
     async (path) => {
       if (!existsSync(path)) throw Error("Missing screenshot");
-      return { image: Buffer.from("fixture"), width: 1920, height: 1080 };
+      return { image: Buffer.from(frame), width: 1920, height: 1080 };
     },
     prototype,
   );
@@ -114,6 +116,12 @@ function setup(
     order,
     sounds,
     fireShortcut: () => handler(),
+    setFrame: (value: string) => {
+      frame = value;
+    },
+    setRecognition: (result: import("../src/types/ocr").OcrResult) => {
+      recognition = result;
+    },
     setCaptureFail: (value: boolean) => {
       captureFail = value;
     },
@@ -379,7 +387,7 @@ describe("schema compatibility", () => {
     ).toContain("Preserved legacy cargo");
     expect(new CaptureRepository(upgraded).list()).toEqual([]);
     expect(upgraded.db.prepare("PRAGMA user_version").get()?.user_version).toBe(
-      2,
+      3,
     );
     upgraded.close();
   });
@@ -558,4 +566,216 @@ describe("development-only backend comparison capture gating", () => {
     s.queue.resetShortcutDiagnostics();
     expect(p.state.rawInvocations).toBe(0);
   });
+});
+
+describe("automatic OCR validation and shortcut flood protection", () => {
+  it("keeps a different visible contract unassociated and skips unchanged subsequent images", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      await s.queue.initialize();
+      s.queue.configurePolicy({
+        ...s.queue.snapshot().policy,
+        autoEnabled: true,
+        delaySeconds: 1,
+        maxAttempts: 1,
+        autoSource: "Display",
+      });
+      s.queue.automatic.setMonitoring(true);
+      const make = (n: number) => ({
+        id: "auto-" + n,
+        kind: "Accepted" as const,
+        missionId: "00000000-0000-4000-8000-" + String(n).padStart(12, "0"),
+        objectiveId: null,
+        timestamp: new Date().toISOString(),
+        receivedAt: new Date().toISOString(),
+        title: "Different Cargo Haul",
+      });
+      s.queue.automatic.accept(make(1));
+      await vi.advanceTimersByTimeAsync(1100);
+      const first = s.repository.list()[0];
+      expect(first.validation).toBe("ReviewUnassociated");
+      expect(first.trigger?.association).toBe("Unverified");
+      expect(first.observation).not.toHaveProperty("missionId");
+      expect(first.screenshot).not.toBeNull();
+      expect(
+        first.observation?.warnings.some((w) =>
+          w.includes("different contract"),
+        ),
+      ).toBe(true);
+      s.queue.automatic.accept(make(2));
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(s.repository.list()[1].validation).toBe("Duplicate");
+      expect(s.repository.list()[1].screenshot).toBeNull();
+      expect(s.queue.automatic.history()[0].status).toBe("Skipped");
+      expect(
+        s.db.db.prepare("SELECT COUNT(*) AS n FROM contracts").get()?.n,
+      ).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("rejects an Options/home screen without retaining its screenshot", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      await s.queue.initialize();
+      const empty = ocrFixture();
+      empty.text = "OPTIONS";
+      empty.lines = [];
+      s.setRecognition(empty);
+      s.queue.configurePolicy({
+        ...s.queue.snapshot().policy,
+        autoEnabled: true,
+        delaySeconds: 1,
+        maxAttempts: 1,
+        autoSource: "Display",
+      });
+      s.queue.automatic.setMonitoring(true);
+      s.queue.automatic.accept({
+        id: "bad",
+        kind: "Accepted",
+        missionId: "00000000-0000-4000-8000-000000000001",
+        objectiveId: null,
+        timestamp: new Date().toISOString(),
+        receivedAt: new Date().toISOString(),
+        title: "Cargo Haul",
+      });
+      await vi.advanceTimersByTimeAsync(1100);
+      expect(s.repository.list()[0]).toMatchObject({
+        validation: "Rejected",
+        status: "Failed",
+        screenshot: null,
+        bytes: 0,
+      });
+      expect(s.queue.automatic.history()[0].status).toBe("Failed");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("suppresses sustained repeated callbacks until one second of quiet, then allows another capture", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      await s.queue.initialize();
+      for (let n = 0; n < 10; n++) s.fireShortcut();
+      await vi.advanceTimersByTimeAsync(500);
+      s.fireShortcut();
+      await vi.advanceTimersByTimeAsync(600);
+      s.fireShortcut();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(s.order).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(1001);
+      s.fireShortcut();
+      await vi.advanceTimersByTimeAsync(50);
+      expect(s.order).toHaveLength(2);
+      expect(s.queue.snapshot().shortcutDiagnostics.totalInvocations).toBe(13);
+      expect(
+        s.queue
+          .snapshot()
+          .shortcutDiagnostics.events.some(
+            (e) => e.stage === "RepeatSuppressed",
+          ),
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("startup and periodic screenshot retention", () => {
+  function seed(s: ReturnType<typeof setup>) {
+    const id = randomUUID(),
+      record = {
+        id,
+        capturedAt: new Date(Date.now() - 8 * 86400000).toISOString(),
+        source: "Manual" as const,
+        status: "Processed" as const,
+        displayId: null,
+        displayLabel: null,
+        screenshot: id + ".png",
+        width: 10,
+        height: 10,
+        bytes: 3,
+        attempts: 1,
+        error: null,
+        result: null,
+        observation: null,
+      };
+    s.repository.put(record);
+    writeFileSync(join(s.folder, record.screenshot), "old");
+    return record;
+  }
+  it("honors cleanup disabled at startup and during operation, but permits explicit cleanup", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup();
+      s.queue.configurePolicy({
+        ...s.queue.snapshot().policy,
+        cleanupEnabled: false,
+      });
+      const c = seed(s);
+      await s.queue.initialize();
+      expect(s.repository.get(c.id)).not.toBeNull();
+      await vi.advanceTimersByTimeAsync(3600001);
+      expect(s.repository.get(c.id)).not.toBeNull();
+      s.queue.cleanup();
+      expect(s.repository.get(c.id)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("cleans expired records at startup and once per hour", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup(),
+        first = seed(s);
+      await s.queue.initialize();
+      expect(s.repository.get(first.id)).toBeNull();
+      const later = seed(s);
+      await vi.advanceTimersByTimeAsync(3600001);
+      expect(s.repository.get(later.id)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+it("retains changed screenshots with identical contract text as independent unassociated observations", async () => {
+  vi.useFakeTimers();
+  try {
+    const s = setup();
+    await s.queue.initialize();
+    s.queue.configurePolicy({
+      ...s.queue.snapshot().policy,
+      autoEnabled: true,
+      delaySeconds: 1,
+      maxAttempts: 1,
+      autoSource: "Display",
+    });
+    s.queue.automatic.setMonitoring(true);
+    const event = (n: number) => ({
+      id: "similar-" + n,
+      kind: "Accepted" as const,
+      missionId: "00000000-0000-4000-8000-" + String(n).padStart(12, "0"),
+      objectiveId: null,
+      timestamp: new Date().toISOString(),
+      receivedAt: new Date().toISOString(),
+      title: "Cargo Haul",
+    });
+    s.queue.automatic.accept(event(1));
+    await vi.advanceTimersByTimeAsync(1100);
+    s.setFrame("changed pixels, same recognized contract fields");
+    s.queue.automatic.accept(event(2));
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(s.repository.list().filter((c) => c.screenshot)).toHaveLength(2);
+    expect(
+      s.queue.automatic.history().every((r) => r.status === "Completed"),
+    ).toBe(true);
+    expect(
+      s.repository.list().every((c) => c.trigger?.association === "Unverified"),
+    ).toBe(true);
+  } finally {
+    vi.useRealTimers();
+  }
 });

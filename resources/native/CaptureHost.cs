@@ -55,6 +55,18 @@ class CaptureHost {
     return new {inspectedAt=DateTime.UtcNow.ToString("o"),foregroundProcess=name,foregroundPid=pid==0?(uint?)null:pid,appElevated=Elevated(appPid),foregroundElevated=pid==0?(bool?)null:Elevated(pid),gameElevated=gameElevation,gameVisible=visible};
   }
 
+  [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr window,out RECT rect);
+  [DllImport("user32.dll")] static extern bool IsIconic(IntPtr window);
+  static object[] GameWindows() {
+    var windows=new List<object>();IntPtr foreground=GetForegroundWindow();
+    EnumWindows(delegate(IntPtr window,IntPtr data){
+      if(IsWindowVisible(window)&&!IsIconic(window)&&IsGame(window)){
+        RECT r;uint pid;GetWindowThreadProcessId(window,out pid);
+        if(GetWindowRect(window,out r)&&r.Right-r.Left>=640&&r.Bottom-r.Top>=360)
+          windows.Add(new{handle=window.ToInt64().ToString(System.Globalization.CultureInfo.InvariantCulture),pid=pid,width=r.Right-r.Left,height=r.Bottom-r.Top,foreground=window==foreground,process="StarCitizen.exe"});
+      }return true;
+    },IntPtr.Zero);return windows.ToArray();
+  }
   static object Capture(Dictionary<string,object> input,object context) {
     Guid id;if(!Guid.TryParse(Convert.ToString(input["captureId"]),out id))throw new Exception("Invalid CaptureId.");
     string selected=Convert.ToString(input["displayId"]);
@@ -100,6 +112,7 @@ class CaptureHost {
       try {
         request=json.Deserialize<Dictionary<string,object>>(line);requestId=Convert.ToString(request["id"]);string op=Convert.ToString(request["op"]);object result;
         if(op=="displays")result=Displays();
+        else if(op=="game-windows")result=GameWindows();
         else if(op=="capture"){context=Context(ParentPid(request));result=Capture(request,context);}
         else if(op=="context")result=Context(ParentPid(request));
         else if(op=="feedback"){Feedback(request.ContainsKey("success")&&Convert.ToBoolean(request["success"]));result=new{played=true};}

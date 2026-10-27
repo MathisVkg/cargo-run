@@ -57,7 +57,30 @@ export interface ContractObservation {
 export interface CaptureRecord {
   id: string;
   capturedAt: string;
-  source: "Shortcut" | "Manual";
+  requestedAt?: string;
+  savedAt?: string;
+  source: "Shortcut" | "Manual" | "Automatic";
+  requestedSource?: import("./capturePolicy").CaptureMode;
+  backend?: "Window" | "Display";
+  fallback?: boolean;
+  fallbackReason?: string;
+  trigger?: import("./capturePolicy").CaptureTrigger;
+  validation?:
+    | "Pending"
+    | "UsableUnassociated"
+    | "ReviewUnassociated"
+    | "Rejected"
+    | "Duplicate"
+    | "Cancelled";
+  validationMessage?: string;
+  imageHash?: string;
+  screenSignature?: string;
+  expiresAt?: string | null;
+  evidenceLink?: {
+    contractId: string;
+    status: "Active" | "Completed" | "Abandoned";
+    closedAt: string | null;
+  };
   status: CaptureStatus;
   displayId: string | null;
   displayLabel: string | null;
@@ -85,6 +108,16 @@ export interface CaptureDisplay {
 }
 import type { ShortcutDiagnostics } from "./shortcut";
 export interface OcrSnapshot {
+  lastSuccessful?: {
+    backend: "Window" | "Display";
+    width: number;
+    height: number;
+    fallback: boolean;
+    fallbackReason?: string;
+  };
+  policy: import("./capturePolicy").CapturePolicy;
+  storage: import("./capturePolicy").CaptureStorage;
+  automaticRequests: import("./capturePolicy").AutoRequest[];
   inputPrototype?: import("./inputPrototype").InputPrototypeSnapshot;
   recording: boolean;
   shortcutInvocations: number;

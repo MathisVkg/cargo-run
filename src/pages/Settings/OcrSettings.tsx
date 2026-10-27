@@ -4,6 +4,7 @@ import { useOcrStore } from "../../stores/useOcrStore";
 import { useCargoStore } from "../../stores/useCargoStore";
 import { Badge } from "../../components/ui";
 import { Overlay } from "../../components/ui/Overlay";
+import { CapturePolicyControls } from "./CapturePolicyControls";
 import { ShortcutControls } from "./ShortcutControls";
 export function OcrSettings() {
   const { state, error, busy, configure, capture, clear, displays } =
@@ -56,6 +57,8 @@ export function OcrSettings() {
           </p>
         </div>
         <div>
+          <CapturePolicyControls />
+          <div className="setting-divider" />
           <label htmlFor="capture-display">Capture display</label>
           <select
             id="capture-display"
@@ -106,7 +109,7 @@ export function OcrSettings() {
           onClick={() => void capture()}
         >
           <Camera size={15} />
-          Capture selected display
+          Capture now
         </button>
         <button className="button" onClick={() => setPage("Scan Review")}>
           <ScanLine size={15} />

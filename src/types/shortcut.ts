@@ -11,6 +11,7 @@ export type ShortcutStage =
   | "BackendInvocation"
   | "Registration"
   | "Invocation"
+  | "RepeatSuppressed"
   | "CaptureRequested"
   | "CaptureSaved"
   | "CaptureError"
@@ -21,7 +22,7 @@ export interface ShortcutDiagnostic {
   at: string;
   stage: ShortcutStage;
   accelerator: string;
-  source: "Shortcut" | "Manual" | null;
+  source: "Shortcut" | "Manual" | "Automatic" | null;
   captureId: string | null;
   message: string;
   context: ShortcutContext | null;

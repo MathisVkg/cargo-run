@@ -83,7 +83,7 @@ export default function ScanReview() {
           onClick={() => void capture()}
         >
           <Camera size={15} />
-          Capture display
+          Capture now
         </button>
       </PageHeader>
       <div className="notice scan-notice">
@@ -106,7 +106,7 @@ export default function ScanReview() {
         <section className="panel">
           <EmptyState
             title="No captures yet"
-            description="Focus a contract in Star Citizen and press the registered shortcut. Or choose a display in Settings for a desktop test."
+            description="Focus a contract in Star Citizen and press the registered shortcut. Choose a capture source in Settings; use Full Display with an explicit monitor for a desktop test."
           />
         </section>
       ) : (
@@ -136,14 +136,20 @@ export default function ScanReview() {
                   <small>{date(c.capturedAt)}</small>
                   <Badge
                     tone={
-                      c.status === "Failed"
-                        ? "red"
-                        : c.status === "Processed"
-                          ? "green"
-                          : "amber"
+                      c.validation === "Duplicate" ||
+                      c.validation === "Cancelled"
+                        ? "neutral"
+                        : c.status === "Failed"
+                          ? "red"
+                          : c.status === "Processed"
+                            ? "green"
+                            : "amber"
                     }
                   >
-                    {c.status}
+                    {c.validation === "Duplicate" ||
+                    c.validation === "Cancelled"
+                      ? "Skipped"
+                      : c.status}
                   </Badge>
                 </span>
               </button>
@@ -194,6 +200,51 @@ export default function ScanReview() {
                         Delete capture
                       </button>
                     </div>
+                  </div>
+                  <div className="capture-metadata">
+                    <p>
+                      Origin:{" "}
+                      {selected.source === "Automatic"
+                        ? "Automatic Game.log trigger"
+                        : selected.source === "Shortcut"
+                          ? "Global shortcut"
+                          : "Manual button"}{" "}
+                      · Capture method: {selected.backend ?? "Display (legacy)"}{" "}
+                      · {selected.width ?? "—"} × {selected.height ?? "—"}
+                      {selected.fallback ? " · Full-display fallback used" : ""}
+                    </p>
+                    {selected.fallbackReason && (
+                      <p className="notice warning">
+                        {selected.fallbackReason}
+                      </p>
+                    )}
+                    {selected.trigger && (
+                      <div className="notice warning capture-trigger">
+                        <strong>
+                          Unverified trigger candidate · not a contract
+                          association
+                        </strong>
+                        <p>MissionId: {selected.trigger.candidateMissionId}</p>
+                        <p>
+                          {selected.trigger.eventType} ·{" "}
+                          {date(selected.trigger.eventAt)} ·{" "}
+                          {selected.trigger.delaySeconds}s configured delay ·
+                          capture attempt {selected.trigger.attempt}
+                        </p>
+                        <p>
+                          Validation: {selected.validation ?? "Pending"} ·{" "}
+                          {selected.validationMessage ??
+                            "The captured contract may differ from the trigger."}
+                        </p>
+                      </div>
+                    )}
+                    <p className="form-note">
+                      Screenshot expiry:{" "}
+                      {selected.expiresAt
+                        ? date(selected.expiresAt)
+                        : "Protected or unavailable"}
+                      .
+                    </p>
                   </div>
                   {selected.screenshot && !imageError ? (
                     <button

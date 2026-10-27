@@ -24,7 +24,7 @@ export class CargoDatabase {
     const version = Number(
       (this.db.prepare("PRAGMA user_version").get() as Row).user_version,
     );
-    if (version > 2) {
+    if (version > 3) {
       this.db.close();
       throw new Error(
         "This database was created by a newer Cargo Run version. No data was changed.",
@@ -52,6 +52,12 @@ export class CargoDatabase {
       this.transaction(() => {
         this.db.exec(
           "CREATE TABLE ocr_captures (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, payload TEXT NOT NULL); PRAGMA user_version=2;",
+        );
+      });
+    if (version < 3)
+      this.transaction(() => {
+        this.db.exec(
+          "CREATE TABLE IF NOT EXISTS automatic_captures (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, mission_id TEXT NOT NULL UNIQUE, payload TEXT NOT NULL); PRAGMA user_version=3;",
         );
       });
   }

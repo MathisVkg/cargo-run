@@ -63,6 +63,10 @@ export class TrackingService {
   private polling: Promise<void> | null = null;
   private running = false;
   private config;
+  onLiveAcceptance: (
+    event: import("../../src/types/tracking").MissionEvent,
+  ) => void = () => {};
+  onMonitoringChange: (running: boolean) => void = () => {};
   onChange: (snapshot: AppSnapshot) => void = () => {};
   constructor(databasePath: string) {
     this.database = new CargoDatabase(databasePath);
@@ -201,6 +205,7 @@ export class TrackingService {
     this.config = { ...this.config, enabled: true };
     this.database.setSetting("monitor", this.config);
     this.running = true;
+    this.notifyMonitoring(true);
     await this.tick();
     this.schedule();
     return this.snapshot();
@@ -216,8 +221,16 @@ export class TrackingService {
   async resume(): Promise<void> {
     if (this.config.enabled) await this.start();
   }
+  private notifyMonitoring(active: boolean) {
+    try {
+      this.onMonitoringChange(active);
+    } catch {
+      /* Capture observers cannot stop log tracking. */
+    }
+  }
   private async halt(): Promise<void> {
     this.running = false;
+    this.notifyMonitoring(false);
     if (this.timer) clearTimeout(this.timer);
     this.timer = null;
     if (this.polling) await this.polling;
@@ -245,6 +258,7 @@ export class TrackingService {
           previous,
           !previous,
         );
+        this.notifyMonitoring(this.running);
         if (
           !previous ||
           JSON.stringify(previous) !== JSON.stringify(result.checkpoint) ||
@@ -268,6 +282,7 @@ export class TrackingService {
         if (!result.hasMore) break;
       }
     } catch (e) {
+      this.notifyMonitoring(false);
       const message =
         e instanceof Error ? e.message : "Could not read Game.log.";
       if (this.status !== "ERROR" || this.error !== message) {
@@ -284,6 +299,7 @@ export class TrackingService {
   ): void {
     const before = this.store.getState();
     let changed = false;
+    const accepted: import("../../src/types/tracking").MissionEvent[] = [];
     try {
       this.database.transaction(() => {
         for (const line of lines) {
@@ -298,7 +314,16 @@ export class TrackingService {
             continue;
           }
           const event = parsed.event;
+          const firstAcceptance =
+            event.kind === "Accepted" &&
+            !this.database.db
+              .prepare(
+                "SELECT id FROM mission_events WHERE mission_id=? AND kind='Accepted' LIMIT 1",
+              )
+              .get(event.missionId);
           if (!this.database.recordEvent(event, context)) continue;
+          if (firstAcceptance && source.mode === "Live" && this.running)
+            accepted.push(event);
           changed = true;
           const apply = (pending: typeof event) => {
             const result = applyMissionEvent(
@@ -341,6 +366,13 @@ export class TrackingService {
       throw e;
     }
     if (changed) this.publish();
+    for (const event of accepted) {
+      try {
+        this.onLiveAcceptance(event);
+      } catch {
+        /* Capture observers cannot roll back committed log events. */
+      }
+    }
   }
   async importHistory(): Promise<AppSnapshot> {
     this.ensureRealMode();

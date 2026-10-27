@@ -1,4 +1,11 @@
-import { app, globalShortcut, nativeImage, protocol, net } from "electron";
+import {
+  app,
+  globalShortcut,
+  nativeImage,
+  protocol,
+  net,
+  desktopCapturer,
+} from "electron";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { readFile, stat } from "node:fs/promises";
@@ -8,6 +15,7 @@ import { CaptureRepository } from "./repository";
 import { WindowsCaptureHost } from "./nativeHost";
 import { OfflineTesseract } from "./provider";
 import { OcrQueue } from "./queue";
+import { WindowCaptureBackend } from "./windowCapture";
 import { WindowsRawInput } from "./rawInput";
 export function createOcrQueue(database: CargoDatabase) {
   const directory = join(app.getPath("userData"), "captures");
@@ -34,9 +42,23 @@ export function createOcrQueue(database: CargoDatabase) {
           process.env.CARGO_RUN_SHORTCUT_COMPARE === "1",
         )
       : undefined;
+  const displayBackend = new WindowsCaptureHost(resources, directory);
+  const backend = new WindowCaptureBackend(
+    displayBackend,
+    {
+      windows: () => displayBackend.windows(),
+      sources: (size) =>
+        desktopCapturer.getSources({
+          types: ["window"],
+          thumbnailSize: size,
+          fetchWindowIcons: false,
+        }),
+    },
+    directory,
+  );
   return new OcrQueue(
     new CaptureRepository(database),
-    new WindowsCaptureHost(resources, directory),
+    backend,
     provider,
     globalShortcut,
     directory,

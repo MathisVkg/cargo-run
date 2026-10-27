@@ -7,7 +7,7 @@ export const defaultCaptureSettings: CaptureSettings = {
   displayId: "auto",
 };
 export class CaptureRepository {
-  constructor(private database: CargoDatabase) {}
+  constructor(readonly database: CargoDatabase) {}
   diagnostics(): import("../../../src/types/shortcut").ShortcutDiagnostics {
     return (
       this.database.getSetting<

@@ -402,3 +402,82 @@ describe("monitoring edge cases", () => {
     expect(s.snapshot().contracts.map((c) => c.missionId)).toEqual([missionB]);
   });
 });
+
+describe("committed live acceptance observer", () => {
+  it("publishes only first live acceptance after commit, never imports or duplicates", async () => {
+    const folder = directory(),
+      file = join(folder, "Game.log");
+    writeFileSync(file, "");
+    const s = service();
+    await s.setLogPath(file);
+    const seen: string[] = [],
+      monitoring: boolean[] = [];
+    s.onMonitoringChange = (active) => monitoring.push(active);
+    s.onLiveAcceptance = (event) => {
+      expect(
+        s.database.db
+          .prepare("SELECT id FROM mission_events WHERE id=?")
+          .get(event.id),
+      ).toBeDefined();
+      seen.push(event.missionId);
+    };
+    await s.start();
+    const source = {
+      path: file,
+      generation: "test",
+      offset: 0,
+      mode: "Live" as const,
+    };
+    s.processLines([{ text: accepted(), offset: 0 }], source);
+    s.processLines(
+      [
+        {
+          text: notification(
+            "Contract Accepted: Rookie Cargo Haul",
+            missionA,
+            undefined,
+            "2026-10-27T12:00:00Z",
+          ),
+          offset: 100,
+        },
+      ],
+      source,
+    );
+    s.processLines(
+      [
+        {
+          text: notification("Contract Accepted: Cargo Haul", missionB),
+          offset: 200,
+        },
+      ],
+      { ...source, mode: "Import" },
+    );
+    expect(seen).toEqual([missionA]);
+    expect(s.snapshot().contracts).toHaveLength(2);
+    await s.stop();
+    expect(monitoring).toContain(true);
+    expect(monitoring.at(-1)).toBe(false);
+  });
+  it("does not roll back log contracts when the capture observer fails", async () => {
+    const folder = directory(),
+      file = join(folder, "Game.log");
+    writeFileSync(file, "");
+    const s = service();
+    await s.setLogPath(file);
+    s.onMonitoringChange = () => {
+      throw Error("Capture observer unavailable");
+    };
+    await s.start();
+    s.onLiveAcceptance = () => {
+      throw Error("Capture failed");
+    };
+    s.processLines([{ text: accepted(), offset: 0 }], {
+      path: file,
+      generation: "test",
+      offset: 0,
+      mode: "Live",
+    });
+    expect(s.snapshot().contracts[0].missionId).toBe(missionA);
+    await s.stop();
+  });
+});
