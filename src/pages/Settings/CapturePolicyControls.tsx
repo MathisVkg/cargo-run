@@ -81,8 +81,8 @@ export function CapturePolicyControls({
           </label>
           <p className="form-note">
             A delayed screenshot may show a different contract. MissionIds are
-            unverified trigger candidates; saving always requires review and
-            confirmation.
+            unverified trigger candidates. Safe accepted scans import
+            automatically; ambiguous scans wait for your choice.
           </p>
           <label htmlFor="auto-delay">Capture delay</label>
           <select

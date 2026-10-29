@@ -85,7 +85,7 @@ let app;
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
       .getByRole("navigation")
-      .getByRole("button", { name: /^Scan Review/ })
+      .getByRole("button", { name: /^Scan History/ })
       .click();
     await page
       .getByRole("button", { name: "Reprocess saved OCR", exact: true })
@@ -98,7 +98,7 @@ let app;
       .waitFor();
     if (record.screenshot)
       await page
-        .locator(".screenshot-preview img")
+        .locator(".scan-history-thumb img")
         .evaluate((img) => img.decode());
     await page.screenshot({
       path: "work/ocr-review-v032.png",
@@ -172,7 +172,7 @@ let app;
     assert.deepEqual(state.captures[0].result, record.result);
     assert.equal(
       (await page.evaluate(() => window.cargoRun.getState())).contracts.length,
-      0,
+      1,
     );
     assert.deepEqual(errors, []);
     fs.writeFileSync(
@@ -185,14 +185,14 @@ let app;
           quantities: [7, 6, 7, 5],
           rawEvidenceUnchanged: true,
           recorderSaveCancel: true,
-          contracts: 0,
+          contracts: 1,
         },
         null,
         2,
       ),
     );
     console.log(
-      "PASS saved actual 4K OCR Reprocess, raw evidence/attempts preserved, protected screenshot preview, recorder F8 save/Escape cancellation/no capture, prototype status visible, no contract creation. Raw Input status: " +
+      "PASS saved actual 4K OCR Reprocess, raw evidence/attempts preserved, protected screenshot preview, recorder F8 save/Escape cancellation/no capture, prototype status visible, automatic contract creation. Raw Input status: " +
         state.inputPrototype.status +
         ".",
     );

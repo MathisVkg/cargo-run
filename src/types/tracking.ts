@@ -31,6 +31,7 @@ export interface TrackingInfo {
   importing: boolean;
   error: string | null;
   lastEventAt: string | null;
+  pendingMissions?: number;
   accepted: number;
   objectives: number;
   completed: number;

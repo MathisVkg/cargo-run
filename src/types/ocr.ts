@@ -41,6 +41,7 @@ export interface ScanObjective {
   deliveredSCU: Field<number>;
 }
 export interface ContractObservation {
+  coverage?: { state: "Established" | "Partial"; reason: string };
   parserVersion?: string;
   title: Field<string>;
   company: Field<string>;
@@ -55,6 +56,7 @@ export interface ContractObservation {
   acceptanceTimestamp: null;
 }
 export interface CaptureRecord {
+  importResult?: import("./review").ScanOutcome;
   id: string;
   capturedAt: string;
   requestedAt?: string;

@@ -387,7 +387,7 @@ describe("schema compatibility", () => {
     ).toContain("Preserved legacy cargo");
     expect(new CaptureRepository(upgraded).list()).toEqual([]);
     expect(upgraded.db.prepare("PRAGMA user_version").get()?.user_version).toBe(
-      4,
+      5,
     );
     upgraded.close();
   });
@@ -481,7 +481,7 @@ describe("shortcut lifecycle diagnostics and recording", () => {
     expect(fixed.observation?.objectives).toHaveLength(2);
     expect(fixed.result).toEqual(observedAluminumFixture());
     expect(fixed.screenshot).toBe(r.screenshot);
-    expect(fixed.observation?.parserVersion).toBe("0.4.0");
+    expect(fixed.observation?.parserVersion).toBe("0.4.1");
     expect(fixed.attempts).toBe(r.attempts);
     expect(s.order).toHaveLength(1);
     expect(

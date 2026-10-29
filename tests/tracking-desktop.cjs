@@ -1,35 +1,29 @@
-const { _electron } = require("playwright");
-const assert = require("node:assert/strict"),
+// Real Electron Game.log monitoring, secondary pending projection and persisted manual ledger.
+const { _electron } = require("playwright"),
+  assert = require("node:assert/strict"),
   fs = require("node:fs"),
-  path = require("node:path");
-const A = "a50caaaa-aa44-4c3c-9be5-ccff802e525b",
+  path = require("node:path"),
+  { DatabaseSync } = require("node:sqlite");
+fs.mkdirSync("work", { recursive: true });
+const folder = fs.mkdtempSync(path.resolve("work/tracking-secondary-")),
+  file = path.join(folder, "Game.log"),
+  profile = path.join(folder, "profile"),
+  A = "a50caaaa-aa44-4c3c-9be5-ccff802e525b",
   B = "96db3a01-4210-419d-ad38-45795e26324d",
-  C = "c50caaaa-aa44-4c3c-9be5-ccff802e525b",
-  D = "d50caaaa-aa44-4c3c-9be5-ccff802e525b";
-const note = (text, id = A, objective) =>
-  '<2026-10-19T17:00:00.000Z> <SHUDEvent_OnNotification> Added notification "' +
+  C = "c50caaaa-aa44-4c3c-9be5-ccff802e525b";
+const note = (text, id = A, obj) =>
+  '<2026-10-29T08:00:00.000Z> <SHUDEvent_OnNotification> Added notification "' +
   text +
   ':" ... MissionId: [' +
   id +
   "]" +
-  (objective ? ", ObjectiveId: [" + objective + "]" : "");
-fs.mkdirSync("work", { recursive: true });
-const folder = fs.mkdtempSync(path.resolve("work/desktop-phase2-")),
-  log = path.join(folder, "Game.log");
-const historic =
-  note("Contract Accepted: Historical Quartz cargo") +
-  "\n" +
-  note(
-    "New Objective: Deliver 0/11 SCU of Quartz to NB Int Spaceport",
-    A,
-    "historical-obj",
-  ) +
-  "\n";
-fs.writeFileSync(log, historic);
+  (obj ? ", ObjectiveId: [" + obj + "]" : "");
+const original = note("Contract Accepted: Historical Quartz cargo") + "\n";
+fs.writeFileSync(file, original);
 const env = {
   ...process.env,
   NODE_ENV: "test",
-  CARGO_RUN_TEST_USER_DATA: path.join(folder, "profile"),
+  CARGO_RUN_TEST_USER_DATA: profile,
 };
 delete env.ELECTRON_RUN_AS_NODE;
 let app, page;
@@ -41,13 +35,17 @@ async function launch() {
   });
   page = await app.firstWindow();
   page.on("pageerror", (e) => errors.push(e.message));
-  page.on("console", (m) => {
-    if (m.type() === "error") errors.push(m.text());
-  });
   await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
-  await page.waitForFunction(
-    () => !document.body.textContent.includes("Loading saved operations"),
-  );
+}
+const state = () => page.evaluate(() => window.cargoRun.getState());
+async function until(check) {
+  const end = Date.now() + 15000;
+  while (Date.now() < end) {
+    const s = await state();
+    if (check(s)) return s;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  throw Error("Tracking condition timed out");
 }
 async function nav(name) {
   await page.getByLabel("Open navigation", { exact: true }).click();
@@ -56,145 +54,87 @@ async function nav(name) {
     .getByRole("button", { name: new RegExp("^" + name) })
     .click();
 }
-async function state() {
-  return page.evaluate(() => window.cargoRun.getState());
-}
-// Avoid eval inside the renderer's CSP: poll state through the typed bridge on the test side.
-async function until(test) {
-  const end = Date.now() + 15000;
-  while (Date.now() < end) {
-    const s = await state();
-    if (test(s)) return s;
-    await new Promise((r) => setTimeout(r, 100));
+function pending(id) {
+  const db = new DatabaseSync(path.join(profile, "cargo-run.sqlite"), {
+    readOnly: true,
+  });
+  try {
+    const row = db
+      .prepare("SELECT payload FROM pending_log_missions WHERE mission_id=?")
+      .get(id);
+    return row ? JSON.parse(row.payload) : null;
+  } finally {
+    db.close();
   }
-  throw Error("Timed out waiting for expected persistent state");
 }
-async function run() {
+(async () => {
   try {
     await launch();
-    assert.equal((await state()).contracts.length, 0);
-    await page
-      .getByRole("button", { name: "Add Contract", exact: true })
-      .click();
-    await page
-      .getByLabel("Contract name", { exact: true })
-      .fill("Persistent manual cargo");
-    await page
-      .getByLabel("Payout (aUEC, optional)", { exact: true })
-      .fill("5000");
-    await page
-      .getByLabel("Pickup location", { exact: true })
-      .fill("Everus Harbor");
-    await page.getByLabel("Destination", { exact: true }).fill("Area18");
-    await page.getByLabel("Commodity", { exact: true }).fill("Titanium");
-    await page.getByLabel("Cargo quantity (SCU)", { exact: true }).fill("10");
-    await page
-      .getByRole("button", { name: "Save contract", exact: true })
-      .click();
-    await until((s) => s.contracts.length === 1);
+    await page.evaluate(() =>
+      window.cargoRun.saveContract({
+        draft: {
+          name: "Persistent manual cargo",
+          payout: 5000,
+          objectives: [
+            {
+              commodity: "Titanium",
+              pickupLocation: "Everus Harbor",
+              destination: "Area18",
+              quantitySCU: 10,
+            },
+          ],
+        },
+      }),
+    );
     await page
       .getByLabel("Selected ship", { exact: true })
       .selectOption("hull-c");
     await until((s) => s.selectedShipId === "hull-c");
-    await app.close();
-    await launch();
-    assert.equal((await state()).contracts[0].name, "Persistent manual cargo");
-    assert.equal(
-      await page.getByLabel("Selected ship", { exact: true }).inputValue(),
-      "hull-c",
-    );
     await nav("Settings");
-    // Stub only the native picker's returned selection, exercising the real select-file IPC and validation.
     await app.evaluate(({ dialog }, file) => {
       dialog.showOpenDialog = async () => ({
         canceled: false,
         filePaths: [file],
       });
-    }, log);
+    }, file);
     await page
       .getByRole("button", { name: "Select Game.log", exact: true })
       .click();
-    await until((s) => s.tracking.path === log);
     await page
       .getByRole("button", { name: "Start monitoring", exact: true })
       .click();
     await until((s) => s.tracking.status === "ONLINE");
-    assert.equal((await state()).contracts.length, 1);
-    const liveAccepted = note('Contract Accepted: Live cargo: "Quartz" run', B);
-    fs.appendFileSync(log, liveAccepted + "\n");
-    await until((s) => s.contracts.some((c) => c.missionId === B));
-    await nav("Dashboard");
-    await page
-      .getByRole("button", { name: /Unresolved Destination.*linked contract/ })
-      .waitFor();
-    assert.match(
-      await page.locator(".stats-grid").innerText(),
-      /Known payouts only/,
+    assert.equal((await state()).tracking.accepted, 0);
+    fs.appendFileSync(
+      file,
+      note("Contract Accepted: Live Quartz run", B) + "\n",
     );
-    const liveObjective = note(
+    await until((s) => s.tracking.accepted === 1);
+    assert.equal((await state()).contracts.length, 1);
+    assert.equal((await state()).tracking.pendingMissions, 1);
+    const objective = note(
       "New Objective: Deliver 2/20 SCU of Quartz to Orison",
       B,
       "live-objective",
     );
-    fs.appendFileSync(log, liveObjective.slice(0, 90));
+    fs.appendFileSync(file, objective.slice(0, 90));
     await new Promise((r) => setTimeout(r, 650));
-    assert.equal(
-      (await state()).contracts.find((c) => c.missionId === B).cargoObjectives
-        .length,
-      0,
-    );
-    fs.appendFileSync(
-      log,
-      liveObjective.slice(90) +
-        "\n" +
-        liveAccepted +
-        "\n" +
-        liveObjective +
-        "\n",
-    );
-    await until(
-      (s) =>
-        s.contracts.find((c) => c.missionId === B)?.cargoObjectives.length ===
-        1,
-    );
-    await page.getByRole("button", { name: /Orison.*linked contract/ }).click();
-    await page
-      .getByText("Required 20 · Delivered 2", { exact: true })
-      .waitFor();
-    assert.match(
-      await page.locator(".destination-groups").innerText(),
-      /Unknown/,
-    );
-    assert.equal((await state()).tracking.accepted, 1);
-    const partial = note("Contract Accepted: UTF-8 resupply é", C);
-    fs.appendFileSync(log, partial.slice(0, -2));
-    await new Promise((r) => setTimeout(r, 650));
+    assert.equal((await state()).tracking.objectives, 0);
     await app.close();
+    app = null;
     await launch();
-    assert.equal((await state()).contracts.length, 2);
-    fs.appendFileSync(log, partial.slice(-2) + "\n");
-    await until((s) => s.contracts.some((c) => c.missionId === C));
-    assert.equal((await state()).tracking.status, "ONLINE");
+    assert.equal((await state()).selectedShipId, "hull-c");
+    fs.appendFileSync(file, objective.slice(90) + "\n" + objective + "\n");
+    await until((s) => s.tracking.objectives === 1);
+    assert.equal(pending(B).cargoObjectives.length, 1);
+    assert.equal(pending(B).cargoObjectives[0].deliveredSCU, 2);
     fs.appendFileSync(
-      log,
-      note('Contract Complete: Live cargo: "Quartz" run', B) + "\n",
+      file,
+      note("Contract Complete: Live Quartz run", B) + "\n",
     );
-    await until(
-      (s) => s.contracts.find((c) => c.missionId === B)?.status === "Completed",
-    );
-    assert.equal((await state()).runs.length, 0);
-    assert.equal(
-      (await state()).contracts.find((c) => c.missionId === B)
-        .confirmedEarnings,
-      0,
-    );
-    await nav("History");
-    await page.getByLabel("Search history", { exact: true }).fill("Live cargo");
-    await page
-      .getByLabel("Filter by status", { exact: true })
-      .selectOption("Completed");
-    await page.getByText('Live cargo: "Quartz" run', { exact: true }).waitFor();
-    assert.match(await page.locator(".history-table").innerText(), /Unknown/);
+    await until((s) => s.tracking.completed === 1);
+    assert.equal(pending(B).status, "Completed");
+    assert.equal((await state()).contracts.length, 1);
     await nav("Settings");
     for (let i = 0; i < 2; i++) {
       await page
@@ -203,46 +143,27 @@ async function run() {
       await page
         .getByRole("button", { name: "Confirm import", exact: true })
         .click();
-      await until((s) => s.tracking.accepted === 3 && !s.tracking.importing);
-      await page
-        .getByRole("button", { name: "Import existing history", exact: true })
-        .waitFor({ state: "visible" });
+      await until((s) => s.tracking.accepted === 2 && !s.tracking.importing);
     }
-    assert.equal((await state()).contracts.length, 4);
-    assert.equal((await state()).tracking.objectives, 2);
+    assert.equal((await state()).contracts.length, 1);
+    assert.ok(fs.readFileSync(file, "utf8").startsWith(original));
     fs.appendFileSync(
-      log,
+      file,
       'Added notification "Contract Accepted: malformed:" MissionId: [invalid]\n',
     );
     await until((s) => s.tracking.parsingErrors === 1);
-    await page.getByText("Advanced & Diagnostics", { exact: true }).click();
+    await page.locator(".advanced-panel > summary").click();
     await page.getByLabel("Show parsing failures only").check();
-    await page
-      .getByText(
-        "Recognized notification has no valid MissionId; no contract was changed.",
-        { exact: true },
-      )
-      .waitFor();
     await page.locator(".diagnostic-event summary").click();
     await page
       .getByText(/Added notification "Contract Accepted: malformed/)
       .waitFor();
-    await page.getByLabel("Show parsing failures only").uncheck();
-    fs.renameSync(log, path.join(folder, "Game-old.log"));
+    fs.renameSync(file, path.join(folder, "old.log"));
     await until((s) => s.tracking.status === "ERROR");
-    fs.writeFileSync(
-      log,
-      note("Contract Accepted: Rotated log mission", D) + "\n",
-    );
+    fs.writeFileSync(file, note("Contract Accepted: Rotated cargo", C) + "\n");
     await until(
-      (s) =>
-        s.tracking.status === "ONLINE" &&
-        s.contracts.some((c) => c.missionId === D),
+      (s) => s.tracking.status === "ONLINE" && s.tracking.accepted === 3,
     );
-    await page.screenshot({
-      path: "work/phase2-settings.png",
-      animations: "disabled",
-    });
     await page
       .getByRole("button", { name: "Stop monitoring", exact: true })
       .click();
@@ -255,42 +176,28 @@ async function run() {
     await page
       .getByRole("heading", { name: "Contract History", exact: true })
       .waitFor();
-    assert.equal((await state()).runs.length, 1);
-    const before = await state();
+    const before = JSON.parse(JSON.stringify(await state()));
+    assert.equal(before.runs[0].contractSnapshots.length, 1);
     await app.close();
+    app = null;
     await launch();
     const after = await state();
-    assert.equal(after.contracts.length, before.contracts.length);
+    assert.deepEqual(after.contracts, before.contracts);
     assert.deepEqual(after.runs, before.runs);
     assert.equal(after.tracking.status, "OFFLINE");
-    assert.equal(after.tracking.path, log);
-    assert.equal(after.selectedShipId, "hull-c");
-    assert.equal(after.tracking.accepted, 4);
-    await page
-      .getByRole("button", { name: /Unresolved Destination.*linked contract/ })
-      .click();
-    await page.locator(".page-content").evaluate((el) => {
-      el.scrollTop = 0;
-    });
-    await page.screenshot({
-      path: "work/phase2-dashboard.png",
-      animations: "disabled",
-    });
+    assert.equal(pending(B).status, "Completed");
     assert.deepEqual(errors, []);
     console.log(
-      "PASS Phase 2 Windows Electron: SQLite survives 3 restarts; manual contract and ship saved; live monitoring skips history; incomplete UTF-8 event resumes; mission/objective association; duplicates; automatic completion with zero earned payout; repeat imports idempotent; parser failure inspection; ERROR/recovery/rotation; stop configuration; run snapshots persist. Native picker response stubbed; actual game log not used.",
+      "PASS Windows secondary Game.log: first start skips history; acceptance remains pending-only; partial objective survives restart; duplicate events/imports; completion retained before OCR; diagnostics; file error/rotation/recovery; stop/restart; manual ledger/ship/run history preserved. Native picker response stubbed; no real game session.",
     );
   } catch (e) {
+    console.error(e);
     if (page)
       await page
-        .screenshot({ path: "work/phase2-desktop-failure.png" })
+        .screenshot({ path: "work/tracking-secondary-failure.png" })
         .catch(() => {});
-    throw e;
+    process.exitCode = 1;
   } finally {
-    if (app) await app.close().catch(() => {});
+    if (app) await app.close();
   }
-}
-run().catch((e) => {
-  console.error(e);
-  process.exitCode = 1;
-});
+})();

@@ -653,6 +653,26 @@ export class OcrQueue {
     );
     return this.publish();
   }
+  onRecognized: (id: string) => void = () => {};
+  private importRecognized(id: string) {
+    try {
+      this.onRecognized(id);
+    } catch (error) {
+      const c = this.repository.get(id);
+      if (c)
+        this.repository.put({
+          ...c,
+          importResult: {
+            status: "Pending corrections",
+            message:
+              "Import could not be committed. Retry this scan. " +
+              String(error),
+            candidateIds: [],
+            processedHash: "",
+          },
+        });
+    }
+  }
   reparse(id: unknown) {
     const record = this.record(id);
     if (!record.result)
@@ -661,6 +681,7 @@ export class OcrQueue {
       ...record,
       observation: extractContract(record.result, record.id, record.capturedAt),
     });
+    this.importRecognized(record.id);
     return this.publish();
   }
   private kick() {
@@ -800,6 +821,7 @@ export class OcrQueue {
           observation,
           error: rejected ? validationMessage! : null,
         });
+        if (!rejected) this.importRecognized(next.id);
       } catch (error) {
         if (this.closing) return;
         const current = this.repository.get(next.id);

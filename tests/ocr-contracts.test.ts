@@ -75,9 +75,10 @@ function input(
   targetId = "",
   patch: Partial<ConfirmReview> = {},
 ): ConfirmReview {
-  const r = s.prepareOcr({ captureId: c.id, targetId });
+  const r = s.prepareOcr({ captureId: c.id, targetId, advanced: true });
   return {
     captureId: c.id,
+    advanced: true,
     targetId,
     action: targetId ? "Update" : "Create",
     draft: r.draft,
@@ -125,7 +126,25 @@ function log(
       "objective-" + mission,
     ),
   );
-  return s.snapshot().contracts.find((c) => c.missionId === mission)!;
+  // Explicit legacy-ledger fixture: v0.4.0 saved these incomplete contracts.
+  // New default pending-only behavior is verified in automatic-import.test.ts.
+  const legacy = s.database
+    .pendingMissions()
+    .find((c) => c.missionId === mission)!;
+  s.store.setState({
+    contracts: [
+      ...s.domain().contracts.filter((c) => c.missionId !== mission),
+      legacy,
+    ],
+    currentRun: {
+      ...s.domain().currentRun,
+      contractIds: [
+        ...new Set([...s.domain().currentRun.contractIds, legacy.id]),
+      ],
+    },
+  });
+  s.database.transaction(() => s.database.saveDomain(s.domain()));
+  return legacy;
 }
 describe("reviewed OCR contract transactions", () => {
   it("creates one multi-destination OCR-only contract with unknown acceptance and no log", () => {
@@ -230,6 +249,9 @@ describe("reviewed OCR contract transactions", () => {
   it("requires incomplete-list acknowledgement", () => {
     const s = service(),
       c = capture(s);
+    c.observation!.potentiallyIncomplete = true;
+    c.observation!.warnings.push("Partial list");
+    new CaptureRepository(s.database).put(c);
     expect(() =>
       s.confirmOcr(input(s, c, "", { incompleteConfirmed: false })),
     ).toThrow(/incomplete/);

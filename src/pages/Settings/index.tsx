@@ -96,7 +96,7 @@ export default function Settings() {
             </div>
             <div>
               <h2>
-                Cargo Run <Badge>0.4.0</Badge>
+                Cargo Run <Badge>0.4.1</Badge>
               </h2>
               <p>Fleet Operations · SQLite, Game.log & local OCR prototype</p>
               <p className="form-note">

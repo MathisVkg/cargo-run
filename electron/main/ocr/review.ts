@@ -184,8 +184,19 @@ export function prepareReview(
   const capture = JSON.parse(String(row.payload)) as CaptureRecord,
     original = observedDraft(capture);
   const previous = evidence(db).find((l) => l.captureId === captureId);
-  const targets = state.contracts.filter(
-    (c) => c.dataOrigin !== "Sample" && !c.supersededBy,
+  const all = [
+    ...state.contracts,
+    ...db
+      .pendingMissions()
+      .filter((p) => !state.contracts.some((c) => c.missionId === p.missionId)),
+  ];
+  const targets = all.filter(
+    (c) =>
+      c.dataOrigin !== "Sample" &&
+      !c.supersededBy &&
+      (req.advanced === true ||
+        c.status === "Active" ||
+        c.id === previous?.contractId),
   );
   const targetId =
     req.targetId === undefined
@@ -462,6 +473,7 @@ export function planReview(
   db: CargoDatabase,
   state: DomainSnapshot,
   value: unknown,
+  mode: "Reviewed" | "Automatic" | "Issue resolved" = "Reviewed",
 ): ReviewPlan {
   if (!value || typeof value !== "object") throw Error("Invalid confirmation.");
   const input = value as ConfirmReview,
@@ -537,6 +549,7 @@ export function planReview(
   if (
     input.action === "Create" &&
     review.candidates.length &&
+    mode === "Reviewed" &&
     !input.distinctConfirmed
   )
     throw Error(
@@ -618,6 +631,16 @@ export function planReview(
     const manual = !same(selected, recognized);
     if (manual) corrections.push(path);
     if (input.choices[path] === "Keep") return;
+    if (
+      same(selected, stored) &&
+      provenance[provenancePath]?.source === "Manual"
+    ) {
+      provenance[provenancePath] = {
+        ...provenance[provenancePath],
+        corroboratedBy: ["Manual", "OCR"],
+      };
+      return;
+    }
     const old =
       provenance[provenancePath]?.source ??
       (target?.missionId ? "Log" : target?.source);
@@ -736,7 +759,13 @@ export function planReview(
     rawText: review.capture.result?.text,
     observation: review.capture.observation ?? undefined,
     associationType:
-      input.action === "Create" ? "UserConfirmedCreate" : "UserConfirmedUpdate",
+      mode === "Automatic"
+        ? input.action === "Create"
+          ? "AutomaticCreate"
+          : "AutomaticUpdate"
+        : input.action === "Create"
+          ? "UserConfirmedCreate"
+          : "UserConfirmedUpdate",
     captureId,
     contractId,
     attached: true,
@@ -753,15 +782,21 @@ export function planReview(
     choices: input.choices,
     missionId: contract.missionId ?? null,
   };
-  const contracts = target
-    ? state.contracts.map((c) =>
-        c.id === target.id
-          ? contract
-          : c.id === source?.id
-            ? { ...c, supersededBy: contract.id }
-            : c,
-      )
-    : [...state.contracts, contract];
+  const contracts =
+    target && state.contracts.some((c) => c.id === target.id)
+      ? state.contracts.map((c) =>
+          c.id === target.id
+            ? contract
+            : c.id === source?.id
+              ? { ...c, supersededBy: contract.id }
+              : c,
+        )
+      : [
+          ...state.contracts.map((c) =>
+            c.id === source?.id ? { ...c, supersededBy: contract.id } : c,
+          ),
+          contract,
+        ];
   const runIds = [
     ...new Set([
       ...state.currentRun.contractIds.map((id) =>
@@ -779,6 +814,7 @@ export function planReview(
     idempotent: false,
     moveFrom: source?.id,
     audit: {
+      authorization: mode,
       confirmation: {
         accepted: input.acceptedConfirmed,
         incomplete: input.incompleteConfirmed,

@@ -78,7 +78,7 @@ export default function App() {
         <span>
           <span className="status-dot" />
           LOCAL OPERATIONS <span className="status-divider">/</span>
-          {page.toUpperCase()}
+          {page === "Scan Review" ? "SCAN HISTORY" : page.toUpperCase()}
         </span>
         <span>
           <HardDrive size={12} />
@@ -89,7 +89,7 @@ export default function App() {
           >
             <CircleHelp size={13} />
           </button>
-          <span className="status-divider">/</span>v0.4.0
+          <span className="status-divider">/</span>v0.4.1
         </span>
       </footer>
       <Navigation open={nav} onClose={() => setNav(false)} />

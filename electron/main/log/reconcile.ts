@@ -21,7 +21,7 @@ export function applyMissionEvent(
       dataOrigin: "Log",
       payout: null,
       confirmedEarnings: 0,
-      acceptedAt: time,
+      acceptedAt: event.timestamp,
       cargoObjectives: [],
     };
     return {

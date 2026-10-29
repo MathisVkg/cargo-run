@@ -35,9 +35,38 @@ export interface MatchCandidate {
     | "Unverified trigger";
   reasons: string[];
 }
+export interface ScanOutcome {
+  status:
+    | "Imported"
+    | "Updated"
+    | "Pending corrections"
+    | "Ambiguous match"
+    | "Failed";
+  message: string;
+  contractId?: string;
+  candidateIds: string[];
+  processedHash: string;
+}
+export interface ResolveScan {
+  captureId: string;
+  targetId?: string;
+  separate?: boolean;
+  draft?: ReviewedDraft;
+  acceptedConfirmed?: boolean;
+  coverageConfirmed?: boolean;
+  choices?: Record<string, "Keep" | "Reviewed">;
+  observationHash?: string;
+  targetVersion?: string;
+}
+export interface ScanIssue {
+  review: OcrReview;
+  outcome: ScanOutcome;
+  coverageEstablished: boolean;
+}
 export interface PrepareReview {
   captureId: string;
   targetId?: string;
+  advanced?: boolean;
   draft?: ReviewedDraft;
   removeObjectiveIds?: string[];
   removeSourceObjectiveIds?: string[];
@@ -81,7 +110,11 @@ export interface ConfirmReview extends PrepareReview {
 export interface EvidenceLink {
   rawText?: string;
   observation?: import("./ocr").ContractObservation;
-  associationType?: "UserConfirmedCreate" | "UserConfirmedUpdate";
+  associationType?:
+    | "UserConfirmedCreate"
+    | "UserConfirmedUpdate"
+    | "AutomaticCreate"
+    | "AutomaticUpdate";
   captureId: string;
   contractId: string;
   attached: boolean;

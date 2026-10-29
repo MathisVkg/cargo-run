@@ -1,3 +1,4 @@
+import { applyMissionEvent } from "../log/reconcile";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
@@ -24,7 +25,7 @@ export class CargoDatabase {
     const version = Number(
       (this.db.prepare("PRAGMA user_version").get() as Row).user_version,
     );
-    if (version > 4) {
+    if (version > 5) {
       this.db.close();
       throw new Error(
         "This database was created by a newer Cargo Run version. No data was changed.",
@@ -69,6 +70,36 @@ export class CargoDatabase {
       PRAGMA user_version=4;
     `);
       });
+    if (version < 5)
+      this.transaction(() => {
+        this.db.exec(
+          "CREATE TABLE IF NOT EXISTS pending_log_missions (mission_id TEXT PRIMARY KEY,payload TEXT NOT NULL); PRAGMA user_version=5;",
+        );
+        // Rebuild only the secondary event projection; never move or delete existing ledger contracts.
+        const events = this.db
+          .prepare("SELECT payload FROM mission_events ORDER BY rowid")
+          .all()
+          .map((r) => JSON.parse(String(r.payload)) as MissionEvent);
+        let projection: Contract[] = [];
+        for (const e of events.filter((e) => e.kind === "Accepted"))
+          projection = applyMissionEvent(projection, e).contracts;
+        for (const e of events.filter((e) => e.kind !== "Accepted"))
+          projection = applyMissionEvent(projection, e).contracts;
+        for (const c of projection) this.savePendingMission(c);
+      });
+  }
+  pendingMissions(): Contract[] {
+    return this.db
+      .prepare("SELECT payload FROM pending_log_missions ORDER BY rowid")
+      .all()
+      .map((r) => JSON.parse(String(r.payload)) as Contract);
+  }
+  savePendingMission(c: Contract) {
+    this.db
+      .prepare(
+        "INSERT INTO pending_log_missions(mission_id,payload) VALUES(?,?) ON CONFLICT(mission_id) DO UPDATE SET payload=excluded.payload",
+      )
+      .run(c.missionId!, JSON.stringify(c));
   }
   transaction<T>(action: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

@@ -26,6 +26,24 @@ import {
   missionB,
   notification,
 } from "./fixtures/log";
+function missions(s: TrackingService) {
+  return [
+    ...s.domain().contracts,
+    ...s.database
+      .pendingMissions()
+      .filter(
+        (p) => !s.domain().contracts.some((c) => c.missionId === p.missionId),
+      ),
+  ];
+}
+function legacyLedger(s: TrackingService) {
+  const c = s.database.pendingMissions();
+  s.store.setState({
+    contracts: c,
+    currentRun: { ...s.domain().currentRun, contractIds: c.map((c) => c.id) },
+  });
+  s.database.transaction(() => s.database.saveDomain(s.domain()));
+}
 const folders: string[] = [];
 const services: TrackingService[] = [];
 function directory() {
@@ -69,15 +87,15 @@ describe("SQLite event association and replay", () => {
   it("deduplicates the same MissionId and event across imports, with unknown payout excluded", () => {
     const s = service();
     feed(s, accepted(), accepted(), objective(), objective());
-    expect(s.snapshot().contracts).toHaveLength(1);
-    expect(s.snapshot().contracts[0].cargoObjectives).toHaveLength(1);
+    expect(missions(s)).toHaveLength(1);
+    expect(missions(s)[0].cargoObjectives).toHaveLength(1);
     expect(s.snapshot().tracking).toMatchObject({ accepted: 1, objectives: 1 });
-    expect(s.snapshot().contracts[0]).toMatchObject({
+    expect(missions(s)[0]).toMatchObject({
       payout: null,
       source: "Log",
       dataOrigin: "Log",
     });
-    expect(operationStats(s.snapshot().contracts).potential).toBe(0);
+    expect(operationStats(missions(s)).potential).toBe(0);
   });
   it("deduplicates objective notifications with and without optional ObjectiveId", () => {
     const s = service();
@@ -90,7 +108,7 @@ describe("SQLite event association and replay", () => {
       objective(),
       objective(),
     );
-    expect(s.snapshot().contracts[0].cargoObjectives).toHaveLength(1);
+    expect(missions(s)[0].cargoObjectives).toHaveLength(1);
     expect(s.snapshot().tracking.objectives).toBe(1);
   });
   it("keeps two explicit ObjectiveIds distinct even with identical cargo details", () => {
@@ -101,13 +119,14 @@ describe("SQLite event association and replay", () => {
       objective(),
       objective(0, 11, "NB Int Spaceport", "other-id"),
     );
-    expect(s.snapshot().contracts[0].cargoObjectives).toHaveLength(2);
+    expect(missions(s)[0].cargoObjectives).toHaveLength(2);
     expect(s.snapshot().tracking.objectives).toBe(2);
   });
-  it("places acceptance-only contracts under Unresolved Destination without inventing SCU", () => {
+  it("keeps acceptance-only missions outside the Dashboard without inventing SCU", () => {
     const s = service();
     feed(s, accepted());
-    expect(groupByDestination(s.snapshot().contracts)[0]).toMatchObject({
+    expect(s.snapshot().contracts).toEqual([]);
+    expect(groupByDestination(missions(s))[0]).toMatchObject({
       destination: "Unresolved Destination",
       unknownCargo: true,
       unknownPayouts: true,
@@ -116,16 +135,16 @@ describe("SQLite event association and replay", () => {
   it("reconciles an objective and completion arriving before acceptance", () => {
     const s = service();
     feed(s, objective(), completed());
-    expect(s.snapshot().contracts).toEqual([]);
+    expect(missions(s)).toEqual([]);
     expect(s.snapshot().tracking.unresolved).toBe(2);
     feed(s, accepted());
-    expect(s.snapshot().contracts[0]).toMatchObject({
+    expect(missions(s)[0]).toMatchObject({
       missionId: missionA,
       status: "Completed",
       completedAt: "2026-10-19T16:00:00.000Z",
       confirmedEarnings: 0,
     });
-    expect(s.snapshot().contracts[0].cargoObjectives).toHaveLength(1);
+    expect(missions(s)[0].cargoObjectives).toHaveLength(1);
     expect(s.snapshot().tracking.unresolved).toBe(0);
   });
   it("never completes a similar title for a different MissionId", () => {
@@ -138,7 +157,7 @@ describe("SQLite event association and replay", () => {
         missionB,
       ),
     );
-    expect(s.snapshot().contracts[0].status).toBe("Active");
+    expect(missions(s)[0].status).toBe("Active");
     expect(s.snapshot().tracking.unresolved).toBe(1);
   });
   it("supports distinct ObjectiveIds, updates existing progress and preserves run membership", () => {
@@ -150,21 +169,21 @@ describe("SQLite event association and replay", () => {
       objective(0, 20, "Area18", "dropoff-second"),
       objective(5),
     );
-    expect(s.snapshot().contracts[0].cargoObjectives).toHaveLength(2);
-    expect(s.snapshot().contracts[0].cargoObjectives[0].deliveredSCU).toBe(5);
-    expect(operationStats(s.snapshot().contracts).scu).toBe(26);
+    expect(missions(s)[0].cargoObjectives).toHaveLength(2);
+    expect(missions(s)[0].cargoObjectives[0].deliveredSCU).toBe(5);
+    expect(operationStats(missions(s)).scu).toBe(26);
     const runId = s.snapshot().currentRun.id;
     feed(s, completed());
     expect(s.snapshot().currentRun.id).toBe(runId);
-    expect(s.snapshot().currentRun.contractIds).toContain(
-      s.snapshot().contracts[0].id,
+    expect(s.snapshot().currentRun.contractIds).not.toContain(
+      missions(s)[0].id,
     );
     expect(s.snapshot().runs).toEqual([]);
   });
   it("does not regress objective progress when historical values are replayed", () => {
     const s = service();
     feed(s, accepted(), objective(7), objective(2));
-    expect(s.snapshot().contracts[0].cargoObjectives[0].deliveredSCU).toBe(7);
+    expect(missions(s)[0].cargoObjectives[0].deliveredSCU).toBe(7);
   });
   it("recovers contracts, selected ship, runs, source events and unresolved associations from SQLite", async () => {
     const file = join(directory(), "cargo.sqlite");
@@ -176,13 +195,14 @@ describe("SQLite event association and replay", () => {
       notification("Contract Complete: Pending B", missionB),
     );
     s.selectShip("hull-c");
+    legacyLedger(s);
     s.finishRun();
     const run = s.snapshot().runs[0];
     await s.close();
     services.splice(services.indexOf(s), 1);
     s = service(file);
     expect(s.snapshot().selectedShipId).toBe("hull-c");
-    expect(s.snapshot().contracts[0].missionId).toBe(missionA);
+    expect(missions(s)[0].missionId).toBe(missionA);
     expect(s.snapshot().runs[0]).toEqual(run);
     expect(s.snapshot().tracking.unresolved).toBe(1);
     feed(
@@ -191,19 +211,20 @@ describe("SQLite event association and replay", () => {
       objective(),
       notification("Contract Accepted: Pending B", missionB),
     );
-    expect(s.snapshot().contracts).toHaveLength(2);
-    expect(
-      s.snapshot().contracts.find((c) => c.missionId === missionB)?.status,
-    ).toBe("Completed");
+    expect(missions(s)).toHaveLength(2);
+    expect(missions(s).find((c) => c.missionId === missionB)?.status).toBe(
+      "Completed",
+    );
     expect(s.snapshot().tracking.accepted).toBe(2);
   });
   it("retains immutable closed-run snapshots after later mission completion", () => {
     const s = service();
     feed(s, accepted(), objective());
+    legacyLedger(s);
     s.finishRun();
     feed(s, completed());
     expect(s.snapshot().runs[0].contractSnapshots[0].status).toBe("Active");
-    expect(s.snapshot().contracts[0].status).toBe("Completed");
+    expect(missions(s)[0].status).toBe("Completed");
   });
   it("rolls back event identifiers and state together if a checkpoint commit fails", () => {
     const s = service();
@@ -225,11 +246,11 @@ describe("SQLite event association and replay", () => {
         },
       ),
     ).toThrow("simulated disk error");
-    expect(s.snapshot().contracts).toEqual([]);
+    expect(missions(s)).toEqual([]);
     expect(s.snapshot().tracking.accepted).toBe(0);
     s.database.saveCheckpoint = original;
     feed(s, accepted());
-    expect(s.snapshot().contracts).toHaveLength(1);
+    expect(missions(s)).toHaveLength(1);
   });
   it("bounds diagnostics, exposes parse failures, and ignores unrelated log lines", () => {
     const s = service();
@@ -325,11 +346,11 @@ describe("incremental reader and monitoring recovery", () => {
     const original = readFileSync(file);
     await s.setLogPath(file);
     await s.start();
-    expect(s.snapshot().contracts).toEqual([]);
+    expect(missions(s)).toEqual([]);
     await s.stop();
     await s.importHistory();
     await s.importHistory();
-    expect(s.snapshot().contracts).toHaveLength(1);
+    expect(missions(s)).toHaveLength(1);
     expect(s.snapshot().tracking).toMatchObject({ accepted: 1, objectives: 1 });
     expect(readFileSync(file)).toEqual(original);
   });
@@ -343,14 +364,14 @@ describe("incremental reader and monitoring recovery", () => {
     await s.start();
     appendFileSync(file, accepted() + "\n" + objective().slice(0, 90));
     await new Promise((r) => setTimeout(r, 650));
-    expect(s.snapshot().contracts).toHaveLength(1);
+    expect(missions(s)).toHaveLength(1);
     await s.close();
     services.splice(services.indexOf(s), 1);
     appendFileSync(file, objective().slice(90) + "\n" + accepted() + "\n");
     s = service(db);
     await s.resume();
-    expect(s.snapshot().contracts).toHaveLength(1);
-    expect(s.snapshot().contracts[0].cargoObjectives).toHaveLength(1);
+    expect(missions(s)).toHaveLength(1);
+    expect(missions(s)[0].cargoObjectives).toHaveLength(1);
     expect(s.snapshot().tracking).toMatchObject({
       accepted: 1,
       objectives: 1,
@@ -382,7 +403,7 @@ describe("monitoring edge cases", () => {
     await s.importHistory();
     expect(s.snapshot().tracking.status).toBe("OFFLINE");
     expect(s.snapshot().tracking.error).toBeNull();
-    expect(s.snapshot().contracts).toHaveLength(1);
+    expect(missions(s)).toHaveLength(1);
   });
   it("does not replay an existing partial notification on first forward-only start", async () => {
     const file = join(directory(), "Game.log"),
@@ -393,13 +414,13 @@ describe("monitoring edge cases", () => {
     await s.start();
     appendFileSync(file, line.slice(80) + "\n");
     await new Promise((r) => setTimeout(r, 650));
-    expect(s.snapshot().contracts).toEqual([]);
+    expect(missions(s)).toEqual([]);
     appendFileSync(
       file,
       notification("Contract Accepted: New after start", missionB) + "\n",
     );
     await new Promise((r) => setTimeout(r, 650));
-    expect(s.snapshot().contracts.map((c) => c.missionId)).toEqual([missionB]);
+    expect(missions(s).map((c) => c.missionId)).toEqual([missionB]);
   });
 });
 
@@ -453,7 +474,7 @@ describe("committed live acceptance observer", () => {
       { ...source, mode: "Import" },
     );
     expect(seen).toEqual([missionA]);
-    expect(s.snapshot().contracts).toHaveLength(2);
+    expect(missions(s)).toHaveLength(2);
     await s.stop();
     expect(monitoring).toContain(true);
     expect(monitoring.at(-1)).toBe(false);
@@ -477,7 +498,7 @@ describe("committed live acceptance observer", () => {
       offset: 0,
       mode: "Live",
     });
-    expect(s.snapshot().contracts[0].missionId).toBe(missionA);
+    expect(missions(s)[0].missionId).toBe(missionA);
     await s.stop();
   });
 });

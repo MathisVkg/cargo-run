@@ -183,7 +183,7 @@ describe("capture retention and schema compatibility", () => {
       upgraded.db.prepare("SELECT payload FROM contracts").get()?.payload,
     ).toContain("Keep contract");
     expect(upgraded.db.prepare("PRAGMA user_version").get()?.user_version).toBe(
-      4,
+      5,
     );
     upgraded.close();
   });

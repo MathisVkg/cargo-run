@@ -94,6 +94,7 @@ else
         join(app.getPath("userData"), "cargo-run.sqlite"),
       );
       ocr = createOcrQueue(service.database);
+      ocr.onRecognized = (id) => service.processScan(id);
       ocr.onChange = (state) => {
         if (mainWindow && !mainWindow.isDestroyed())
           mainWindow.webContents.send("ocr:state", state);
@@ -130,6 +131,16 @@ else
       register("ocr:reparse", (id) => ocr.reparse(id));
       register("ocr:policy", (input) => ocr.configurePolicy(input));
       register("ocr:cleanup", () => ocr.cleanup());
+      register("ocr:issue", (input) => service.scanIssue(input), true);
+      register(
+        "ocr:resolveIssue",
+        (input) => {
+          const r = service.resolveScan(input);
+          ocr.refreshEvidence();
+          return r;
+        },
+        true,
+      );
       register("ocr:prepareReview", (input) => service.prepareOcr(input), true);
       register(
         "ocr:confirmReview",

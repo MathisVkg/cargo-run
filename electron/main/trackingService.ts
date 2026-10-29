@@ -4,6 +4,10 @@ import {
   persistReview,
   evidence,
 } from "./ocr/review";
+import { inspectScan, scanConfirmation } from "./ocr/importer";
+import { CaptureRepository } from "./ocr/repository";
+import { versionOf } from "./ocr/review";
+import type { ResolveScan, ScanOutcome } from "../../src/types/review";
 import { randomUUID } from "node:crypto";
 import { isAbsolute, basename } from "node:path";
 import { CargoDatabase } from "./storage/database";
@@ -121,6 +125,13 @@ export class TrackingService {
         importing: this.importing,
         error: this.error,
         ...this.database.counts(),
+        pendingMissions: this.database
+          .pendingMissions()
+          .filter(
+            (p) =>
+              p.status === "Active" &&
+              !this.domain().contracts.some((c) => c.missionId === p.missionId),
+          ).length,
         events: this.database.diagnostics(),
       },
     };
@@ -155,12 +166,16 @@ export class TrackingService {
   prepareOcr(input: unknown) {
     return prepareReview(this.database, this.domain(), input);
   }
-  confirmOcr(input: unknown) {
+  confirmOcr(
+    input: unknown,
+    mode: "Reviewed" | "Automatic" | "Issue resolved" = "Reviewed",
+    outcome?: ScanOutcome,
+  ) {
     const before = this.store.getState();
     let plan: ReturnType<typeof planReview>;
     try {
       plan = this.database.transaction(() => {
-        const next = planReview(this.database, this.domain(), input);
+        const next = planReview(this.database, this.domain(), input, mode);
         if (!next.idempotent) {
           this.store.setState({
             contracts: next.contracts,
@@ -169,6 +184,27 @@ export class TrackingService {
           this.database.saveDomain(this.domain());
           persistReview(this.database, next);
         }
+        const captures = new CaptureRepository(this.database),
+          c = captures.get(next.link.captureId);
+        if (c)
+          captures.put({
+            ...c,
+            importResult: {
+              ...(outcome ?? {
+                candidateIds: [],
+                processedHash: versionOf([c.result, c.observation]),
+              }),
+              status: next.idempotent
+                ? c.importResult?.status === "Imported"
+                  ? "Imported"
+                  : "Updated"
+                : (next.audit as { before: unknown })?.before
+                  ? "Updated"
+                  : "Imported",
+              contractId: next.contract.id,
+              message: "Dashboard and Manifest updated.",
+            },
+          });
         return next;
       });
     } catch (e) {
@@ -180,6 +216,79 @@ export class TrackingService {
       contractId: plan.contract.id,
       idempotent: plan.idempotent,
     };
+  }
+  private scanOptions(input: unknown): ResolveScan {
+    if (!input || typeof input !== "object")
+      throw Error("Invalid scan request.");
+    const r = input as ResolveScan;
+    if (
+      typeof r.captureId !== "string" ||
+      r.captureId.length > 256 ||
+      (r.targetId !== undefined &&
+        (typeof r.targetId !== "string" || r.targetId.length > 256))
+    )
+      throw Error("Invalid scan identity.");
+    for (const k of [
+      "separate",
+      "acceptedConfirmed",
+      "coverageConfirmed",
+    ] as const)
+      if (r[k] !== undefined && typeof r[k] !== "boolean")
+        throw Error("Invalid confirmation.");
+    if (
+      r.choices &&
+      (!r.choices ||
+        typeof r.choices !== "object" ||
+        Array.isArray(r.choices) ||
+        Object.keys(r.choices).length > 600 ||
+        Object.values(r.choices).some((v) => !["Keep", "Reviewed"].includes(v)))
+    )
+      throw Error("Invalid field choices.");
+    return r;
+  }
+  scanIssue(input: unknown) {
+    const r = this.scanOptions(input),
+      c = new CaptureRepository(this.database).get(r.captureId);
+    if (!c?.observation) throw Error("No recognized contract is available.");
+    return inspectScan(this.database, this.domain(), c, r);
+  }
+  processScan(captureId: string, resolution?: unknown) {
+    const options = resolution ? this.scanOptions(resolution) : { captureId };
+    const repo = new CaptureRepository(this.database),
+      c = repo.get(captureId);
+    if (!c?.observation) return null;
+    if (
+      resolution &&
+      options.observationHash !== versionOf([c.result, c.observation])
+    )
+      throw Error("OCR changed; reload this issue.");
+    if (
+      !resolution &&
+      c.importResult?.processedHash === versionOf([c.result, c.observation]) &&
+      ["Imported", "Updated"].includes(c.importResult.status)
+    )
+      return c.importResult;
+    const issue = inspectScan(this.database, this.domain(), c, options);
+    if (
+      resolution &&
+      issue.review.target &&
+      options.targetVersion !== issue.review.targetVersion
+    )
+      throw Error("Contract changed; reload this issue.");
+    if (["Imported", "Updated"].includes(issue.outcome.status)) {
+      this.confirmOcr(
+        scanConfirmation(issue, options),
+        resolution ? "Issue resolved" : "Automatic",
+        issue.outcome,
+      );
+      return repo.get(captureId)!.importResult!;
+    }
+    repo.put({ ...c, importResult: issue.outcome });
+    return issue.outcome;
+  }
+  resolveScan(input: unknown) {
+    const r = this.scanOptions(input);
+    return this.processScan(r.captureId, r);
   }
   contractEvidence(id: unknown) {
     if (
@@ -435,12 +544,31 @@ export class TrackingService {
             accepted.push(event);
           changed = true;
           const apply = (pending: typeof event) => {
+            const inLedger = this.store
+              .getState()
+              .contracts.some(
+                (c) => c.missionId === pending.missionId && !c.supersededBy,
+              );
             const result = applyMissionEvent(
-              this.store.getState().contracts,
+              inLedger
+                ? this.store.getState().contracts
+                : this.database.pendingMissions(),
               pending,
             );
-            this.store.setState({ contracts: result.contracts });
-            if (result.createdId) {
+            if (inLedger) {
+              this.store.setState({ contracts: result.contracts });
+              const projected = applyMissionEvent(
+                this.database.pendingMissions(),
+                pending,
+              );
+              for (const c of projected.contracts)
+                if (c.missionId === pending.missionId)
+                  this.database.savePendingMission(c);
+            } else
+              for (const c of result.contracts)
+                if (c.missionId === pending.missionId)
+                  this.database.savePendingMission(c);
+            if (result.createdId && inLedger) {
               const run = this.store.getState().currentRun;
               this.store.setState({
                 currentRun: {
@@ -461,7 +589,9 @@ export class TrackingService {
             event.kind,
             event.timestamp
               ? "Observed mission notification."
-              : "Notification has no supported timestamp; receipt time used.",
+              : event.kind === "Accepted"
+                ? "Acceptance timestamp unavailable; receipt time stored separately."
+                : "Notification has no supported timestamp; receipt time used.",
             line.text,
             context,
             event,
@@ -474,7 +604,36 @@ export class TrackingService {
       this.store.setState(before, true);
       throw e;
     }
-    if (changed) this.publish();
+    if (changed) {
+      // New log identity evidence can make a previously local association ambiguous.
+      // This only inspects saved observations; it never captures or scans the game.
+      const repo = new CaptureRepository(this.database);
+      for (const c of repo.list())
+        if (
+          c.observation &&
+          c.evidenceLink &&
+          this.domain().contracts.some(
+            (t) =>
+              t.id === c.evidenceLink?.contractId &&
+              !t.missionId &&
+              t.status === "Active",
+          )
+        ) {
+          try {
+            const issue = inspectScan(this.database, this.domain(), c);
+            if (
+              issue.outcome.status === "Ambiguous match" &&
+              issue.outcome.candidateIds.some(
+                (id) => !c.importResult?.candidateIds.includes(id),
+              )
+            )
+              repo.put({ ...c, importResult: issue.outcome });
+          } catch {
+            /* Evidence issues cannot invalidate committed mission events. */
+          }
+        }
+      this.publish();
+    }
     for (const event of accepted) {
       try {
         this.onLiveAcceptance(event);

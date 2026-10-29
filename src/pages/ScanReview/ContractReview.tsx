@@ -50,6 +50,7 @@ export function ContractReview({ capture }: { capture: CaptureRecord }) {
       const r = await window.cargoRun.prepareOcr({
         captureId: capture.id,
         targetId,
+        advanced: true,
       });
       setReview(r);
       setDraft(r.draft);
@@ -84,6 +85,7 @@ export function ContractReview({ capture }: { capture: CaptureRecord }) {
     try {
       const r = await window.cargoRun.prepareOcr({
         captureId: capture.id,
+        advanced: true,
         targetId: target,
         draft,
         removeObjectiveIds: removed,
@@ -113,6 +115,7 @@ export function ContractReview({ capture }: { capture: CaptureRecord }) {
     try {
       const input: ConfirmReview = {
         captureId: capture.id,
+        advanced: true,
         targetId: target,
         draft,
         removeObjectiveIds: removed,

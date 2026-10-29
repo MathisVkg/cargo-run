@@ -214,20 +214,23 @@ async function run() {
       w.restore();
       w.show();
     });
-    await navigate("Scan Review");
+    await navigate("Scan History");
     await page
-      .getByRole("heading", { name: "Scan Review", exact: true })
+      .getByRole("heading", { name: "Scan History & Issues", exact: true })
       .waitFor();
-    await page
-      .locator(".capture-item")
+    const usable = page
+      .locator(".scan-history-entry")
       .filter({ hasText: "Frontier Supply" })
-      .first()
+      .first();
+    await usable
+      .getByRole("button", { name: "Edit details / Advanced", exact: true })
       .click();
-    await page
-      .getByRole("heading", { name: "Raw recognized text", exact: true })
-      .waitFor();
-    const imageWorks = await page
-      .locator(".screenshot-preview img")
+    await usable
+      .getByText("OCR evidence and diagnostics", { exact: true })
+      .click();
+    assert.ok((await usable.innerText()).includes("Frontier Supply"));
+    const imageWorks = await usable
+      .locator(".scan-history-thumb img")
       .evaluate(async (img) => {
         await img.decode();
         return img.naturalWidth > 1000;
@@ -247,7 +250,7 @@ async function run() {
     assert.equal(
       (await state()).captures.find((c) => c.id === selected.id).observation
         .parserVersion,
-      "0.4.0",
+      "0.4.1",
     );
     const before = (await state()).captures;
     await app.close();
@@ -268,7 +271,7 @@ async function run() {
         exact: true,
       })
       .scrollIntoViewIfNeeded();
-    await page.locator(".shortcut-diagnostics > summary").click();
+    await page.locator(".advanced-panel > summary").click();
     await page.screenshot({
       path: "work/ocr-settings.png",
       animations: "disabled",
@@ -277,7 +280,7 @@ async function run() {
       .getByLabel("Enable global capture shortcut", { exact: true })
       .uncheck();
     await until(async () => !(await state()).registered);
-    await navigate("Scan Review");
+    await navigate("Scan History");
     await page
       .getByRole("button", { name: "Clear captures", exact: true })
       .click();

@@ -1,6 +1,12 @@
 import type { AppSnapshot, SaveContractRequest } from "./tracking";
 import type { OcrSnapshot, CaptureSettings } from "./ocr";
 export interface DesktopBridge {
+  scanIssue(
+    input: import("./review").ResolveScan,
+  ): Promise<import("./review").ScanIssue>;
+  resolveScan(
+    input: import("./review").ResolveScan,
+  ): Promise<import("./review").ScanOutcome>;
   prepareOcr(
     input: import("./review").PrepareReview,
   ): Promise<import("./review").OcrReview>;

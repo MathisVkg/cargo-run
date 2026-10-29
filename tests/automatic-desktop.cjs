@@ -134,8 +134,8 @@ function accept(n) {
     assert.equal(capture.observation.objectives.length, 4);
     assert.equal(
       (await page.evaluate(() => window.cargoRun.getState())).contracts.length,
-      3,
-      "Only Game.log acceptance may create contracts.",
+      0,
+      "Ambiguous OCR and acceptance alone must leave missions pending.",
     );
     await page.evaluate(
       (policy) => window.cargoRun.ocrConfigurePolicy(policy),
@@ -168,18 +168,22 @@ function accept(n) {
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
       .getByRole("navigation")
-      .getByRole("button", { name: /^Scan Review/ })
+      .getByRole("button", { name: /^Scan History/ })
       .click();
-    await page
-      .locator(".capture-item")
+    const observed = page
+      .locator(".scan-history-entry")
       .filter({ hasText: "Frontier Supply" })
-      .first()
+      .first();
+    await observed
+      .getByRole("button", { name: "Edit details / Advanced", exact: true })
       .click();
-    await page
-      .getByText("Unverified trigger candidate · not a contract association", {
-        exact: true,
-      })
-      .waitFor();
+    await observed
+      .getByText("OCR evidence and diagnostics", { exact: true })
+      .click();
+    assert.match(
+      await observed.locator(".ocr-raw").last().innerText(),
+      /Unverified/,
+    );
     await page.screenshot({
       path: "work/automatic-review-v033.png",
       animations: "disabled",
@@ -251,7 +255,7 @@ function accept(n) {
       animations: "disabled",
     });
     console.log(
-      "PASS synthetic live Game.log -> committed acceptance -> bounded delayed capture -> offline OCR; duplicate MissionId ignored; unchanged screens skipped; unrelated title retained unassociated; monitoring stop cancels; retention removes expired image/metadata while four log contracts remain. No Star Citizen gameplay or automatic OCR contract creation tested.",
+      "PASS synthetic live Game.log -> committed acceptance -> bounded delayed capture -> offline OCR; duplicate MissionId ignored; unchanged screens skipped; unrelated title retained unassociated; monitoring stop cancels; retention removes expired image/metadata while pending log mission evidence remains. No Star Citizen gameplay tested; automatic import requires supported acceptance.",
     );
   } finally {
     if (fixture) {

@@ -1,3 +1,4 @@
+import { establishCoverage } from "./coverage";
 import type {
   OcrResult,
   OcrLine,
@@ -672,8 +673,8 @@ export function extractContract(
     );
   if (!objectives.length)
     warnings.push("No validated visible delivery objectives were extracted.");
-  return {
-    parserVersion: "0.4.0",
+  const observation: ContractObservation = {
+    parserVersion: "0.4.1",
     captureId,
     capturedAt,
     acceptanceTimestamp: null,
@@ -698,4 +699,12 @@ export function extractContract(
     warnings: [...new Set(warnings)],
     potentiallyIncomplete: true,
   };
+  observation.coverage = establishCoverage(result, observation);
+  observation.potentiallyIncomplete =
+    observation.coverage.state !== "Established";
+  if (!observation.potentiallyIncomplete)
+    observation.warnings = observation.warnings.filter(
+      (w) => !w.startsWith("Only visible objectives were read."),
+    );
+  return observation;
 }

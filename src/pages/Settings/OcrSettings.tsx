@@ -104,7 +104,8 @@ export function OcrSettings({
         </Badge>
       </div>
       <p>
-        Capture a contract, review and correct its fields, then confirm saving.
+        Accepted contracts import automatically when the fields, coverage and
+        identity are clear. Scan History shows only issues that need your help.
         Works without Game.log monitoring.
       </p>
       {!state.engine.available && (
@@ -185,7 +186,7 @@ export function OcrSettings({
           Capture now
         </button>
         <button className="button" onClick={() => setPage("Scan Review")}>
-          Open Scan Review
+          Open Scan History
         </button>
       </div>
       <p className="form-note">

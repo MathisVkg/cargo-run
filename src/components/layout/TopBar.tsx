@@ -45,7 +45,7 @@ export function TopBar({ onMenu }: { onMenu(): void }) {
             (ocr?.lastCapture?.success === false ? "capture-failed" : "")
           }
           onClick={() => setPage("Scan Review")}
-          title={ocr?.lastCapture?.message ?? "Open Scan Review"}
+          title={ocr?.lastCapture?.message ?? "Open Scan History"}
         >
           {ocr?.lastCapture?.success === false
             ? "Capture failed"
@@ -55,7 +55,7 @@ export function TopBar({ onMenu }: { onMenu(): void }) {
                 ? ocr.queued + " queued"
                 : ocr?.lastCapture?.success
                   ? "Capture saved"
-                  : "Scan Review"}
+                  : "Scan History"}
         </button>
         <div className="ship-picker">
           <Rocket size={16} />

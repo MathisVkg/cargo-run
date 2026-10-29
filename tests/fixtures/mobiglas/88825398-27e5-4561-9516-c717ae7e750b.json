@@ -1,0 +1,404 @@
+{
+  "source": {
+    "filename": "88825398-27e5-4561-9516-c717ae7e750b.png",
+    "sha256": "0a22f6168413e17266635d46f1e3478cad0c6bd6f8e4a6f3af3532f3d60e3f16",
+    "width": 3840,
+    "height": 2160,
+    "note": "Actual offline OCR from user-provided capture; contract pane subset excludes HUD and left navigation."
+  },
+  "result": {
+    "provider": "Tesseract 7 · offline English",
+    "language": "eng",
+    "text": "NA\nBEACONS\nOFFERS     HISTORY\n=\"\n1: USER LUG\nReward\na 34,500\nContract Deadline\nN/A\nRookie Rank - Direct Small Cargo Haul\nContracted By\nCovalex Independent Contractors\nDETAILS\nPRIMARY OBJECTIVES\nHello,\n<$> Deliver 0/8 SCU of Agricultural Supplies to Port Tressler\nabove microTech.\nNeed a contractor for a simple cargo haul going from a freight\nelevator at NB Int. Spaceport on microTech to a freight elevator at\n¢ Collect Agricultural Supplies from NB Int.\nPort Tressler above microTech. At most the containers will be 4\nSpaceport.\nSCU in size.\nAlso, we strongly encourage contractors to bring a handheld\ntractor beam along.\nAny chance you're available to take care of it for us?\nThanks in advance for ensuring prompt service,\nChase Hewitt\nJr. Logistics Coordinator\nCovalex Shipping\n‘Anything you need, anywhere you need it.\"\nCovalex Shipping is a limited liability corporation. To encourage\nABANDON\nTRACK\n—",
+    "lines": [
+      {
+        "id": "line-2",
+        "text": "NA",
+        "box": {
+          "x": 1170,
+          "y": 223,
+          "width": 32,
+          "height": 20
+        },
+        "confidence": 40
+      },
+      {
+        "id": "line-3",
+        "text": "BEACONS",
+        "box": {
+          "x": 2301,
+          "y": 219,
+          "width": 156,
+          "height": 26
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-4",
+        "text": "OFFERS     HISTORY",
+        "box": {
+          "x": 1358,
+          "y": 220,
+          "width": 820,
+          "height": 26
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-6",
+        "text": "=\"",
+        "box": {
+          "x": 1162,
+          "y": 301,
+          "width": 72,
+          "height": 25
+        },
+        "confidence": 10
+      },
+      {
+        "id": "line-7",
+        "text": "1: USER LUG",
+        "box": {
+          "x": 1311,
+          "y": 300,
+          "width": 69,
+          "height": 8
+        },
+        "confidence": 59
+      },
+      {
+        "id": "line-8",
+        "text": "Reward",
+        "box": {
+          "x": 2619,
+          "y": 389,
+          "width": 110,
+          "height": 24
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-9",
+        "text": "a 34,500",
+        "box": {
+          "x": 3343,
+          "y": 388,
+          "width": 140,
+          "height": 27
+        },
+        "confidence": 65
+      },
+      {
+        "id": "line-11",
+        "text": "Contract Deadline",
+        "box": {
+          "x": 2615,
+          "y": 434,
+          "width": 263,
+          "height": 25
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-12",
+        "text": "N/A",
+        "box": {
+          "x": 3417,
+          "y": 435,
+          "width": 61,
+          "height": 24
+        },
+        "confidence": 86
+      },
+      {
+        "id": "line-14",
+        "text": "Rookie Rank - Direct Small Cargo Haul",
+        "box": {
+          "x": 1381,
+          "y": 432,
+          "width": 865,
+          "height": 65
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-15",
+        "text": "Contracted By",
+        "box": {
+          "x": 2616,
+          "y": 484,
+          "width": 206,
+          "height": 28
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-16",
+        "text": "Covalex Independent Contractors",
+        "box": {
+          "x": 2972,
+          "y": 482,
+          "width": 501,
+          "height": 30
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-22",
+        "text": "DETAILS",
+        "box": {
+          "x": 1383,
+          "y": 627,
+          "width": 197,
+          "height": 33
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-23",
+        "text": "PRIMARY OBJECTIVES",
+        "box": {
+          "x": 2469,
+          "y": 624,
+          "width": 519,
+          "height": 34
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-24",
+        "text": "Hello,",
+        "box": {
+          "x": 1382,
+          "y": 706,
+          "width": 68,
+          "height": 25
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-25",
+        "text": "<$> Deliver 0/8 SCU of Agricultural Supplies to Port Tressler",
+        "box": {
+          "x": 2466,
+          "y": 703,
+          "width": 947,
+          "height": 33
+        },
+        "confidence": 89
+      },
+      {
+        "id": "line-27",
+        "text": "above microTech.",
+        "box": {
+          "x": 2517,
+          "y": 743,
+          "width": 275,
+          "height": 26
+        },
+        "confidence": 90
+      },
+      {
+        "id": "line-30",
+        "text": "Need a contractor for a simple cargo haul going from a freight",
+        "box": {
+          "x": 1383,
+          "y": 772,
+          "width": 824,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-33",
+        "text": "elevator at NB Int. Spaceport on microTech to a freight elevator at",
+        "box": {
+          "x": 1383,
+          "y": 806,
+          "width": 875,
+          "height": 28
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-34",
+        "text": "¢ Collect Agricultural Supplies from NB Int.",
+        "box": {
+          "x": 2524,
+          "y": 797,
+          "width": 687,
+          "height": 32
+        },
+        "confidence": 89
+      },
+      {
+        "id": "line-35",
+        "text": "Port Tressler above microTech. At most the containers will be 4",
+        "box": {
+          "x": 1384,
+          "y": 839,
+          "width": 841,
+          "height": 24
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-36",
+        "text": "Spaceport.",
+        "box": {
+          "x": 2568,
+          "y": 836,
+          "width": 172,
+          "height": 32
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-37",
+        "text": "SCU in size.",
+        "box": {
+          "x": 1384,
+          "y": 874,
+          "width": 149,
+          "height": 23
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-38",
+        "text": "Also, we strongly encourage contractors to bring a handheld",
+        "box": {
+          "x": 1383,
+          "y": 940,
+          "width": 802,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-39",
+        "text": "tractor beam along.",
+        "box": {
+          "x": 1383,
+          "y": 975,
+          "width": 259,
+          "height": 27
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-40",
+        "text": "Any chance you're available to take care of it for us?",
+        "box": {
+          "x": 1382,
+          "y": 1040,
+          "width": 693,
+          "height": 29
+        },
+        "confidence": 93
+      },
+      {
+        "id": "line-41",
+        "text": "Thanks in advance for ensuring prompt service,",
+        "box": {
+          "x": 1381,
+          "y": 1107,
+          "width": 631,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-42",
+        "text": "Chase Hewitt",
+        "box": {
+          "x": 1381,
+          "y": 1176,
+          "width": 173,
+          "height": 23
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-43",
+        "text": "Jr. Logistics Coordinator",
+        "box": {
+          "x": 1379,
+          "y": 1210,
+          "width": 332,
+          "height": 28
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-44",
+        "text": "Covalex Shipping",
+        "box": {
+          "x": 1379,
+          "y": 1243,
+          "width": 220,
+          "height": 29
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-45",
+        "text": "‘Anything you need, anywhere you need it.\"",
+        "box": {
+          "x": 1379,
+          "y": 1275,
+          "width": 561,
+          "height": 31
+        },
+        "confidence": 83
+      },
+      {
+        "id": "line-46",
+        "text": "Covalex Shipping is a limited liability corporation. To encourage",
+        "box": {
+          "x": 1366,
+          "y": 1555,
+          "width": 855,
+          "height": 27
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-47",
+        "text": "ABANDON",
+        "box": {
+          "x": 1341,
+          "y": 1703,
+          "width": 176,
+          "height": 26
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-48",
+        "text": "TRACK",
+        "box": {
+          "x": 3432,
+          "y": 1696,
+          "width": 122,
+          "height": 26
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-49",
+        "text": "—",
+        "box": {
+          "x": 2118,
+          "y": 1807,
+          "width": 61,
+          "height": 9
+        },
+        "confidence": 3
+      }
+    ],
+    "width": 3840,
+    "height": 2160,
+    "durationMs": 2694
+  }
+}
