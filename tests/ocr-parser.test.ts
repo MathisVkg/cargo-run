@@ -42,10 +42,10 @@ describe("OCR observations, never contracts", () => {
   it("does not double-count description cargo quantities", () => {
     expect(parse(true).objectives).toHaveLength(4);
   });
-  it("marks a lone Offers label and an Accepted heading, and treats both tabs as ambiguous", () => {
+  it("requires independent action or explicit selection evidence; navigation words alone remain ambiguous", () => {
     const f = ocrFixture();
     f.lines[0].text = "OFFERS";
-    expect(extractContract(f, "id", "time").view.value).toBe("Offers");
+    expect(extractContract(f, "id", "time").view.state).toBe("Ambiguous");
     f.lines.push({ ...f.lines[0], id: "other", text: "ACCEPTED" });
     expect(extractContract(f, "id", "time").view.state).toBe("Ambiguous");
     f.lines[0].text = "CONTRACTS / ACCEPTED";

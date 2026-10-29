@@ -1,127 +1,148 @@
-# Cargo Run v0.3.3 — Task 03A.3 handoff
+# Cargo Run v0.4.0 — Task 03B handoff
 
-Implemented in C:\Users\zeyros\Documents\repository\cargo-run. Existing v0.3.2 functionality and Fleet Operations styling are preserved. Source backups for this task are in ignored work/task03a3-backup. No commit, PR, installer or game modification was created.
+Implemented exclusively in `C:\Users\zeyros\Documents\repository\cargo-run`. No commit, PR, installer, game modification, dependency addition or live-profile data conversion was performed. Test profiles and screenshots are under ignored `work/`; source backups are under `work/task03b-backup/`. Current changes remain reviewable in Git.
 
-## 1. Delivered behavior and defaults
+## Delivered behavior
 
-- Two capture backends: verified Star Citizen window surface through Electron desktopCapturer, and the existing native full-display helper.
-- Source modes: Automatic/prefer window, Window-only, Full Display. Full Display remains the default; display fallback requires explicit permission and Automatic mode.
-- Experimental acceptance capture defaults OFF; delay 3 seconds; maximum 3 total attempts; independent Window-only preference.
-- Repeat guard for Electron callbacks: one initial capture, then a required one-second callback-free interval before rearming. No key-up claim is made.
-- Cleanup defaults ON, retaining unlinked evidence for 7 days; configurable 1/7/14/30 days.
-- Extended Scan Review metadata and preserved Reprocess Saved OCR.
-- No OCR-to-contract creation, merging, reconciliation or verified MissionId association. Existing Game.log contract creation remains unchanged.
+Reviewed OCR can create an active OCR-only contract without Game.log, or enrich a selected log/local contract. User confirmation is mandatory. Capturing, recognizing, retrying and reprocessing alone never save contracts. Existing Game.log acceptance still creates its supported log placeholder independently.
 
-## 2. Files created and modified
+Scan Review has editable title/company/optional payout/optional known acceptance time, objective commodity/pickup/destination/required/delivered SCU, add/remove controls, total SCU, original-value comparisons, warnings, candidate reasons, objective mappings, conflict decisions and explicit confirmation checkboxes. Cancel/reload does not change contracts. Selecting another target resets the review and confirmations.
 
-New application modules:
+The same CaptureId cannot create a second contract. Separate captures of identical-looking accepted contracts require explicit distinct-instance confirmation. Multiple screenshots can be associated with one contract. Existing linked observations display their contract binding. OCR processing and review/link states are presented separately; rejected automatic attempts are grouped by request while usable observations remain individual.
 
-- electron/main/ocr/windowCapture.ts — window selection/quality checks, explicit fallback and saved pixels.
-- electron/main/ocr/automatic.ts — bounded persistent acceptance scheduler and retry/cancellation lifecycle.
-- electron/main/ocr/retention.ts — owned-file usage, expiration and safe cleanup.
-- src/types/capturePolicy.ts — policy, trigger, request and storage types plus runtime validation.
-- src/pages/Settings/CapturePolicyControls.tsx — source, automatic workflow and retention controls.
+OCR-only records support Dashboard/Manifest inclusion, manual editing, manual completion through contract details, abandonment, run finalization and History. Unknown acceptance remains null. Optional payout/company remain null when unknown. Potential reward is never copied into confirmed earnings.
 
-Updated application files:
+## Architectural decisions
 
-- resources/native/CaptureHost.cs — fixed read-only game-windows operation returning eligible HWND/PID/physical bounds/foreground state for StarCitizen.exe.
-- electron/main/ocr/{nativeHost,integration,queue,repository}.ts — backend composition, serial image queue, validation, image fingerprints, metadata, lifecycle and repeat guard.
-- electron/main/storage/database.ts — schema 3 automatic_captures table; existing payloads preserved.
-- electron/main/trackingService.ts and electron/main/index.ts — post-commit live acceptance callback, monitoring lifecycle and trusted policy/cleanup IPC.
-- electron/preload/index.ts, src/types/{desktop,ocr,shortcut}.ts, src/stores/useOcrStore.ts — typed fixed actions/snapshots.
-- Settings/OcrSettings, ShortcutControls, ScanReview, global styles — controls, truthful diagnostics and candidate metadata.
-- package.json/lockfile, app/navigation/settings version and native manifest — v0.3.3; no new dependencies.
+- Internal ContractId remains the ledger key. MissionId is assigned only through the existing supported log record and explicit reviewed association. OCR never manufactures a MissionId.
+- `prepareReview` derives candidate matches, unique tuple mapping suggestions, validation errors and conflicts from authoritative main-process data. Trigger recency never chooses a target.
+- `planReview` validates the submitted draft, confirmation flags, source/target versions, observation hash, objective identity/progress, lifecycle and explicit per-field choices.
+- `TrackingService.confirmOcr` commits domain state, evidence binding and audit within one SQLite transaction. A failure restores the previous in-memory store; publish occurs after commit.
+- MissionId-bound target lifecycle, known acceptance time, confirmed earnings and newer delivered progress are protected. A screenshot cannot reactivate a completed contract.
+- Stable objective IDs key field provenance. Supporting agreement can corroborate Log/OCR values; corrections are marked Manual. Before/after values and original observation evidence remain in the audit.
+- Narrow typed preload actions are `prepareOcr`, `confirmOcr`, `contractEvidence`, `unlinkEvidence` and `completeContract`. Existing trusted-sender validation, context isolation, sandbox, disabled renderer Node integration and protected capture protocol remain.
+- No new global-input implementation or player input automation was added.
 
-New tests:
+## Database migration: schema 3 → 4
 
-- tests/window-capture.test.ts, automatic-capture.test.ts, capture-retention.test.ts.
-- tests/window-desktop.cjs and tests/native/{WindowCaptureHarness,WindowSurfaceFixture}.cjs.
-- tests/automatic-desktop.cjs.
+Additive tables:
 
-Extended existing queue, tracking and desktop bridge assertions. README and this handoff document current behavior and limits. Test profiles, native binaries, screenshots and architectural reference downloads remain ignored.
+| Table                    | Keys and purpose                                                                                                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `capture_contract_links` | CaptureId primary key; ContractId foreign key with delete restriction; attached flag, association time and structured evidence payload                                                 |
+| `ocr_review_audit`       | Independent review ID; CaptureId and ContractId; time, submission hash and original/reviewed/correction/conflict/confirmation/before/after payload; unique CaptureId + submission hash |
 
-## 3. Capture backend architecture
+The link payload records association type, verification state, original capture metadata, structured observation, recognized text, original values, reviewed values, corrections, conflicts, choices and verified MissionId where available. A canonical MissionId is read from the bound contract so moved screenshot bindings remain correctly verified after consolidation.
 
-The existing helper still captures physical displays using GDI. Window discovery uses public limited process queries and visible, non-minimized top-level windows at least 640×360. It verifies the executable basename StarCitizen.exe; launcher/helper titles alone cannot qualify.
+Links deliberately have no foreign key to temporary capture records: expiry/clear can remove images and capture queue rows while structured evidence/audit remain. Link/audit foreign keys preserve the contract. Ordinary domain saves now upsert contracts instead of deleting/reinserting all contract rows. Existing ships, objectives, runs, samples, capture payloads, mission events and checkpoints retain their established persistence.
 
-The window backend selects a unique foreground eligible game window, otherwise requires one eligible window. It matches the HWND to an external-process Electron source ID, excludes Cargo Run's own process, and rechecks HWND/PID/process after enumeration. Multiple ambiguous surfaces fail rather than guessing the largest title match.
+Migration preserves existing payloads and images; it does not convert old observations automatically. All tables use the existing main-process SQLite implementation. No renderer SQL or arbitrary filesystem API was added. Schema versions newer than 4 are refused. v0.3.3 refuses schema 4; rollback requires a pre-upgrade backup, not editing user_version downward.
 
-Window thumbnails are requested at the physical target bounds. The returned pixels are inspected: empty, black/blank, below minimum size or below 85% of expected dimensions are rejected. No low-resolution image is upscaled. Metadata records actual saved width/height. Source enumeration has a 10-second timeout; a still-pending query is not stacked with another window query. Shutdown cannot restart the native helper through a delayed capture operation.
+## Reconciliation and duplicate safeguards
 
-Window-only never falls back. Automatic can fall back only when the user enabled full-display fallback. The selected display remains explicit, and failures retain both window and display reasons if necessary. Used/attempted backend, fallback flag/reason, dimensions and last saved source are visible/persisted.
+Matching priority is a previously verified MissionId binding, then strong title/objective agreement, supporting reward/timing and explicit user-confirmed association. Candidate labels distinguish verified, strong, possible and unverified trigger matches. The complete target list remains available when heuristics are insufficient.
 
-Desktop verification returned 3840×2084 from a window on the primary 3840×2160 display. A visible magenta overlap was excluded from the saved target surface. The test uses a real separate-process window source with injected synthetic identity metadata only; it does not establish production StarCitizen.exe discovery or Vulkan compatibility.
+Each review rejects changed raw/structured OCR or changed target/source records. Replaying an identical confirmation is idempotent; Create against an already-bound CaptureId returns its current contract without another insert. Unlinking retains the binding tombstone so that screenshot cannot later create another contract accidentally.
 
-SuperCargo's capture.ts, OCR orchestration and main trigger flow were reviewed for architectural understanding. No code, assets or interface were copied. Unlike silent source substitution or title-only selection, this implementation uses verified metadata and explicit fallback.
+ObjectiveId must already belong to the selected MissionId's supported events/objectives. Otherwise commodity/pickup/destination/quantity only suggest a mapping. Each existing objective can be mapped once. Distinct identical rows survive. Unmapped rows remain unless explicitly selected for removal; removing delivered rows or regressing progress is rejected. A later indistinguishable log objective remains unresolved rather than merging or double-counting.
 
-## 4. Automatic capture behavior
+For late association, select the log contract from a previously linked OCR capture and confirm consolidation. The log contract remains canonical. The original OCR record remains stored with `supersededBy`; the live snapshot excludes that alias from ledger totals. All source evidence bindings and current-run references move to the canonical identity. Historical run snapshots and audit records remain intact. Different MissionIds, conflicting closed lifecycle states, or conflicting nonzero confirmed earnings cannot be silently combined. Consolidation requires source objective coverage or explicit allowed removal.
 
-A capture observer runs only after the existing ledger/checkpoint transaction commits. It receives only first committed Live acceptance events while monitoring is running. A conservative title check requires cargo/haul/hauling/freight; unsupported names are ignored rather than guessed. Imports and duplicate MissionId notifications do not produce fresh requests. Observer failures cannot roll back contracts or stop monitoring.
+## Screenshot evidence and retention
 
-The scheduler stores request state in its own table: Pending, Running, Completed, Failed, Skipped or Expired. Limits are 20 pending/running, one in flight, 100 terminal-history rows and a two-minute deadline. Delay is 1–10 seconds; maximum total attempts is 1–5. The existing capture tail serializes actual screenshot work with manual/shortcut requests; the OCR worker remains serial and offline.
+`ContractDetails` is reachable through **Details / evidence** from active destination groups in Dashboard/Manifest and the History ledger. It shows stored contract data, linked/unlinked evidence, date/source, warnings, original OCR/observation, reviewed fields, conflict choices and provenance. Large previews use the existing protected UUID capture protocol.
 
-Each attempt creates an independent CaptureId with candidate trigger metadata: MissionId, log event time, configured delay, attempt and explicit Unverified association. Queue request, capture-start and save timestamps are separate. A scheduled capture may run later than its nominal delay.
+Current association/contract state decorates capture reads; retention does not rely on cached closure status:
 
-OCR must find a plausible title region plus Primary Objectives/delivery rows before an automatic image is usable. Options/home/unrelated screens are rejected; their images are removed while bounded diagnostics remain. A recognizable different title is retained as ReviewUnassociated. Even a matching title never verifies identity or links a mission. Raw OCR/evidence remain available for valid observations, and Reprocess changes only structured extraction.
+- Unlinked: configurable 1/7/14/30 days, default 7.
+- Active attached evidence: protected.
+- Completed/abandoned attached evidence: closure + 30 days.
+- A surviving active association also protects orphan image files when capture metadata is missing.
+- Expiry or missing files leave contracts and structured evidence/audit. Unavailable images are identified explicitly.
+- Unlink changes only the attachment/protection state. Deliberate Clear Captures deletes images/raw capture records after confirmation, while contract/evidence audit remains.
 
-An unchanged normalized image fingerprint suppresses duplicate automatic evidence. Changed screenshots with identical OCR fields remain separate: a text match is not proof of mission identity. Duplicate requests stop retrying; capture failures/rejected screens retry within configured attempts/deadline. No retained screenshot is automatically assigned to several missions.
+Existing startup/hourly cleanup, owned UUID namespace/path/link guards, file-error retention and bounded cleanup diagnostics remain. No active evidence is evicted to make room; capture limits still refuse new work at capacity.
 
-Stopping/replacing the monitored log, errors, disabling/changing automatic configuration or shutdown cancel pending work. Graceful shutdown records cancellation; startup expires interrupted pending/running requests instead of replaying screenshots against a later screen. Already saved OCR work can recover independently. Manual deletion/clear does not cause an automatic observation to resurrect.
+## Settings redesign
 
-## 5. Shortcut-repeat solution
+DOM/display order is OCR & Capture, optional Game.log Monitoring, Ships, Storage & Data, collapsed Advanced & Diagnostics. Existing Fleet Operations colors, cards, controls and responsive form styling remain.
 
-Electron globalShortcut exposes callbacks without key-up events. Cargo Run uses a trailing one-second quiet-period guard: every repeat extends the latch, and only the first callback invokes capture. Actual callback totals remain truthful; repeats are coalesced into a RepeatSuppressed diagnostic after the burst, with the existing 50-event bound.
+One Capture Method applies to manual, shortcut and automatic capture by default. Display selection appears only when a configured method can capture the display. Existing saved policies with a different automatic source are normalized to an explicit advanced override, preserving old behavior. Normalization is read-time and persisted on the next policy save. Disable the override to adopt the shared method.
 
-This is a cooldown fallback, not a physical pressed/released state machine. Quick separate presses within the interval can be ignored. An unusually long OS initial-repeat delay can permit an extra capture. Hardware held-key behavior and Star Citizen-focused delivery were not verified in this task.
+Storage groups SQLite/capture locations, usage, retention, cleanup, sample controls and a clearly separated destructive capture clear. Advanced contains provider information, parser/shortcut diagnostics, bounded automatic request history, source override and application version. Game.log is described as optional mission-event enrichment.
 
-The recorder and configurable standalone function keys remain. Changing the binding rearms the guard. The optional Raw Input backend/comparison mode is preserved and remains experimental/off by default; its prior physical-key failure was not repaired or claimed resolved. No hooks, input interception or arbitrary key logging were introduced.
+Defaults remain Full Display; explicit fallback off; shortcut enabled; sounds enabled; automatic capture off; delay 3 seconds; 3 total attempts; cleanup enabled; unlinked retention 7 days. Existing different preferences are preserved rather than silently reset.
 
-## 6. Retention implementation
+## Files changed
 
-Unlinked evidence expires after 7 days by default, with 1/7/14/30-day controls. Automatic cleanup runs at startup and hourly; disabling it suppresses those cleanup passes. Manual expired cleanup still works. Settings reports owned-file bytes, capture count, last cleanup result and bounded errors; Clear Captures remains available.
+New modules:
 
-Captured/Processing records and active-request evidence are protected. Expired PNGs, thumbnails, temporary files and capture metadata are removed on a best-effort basis. Missing files are harmless. A partial file-deletion failure retains metadata so later cleanup can retry. Old orphan files in the owned UUID namespace use file modification age and the same unlinked policy. Unrelated filenames, filesystem links/non-files and paths outside the owned captures directory are not deleted.
+- `electron/main/ocr/review.ts`: candidate preparation, validation, conflict planning, stable provenance, evidence and transactional persistence helpers.
+- `src/types/review.ts`: narrow request/result/evidence models and reviewed-field validation.
+- `src/pages/ScanReview/ContractReview.tsx`: editable review and confirmation workflow.
+- `src/components/contracts/ContractDetails.tsx`: stored values, evidence, preview/unlink and local completion.
+- `src/utils/captureReview.ts`: grouping failed automatic attempts while retaining usable observations.
+- `tests/ocr-contracts.test.ts`, `tests/ocr-contracts-desktop.cjs`, `tests/fixtures/ocr-hydrogen.ts`: integration regressions, isolated Windows workflow and reported C reconstruction.
 
-A future-only evidenceLink model protects active linked evidence and expires closed evidence 30 days after completion/abandonment. No operation in this version creates an association or infers one from candidate trigger metadata. Contracts, mission events, runs and History are unaffected by cleanup or manual screenshot deletion.
+Updated modules:
 
-Schema 3 adds only automatic_captures. Existing capture JSON/image references stay readable with optional new metadata; tests cover v1/v2 migration preservation. Policy is separate from the existing shortcut/display settings.
+- `electron/main/storage/database.ts`, `trackingService.ts`, `index.ts`, `electron/preload/index.ts`: schema 4, upserts, transactional actions, publication and trusted typed IPC.
+- `electron/main/log/reconcile.ts`: canonical MissionId lookup, unique unassigned OCR objective matching, ambiguity retention and preserved pickup/progress.
+- `electron/main/ocr/parser.ts`: action-position view evidence, contradictions and excluded action titles; parser version 0.4.0.
+- `electron/main/ocr/{queue,repository,retention}.ts`: shared/overridden source selection, live evidence decoration, expiry and orphan protection.
+- `src/types/{models,desktop,capturePolicy}.ts`, `src/stores/cargoDomain.ts`, `src/utils/format.ts`: OCR origin, nullable time/reward, company, sources/provenance, manual correction/progress/lifecycle safety and unknown-date display.
+- `ContractDrawer.tsx`, `DestinationGroups.tsx`, `pages/History/index.tsx`: optional manual fields, OCR progress editing, evidence entry points, combined sources and closure labels.
+- `pages/ScanReview/index.tsx`, all `pages/Settings/*.tsx`, `src/styles/global.css`: review entry, grouped failures, functional retry distinction, settings organization and existing-theme spacing.
+- `package.json`, `package-lock.json`, app/navigation version strings and `resources/native/capture.manifest`: 0.4.0 metadata and new desktop test script; no dependency changes.
+- Existing parser/migration/queue/desktop tests: schema/parser expectations, action evidence, shared source routing, fixed bridge allowlist and advanced-settings selectors.
+- `README.md` and this handoff: current architecture, workflows, limitations and exact game-test instructions.
 
-## 7. Automated verification
+## Automated verification executed
 
-- npm run typecheck: passed.
-- npm run lint: passed.
-- npm test: 138 passed across 13 files, including every existing real/synthetic OCR parsing regression.
-- npm run build: passed, including Windows helper compilation and main/preload/renderer.
-- Dependency audit: zero vulnerabilities; no new dependencies.
+| Check               | Result                                                                      |
+| ------------------- | --------------------------------------------------------------------------- |
+| `npm run typecheck` | Passed                                                                      |
+| `npm run lint`      | Passed                                                                      |
+| `npm test`          | 183 tests in 14 files passed                                                |
+| `npm run build`     | Native capture helper/sounds and production main/preload/React build passed |
 
-Coverage includes correct/incorrect/ambiguous/missing window sources, self-exclusion, blank/black/reduced images, actual resolution, explicit fallback and double failure, stalled source queries, shutdown, delays, bounded retries/overflow, duplicates, stale/recovered requests, stopped monitoring, invalid/unrelated screens, independent changed observations, callback bursts, policy validation, retention enable/disable/startup/hourly behavior, protected/missing/locked/orphan evidence, usage and migration preservation. Log tests verify the observer runs after commit and cannot roll back existing contract creation.
+New tests cover OCR creation, multi-objective values, null optional reward/company, invalid quantities, Offers/ambiguous acceptance, incompleteness, corrections, same-CaptureId replay, separate identical instances, log enrichment/identity, unverified triggers, different MissionIds, conflicts/progress, closed lifecycle/earnings, stale reviews, distinct rows/ObjectiveIds, source consolidation with retained snapshots, transactional failure rollback, samples, local completion/finalization, restart persistence, links/unlinks, active/closed/missing-file/orphan retention, grouped failures, later/out-of-order events and verified moved bindings. Existing queue tests now exercise manual/shortcut/automatic routing with and without an explicit override.
 
-## 8. Windows desktop verification
+Fixture provenance is deliberate:
 
-Passed:
+- A: reported 61,500 / 8 SCU / two Aluminum rows / Port Tressler, represented by the existing spatial reconstruction.
+- B: actual saved 4K OCR export, 65,250 / four rows **7+6+7+5 = 25 SCU**, Pressurized Ice/Processed Food and two Rayari destinations.
+- C: newly labelled spatial reconstruction from the user's report, 60,750 / 31 Hydrogen / microTech Logistics Depot S4LD13 → Rayari Deltana Research Outpost.
+- Existing genuine OCR exports and earlier synthetic/modified 18-SCU variants remain. No actual OCR quantity was changed to fit a prior expectation.
 
-- Existing manual-contract/security/navigation/manifest/history/window-control suite.
-- Existing SQLite/Game.log suite, including repeated restarts, duplicates, rotation/recovery and run snapshots.
-- Actual separate-process Electron window-source test: 3840×2084 pixels, visible overlap excluded, actual dimensions recorded, no upscaling or display fallback. Identity metadata is injected for this normal-app test only.
-- End-to-end synthetic Live Game.log acceptance → committed ledger → delayed native display capture → offline OCR. A duplicate notification did not duplicate requests; three distinct requests serialized, one unrelated-title observation was retained unassociated, two unchanged images were skipped, stop cancelled pending work, and expired cleanup removed evidence without changing four log-created contracts. Capture source/fallback settings and the Settings selector were verified after an actual application restart.
-- Saved real OCR Reprocess/preview and recorder Save/Escape workflow in an isolated profile, with zero OCR-created contracts.
+## Windows desktop verification executed
 
-The standalone all-in-one shortcut/OCR desktop harness failed to launch its compiled WinForms fixture (spawn UNKNOWN). Windows Code Integrity event 3077 identified that specific test executable as blocked. No security controls were changed or bypassed. The automatic desktop test independently exercised the same native full-display capture/OCR path using its isolated synthetic fixture.
+| Test                                   | Result and boundary                                                                                                                                                                                                                                                                                |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node tests/desktop.cjs`               | Passed: real Electron security, navigation, ships, manual add/edit/abandon, capacity, destinations, Manifest, History, run snapshots, samples and window controls                                                                                                                                  |
+| `node tests/tracking-desktop.cjs`      | Passed: SQLite across 3 restarts, tracking/import/replay, partial lines, objective association, zero-earned completion, failure/recovery/rotation and immutable runs                                                                                                                               |
+| `node tests/ocr-contracts-desktop.cjs` | Passed: v3 migration, preserved source override, OCR-only UI creation without monitoring, distinct-instance gating, same-ID replay, extra evidence, Dashboard/Manifest/History, explicit late log consolidation, protected active images, preview/unlink, restart persistence and local completion |
+| `node tests/window-desktop.cjs`        | Passed: separate-process Electron window capture, actual 3840×2084 pixels, overlap excluded, no upscaling/fallback; synthetic window identity                                                                                                                                                      |
+| `node tests/ocr-review-desktop.cjs`    | Passed: actual saved OCR reprocess, unchanged raw evidence/attempt count, shortcut recorder Save/Escape cancellation, no automatic contract creation; existing prototype reached Listening                                                                                                         |
+| `node tests/ocr-desktop.cjs`           | Attempted; stopped launching its compiled `OcrFixture.exe` with `spawn UNKNOWN`                                                                                                                                                                                                                    |
+| `node tests/automatic-desktop.cjs`     | Attempted; stopped launching its compiled WinForms fixture with `spawn UNKNOWN`                                                                                                                                                                                                                    |
 
-No actual Star Citizen window/gameplay/Vulkan capture or in-game automatic recognition was performed. The actual game-focused shortcut issue remains unresolved. Installer signing/packaging and subjective sound audibility remain unverified.
+The new Windows integration test uses genuine saved OCR text plus a synthetic preview PNG because the corresponding original capture file was not present. It tests protected image serving/preview, not new recognition of a genuine game screenshot. The log picker response is stubbed only in isolated tests; the file reader, parser, SQLite, IPC and React paths are real. No live user database was changed. No security policy was modified to force native fixture execution.
 
-## 9. Exact real Star Citizen test
+Ignored visual artifacts include `work/settings-v040.png`, `work/evidence-v040.png` and isolated test profiles. The displayed review/evidence UI and Settings layout were inspected. Original real-game screen/graphics/input delivery is not established by these desktop tests.
 
-1. Keep acceptance capture off. In Settings select Full Display and the game monitor. Capture visible Mobiglas contract details manually; inspect screenshot, resolution and OCR.
-2. Select Star Citizen Window, keep the game in borderless mode and capture with Cargo Run unfocused. Verify the game render surface, correct actual dimensions, no black frame and no overlapping Cargo Run UI. A failure must remain visible.
-3. Test Automatic with fallback disabled. Then explicitly enable fallback if desired and confirm used backend, dimensions and window-failure reason. Window-only must never substitute a display.
-4. Test the chosen shortcut in a normal app first, then in the game. Hold several seconds, release, wait over a second and press again. Inspect callbacks versus CaptureRequested/Saved and RepeatSuppressed; do not call the quiet-period fallback reliable physical key-up handling.
-5. Start live monitoring. Enable acceptance capture with delay 3, attempts 3 and Window source. Accept one new hauling mission, keep the desired details visible, wait for OCR and inspect request/capture metadata. Candidate MissionId must remain Unverified.
-6. Accept another mission and switch the visible details before capture. Confirm that differing content is retained for manual review without association or OCR contract changes. Test several rapid acceptances, duplicate notifications and an unchanged screen.
-7. Test Options/home/unrelated screens, minimized/unavailable windows, black frames and explicit fallback failure. Check bounded attempts/expiry. Stop monitoring during a pending delay and verify cancellation.
-8. Restart during pending work and verify it is cancelled/expired rather than replayed. Check settings and existing captures after migration. Review storage/expiry controls and cleanup; contract/run/history rows must remain unchanged.
-9. Turn the experiment off when finished. Use Electron/manual full-display capture if window capture or input delivery is unreliable. Do not weaken Windows or anti-cheat protections to force a test.
+## Exact in-game verification still required
 
-## 10. Phase 3B boundary
+Follow **README → Exact Star Citizen test**, steps 1–12. This covers backup, monitoring-off OCR creation, physical callback diagnostics, Display/Window/Automatic modes, A/B/C values, repeated captures, Offers/Accepted/contradictory actions, optional log enrichment, separate identities, late association, lifecycle/history, restart and evidence retention, then bounded automatic capture.
 
-The app now has reliable trigger provenance, source/fallback/resolution/validation metadata and a prepared retention model. These are observations and candidate triggers only. Verified associations, OCR-to-contract persistence, automatic merging, mission identity inference and reconciliation remain unimplemented. No timed continuous scanning, game navigation, keyboard/mouse automation, memory access, injection, anti-cheat bypass or cloud OCR was added.
+Registration is not callback delivery. Reset diagnostics, focus Star Citizen, physically press/release the saved chord once, return and inspect Invocation then CaptureSaved/error. Listening does not establish Raw Input delivery. The existing optional comparison instructions are in README; only the explicitly selected backend triggers capture. Earlier physical Raw Input failure remains unresolved. Preserve Electron/manual capture when unreliable.
+
+No actual Star Citizen session, production StarCitizen.exe identification, Vulkan/exclusive-fullscreen behavior, physical in-game shortcut, real mission reconciliation or subjective tone audibility was tested in Task 03B. Native WinForms capture suites need rerunning on a machine where their fixture executable launches.
+
+## Known limits and next phase
+
+OCR reads visible content only; the objective panel may scroll. Acceptance is always explicitly confirmed. Matching remains conservative and user-directed. Ambiguous objective identities or conflicting verified lifecycle/earnings are left unresolved rather than guessed. Source switching reloads the review; edits must be reapplied if switching targets. Review audit persists in SQLite; the evidence panel emphasizes current associations/decisions rather than an audit timeline. Removing raw captures cannot recover an expired original image from structured evidence.
+
+The 50-capture/512-MiB bound still requires explicit cleanup/unlink/clear when protected evidence fills storage. No automatic saving, continuous scanning, navigation, external API, authentication, cloud sync, routing, memory reading, injection or anti-cheat workaround was introduced.
+
+Recommended next work: collect consented real-game OCR exports for A/C and Offers/action variations; run the exact in-game matrix; diagnose the native fixture launch environment; add an explicit historical review timeline and targeted resolution UI for intentionally unresolved objective/lifecycle cases. Keep automatic saving deferred until real-game matching and capture reliability are demonstrated.

@@ -158,7 +158,7 @@ let app;
     );
     if (state.inputPrototype.status === "Error")
       assert.equal(state.registered, false);
-    await page.locator(".shortcut-diagnostics > summary").click();
+    await page.locator(".advanced-panel > summary").click();
     await page
       .locator(".shortcut-diagnostics > summary")
       .scrollIntoViewIfNeeded();

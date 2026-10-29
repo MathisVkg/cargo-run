@@ -1,3 +1,4 @@
+import { ContractDetails } from "./ContractDetails";
 import { useState } from "react";
 import { ChevronDown, MapPin, Pencil, Ban, ArrowRight } from "lucide-react";
 import { groupByDestination } from "../../stores/selectors";
@@ -15,6 +16,7 @@ export function DestinationGroups({
   manifest?: boolean;
   onEdit?(contract: Contract): void;
 }) {
+  const [detail, setDetail] = useState<Contract | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set(["Area18"]));
   const [abandon, setAbandon] = useState<Contract | null>(null);
   const abandonContract = useCargoStore((s) => s.abandonContract);
@@ -154,7 +156,16 @@ export function DestinationGroups({
                         <Badge tone="amber">{c.status}</Badge>
                       </td>
                       <td>
-                        <span className="source-label">{c.source}</span>
+                        <span className="source-label">
+                          {(c.sources ?? [c.source]).join(" + ")}
+                        </span>
+                        <button
+                          className="text-button"
+                          aria-label={"Details for " + c.name}
+                          onClick={() => setDetail(c)}
+                        >
+                          Details / evidence
+                        </button>
                       </td>
                       {onEdit && (
                         <td>
@@ -190,6 +201,7 @@ export function DestinationGroups({
           )}
         </section>
       ))}
+      <ContractDetails contract={detail} onClose={() => setDetail(null)} />
       <Overlay
         open={!!abandon}
         onClose={() => setAbandon(null)}

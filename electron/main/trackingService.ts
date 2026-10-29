@@ -1,3 +1,9 @@
+import {
+  prepareReview,
+  planReview,
+  persistReview,
+  evidence,
+} from "./ocr/review";
 import { randomUUID } from "node:crypto";
 import { isAbsolute, basename } from "node:path";
 import { CargoDatabase } from "./storage/database";
@@ -35,7 +41,12 @@ export function assertDraft(
   if (
     !draft ||
     !text(draft.name) ||
-    !numeric(draft.payout, 0, 1e15) ||
+    !(
+      draft.company === undefined ||
+      draft.company === null ||
+      (typeof draft.company === "string" && draft.company.length <= 2000)
+    ) ||
+    !(draft.payout === null || numeric(draft.payout, 0, 1e15)) ||
     !Array.isArray(draft.objectives) ||
     !draft.objectives.length ||
     draft.objectives.length > 1000
@@ -47,7 +58,15 @@ export function assertDraft(
       !text(o.commodity) ||
       !text(o.pickupLocation) ||
       !text(o.destination) ||
-      !numeric(o.quantitySCU, 0.01, 1e12)
+      !numeric(o.quantitySCU, 0.01, 1e12) ||
+      !(
+        o.id === undefined ||
+        (typeof o.id === "string" && o.id.length <= 256)
+      ) ||
+      !(
+        o.deliveredSCU === undefined ||
+        numeric(o.deliveredSCU, 0, o.quantitySCU)
+      )
     )
       throw new Error("Invalid delivery objective fields.");
 }
@@ -92,6 +111,7 @@ export class TrackingService {
   snapshot(): AppSnapshot {
     return {
       ...this.domain(),
+      contracts: this.domain().contracts.filter((c) => !c.supersededBy),
       revision: this.revision,
       databasePath: this.database.path,
       tracking: {
@@ -131,6 +151,95 @@ export class TrackingService {
         .getState()
         .saveContract(input.draft as ContractDraft, input.id);
     });
+  }
+  prepareOcr(input: unknown) {
+    return prepareReview(this.database, this.domain(), input);
+  }
+  confirmOcr(input: unknown) {
+    const before = this.store.getState();
+    let plan: ReturnType<typeof planReview>;
+    try {
+      plan = this.database.transaction(() => {
+        const next = planReview(this.database, this.domain(), input);
+        if (!next.idempotent) {
+          this.store.setState({
+            contracts: next.contracts,
+            currentRun: { ...before.currentRun, contractIds: next.runIds },
+          });
+          this.database.saveDomain(this.domain());
+          persistReview(this.database, next);
+        }
+        return next;
+      });
+    } catch (e) {
+      this.store.setState(before, true);
+      throw e;
+    }
+    return {
+      state: plan.idempotent ? this.snapshot() : this.publish(),
+      contractId: plan.contract.id,
+      idempotent: plan.idempotent,
+    };
+  }
+  contractEvidence(id: unknown) {
+    if (
+      typeof id !== "string" ||
+      !this.domain().contracts.some((c) => c.id === id)
+    )
+      throw Error("Contract not found.");
+    return evidence(this.database, id);
+  }
+  unlinkEvidence(input: unknown) {
+    if (!input || typeof input !== "object")
+      throw Error("Invalid evidence request.");
+    const { contractId, captureId } = input as {
+      contractId: string;
+      captureId: string;
+    };
+    const link = this.contractEvidence(contractId).find(
+      (l) => l.captureId === captureId,
+    );
+    if (!link) throw Error("Evidence association not found.");
+    this.database.transaction(() => {
+      this.database.db
+        .prepare(
+          "UPDATE capture_contract_links SET attached=0 WHERE capture_id=? AND contract_id=?",
+        )
+        .run(captureId, contractId);
+      this.database.db
+        .prepare(
+          "INSERT INTO ocr_review_audit(id,capture_id,contract_id,at,submission_hash,payload) VALUES(?,?,?,?,?,?)",
+        )
+        .run(
+          randomUUID(),
+          captureId,
+          contractId,
+          new Date().toISOString(),
+          randomUUID(),
+          JSON.stringify({ action: "Unlink", previous: link }),
+        );
+    });
+    return this.publish();
+  }
+  completeContract(id: unknown) {
+    const c = this.domain().contracts.find(
+      (c) => c.id === id && !c.supersededBy,
+    );
+    if (!c || c.status !== "Active" || c.missionId || c.source === "Log")
+      throw Error("Only an active local contract can be manually completed.");
+    return this.mutate(() =>
+      this.store.setState({
+        contracts: this.domain().contracts.map((x) =>
+          x.id === id
+            ? {
+                ...x,
+                status: "Completed",
+                completedAt: new Date().toISOString(),
+              }
+            : x,
+        ),
+      }),
+    );
   }
   selectShip(id: unknown): AppSnapshot {
     if (typeof id !== "string" || !this.savedShips.some((s) => s.id === id))

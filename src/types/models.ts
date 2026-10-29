@@ -1,6 +1,6 @@
 export type ContractStatus = "Active" | "Completed" | "Abandoned";
 export type ContractSource = "Log" | "OCR" | "Manual";
-export type DataOrigin = "Sample" | "Manual" | "Log";
+export type DataOrigin = "Sample" | "Manual" | "Log" | "OCR";
 export type Page =
   "Dashboard" | "Manifest" | "History" | "Settings" | "Scan Review";
 export interface Ship {
@@ -28,7 +28,19 @@ export interface Contract {
   source: ContractSource;
   payout: number | null;
   confirmedEarnings: number;
-  acceptedAt: string;
+  acceptedAt: string | null;
+  company?: string | null;
+  sources?: ("Log" | "OCR" | "Manual")[];
+  supersededBy?: string;
+  fieldProvenance?: Record<
+    string,
+    {
+      source: "Log" | "OCR" | "Manual";
+      captureId?: string;
+      at: string;
+      corroboratedBy?: string[];
+    }
+  >;
   completedAt?: string;
   cargoObjectives: CargoObjective[];
   dataOrigin: DataOrigin;
@@ -42,13 +54,16 @@ export interface CargoRun {
   contractSnapshots: Contract[];
 }
 export interface ObjectiveDraft {
+  id?: string;
+  deliveredSCU?: number;
   commodity: string;
   pickupLocation: string;
   destination: string;
   quantitySCU: number;
 }
 export interface ContractDraft {
+  company?: string | null;
   name: string;
-  payout: number;
+  payout: number | null;
   objectives: ObjectiveDraft[];
 }

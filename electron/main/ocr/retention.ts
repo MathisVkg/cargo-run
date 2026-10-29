@@ -126,6 +126,21 @@ export class CaptureRetention {
     // Old crash leftovers in the owned UUID namespace follow the same unlinked policy.
     const known = new Set(this.repository.list().map((c) => c.id)),
       orphans = new Map<string, string[]>();
+    // A surviving evidence link still protects an orphaned image if capture metadata is missing.
+    for (const row of this.repository.database.db
+      .prepare(
+        "SELECT l.capture_id,c.payload FROM capture_contract_links l JOIN contracts c ON c.id=l.contract_id WHERE l.attached=1",
+      )
+      .all()) {
+      const c = JSON.parse(
+        String(row.payload),
+      ) as import("../../../src/types/models").Contract;
+      const until = c.completedAt
+        ? Date.parse(c.completedAt) + 30 * day
+        : Infinity;
+      if (c.status === "Active" || !Number.isFinite(until) || until > now)
+        known.add(String(row.capture_id));
+    }
     try {
       for (const name of readdirSync(this.directory)) {
         const match = owned.exec(name);

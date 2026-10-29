@@ -35,17 +35,48 @@ export class CaptureRepository {
   saveSettings(settings: CaptureSettings) {
     this.database.setSetting("ocr.settings", settings);
   }
+  private decorate(c: CaptureRecord): CaptureRecord {
+    const row = this.database.db
+      .prepare(
+        "SELECT contract_id,attached FROM capture_contract_links WHERE capture_id=?",
+      )
+      .get(c.id);
+    if (!row) return c;
+    const contract = this.database.db
+      .prepare("SELECT payload FROM contracts WHERE id=?")
+      .get(String(row.contract_id));
+    const value = contract
+      ? (JSON.parse(
+          String(contract.payload),
+        ) as import("../../../src/types/models").Contract)
+      : null;
+    return {
+      ...c,
+      evidenceLink:
+        row.attached && value
+          ? {
+              contractId: value.id,
+              status: value.status,
+              closedAt: value.completedAt ?? null,
+            }
+          : undefined,
+    };
+  }
   list(): CaptureRecord[] {
     return this.database.db
       .prepare("SELECT payload FROM ocr_captures ORDER BY sequence")
       .all()
-      .map((r) => JSON.parse(String(r.payload)) as CaptureRecord);
+      .map((r) =>
+        this.decorate(JSON.parse(String(r.payload)) as CaptureRecord),
+      );
   }
   get(id: string): CaptureRecord | null {
     const row = this.database.db
       .prepare("SELECT payload FROM ocr_captures WHERE id=?")
       .get(id);
-    return row ? (JSON.parse(String(row.payload)) as CaptureRecord) : null;
+    return row
+      ? this.decorate(JSON.parse(String(row.payload)) as CaptureRecord)
+      : null;
   }
   put(record: CaptureRecord) {
     this.database.db

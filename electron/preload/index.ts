@@ -3,6 +3,11 @@ import type { DesktopBridge } from "../../src/types/desktop";
 import type { AppSnapshot } from "../../src/types/tracking";
 import type { OcrSnapshot } from "../../src/types/ocr";
 const bridge: DesktopBridge = {
+  prepareOcr: (input) => ipcRenderer.invoke("ocr:prepareReview", input),
+  confirmOcr: (input) => ipcRenderer.invoke("ocr:confirmReview", input),
+  contractEvidence: (id) => ipcRenderer.invoke("ocr:evidence", id),
+  unlinkEvidence: (input) => ipcRenderer.invoke("ocr:unlink", input),
+  completeContract: (id) => ipcRenderer.invoke("cargo:completeContract", id),
   ocrBeginRecording: () => ipcRenderer.invoke("ocr:beginRecording"),
   ocrEndRecording: () => ipcRenderer.invoke("ocr:endRecording"),
   ocrProbeShortcut: () => ipcRenderer.invoke("ocr:probeShortcut"),

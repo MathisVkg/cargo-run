@@ -11,7 +11,7 @@ describe("reported real-game OCR regression", () => {
     expect(o.company.value).toBe("Covalex Independent Contractors");
     expect(o.reward.value).toBe(61500);
     expect(o.title.value).not.toMatch(/HISTORY|BEACONS|OFFERS|ACCEPTED/);
-    expect(o.view).toMatchObject({ value: null, state: "Ambiguous" });
+    expect(o.view).toMatchObject({ value: "Accepted", state: "Recognized" });
   });
   it("retains two wrapped Aluminum deliveries, full punctuation and commodity-specific pickups", () => {
     const o = parse();

@@ -24,7 +24,7 @@ export class CargoDatabase {
     const version = Number(
       (this.db.prepare("PRAGMA user_version").get() as Row).user_version,
     );
-    if (version > 3) {
+    if (version > 4) {
       this.db.close();
       throw new Error(
         "This database was created by a newer Cargo Run version. No data was changed.",
@@ -59,6 +59,15 @@ export class CargoDatabase {
         this.db.exec(
           "CREATE TABLE IF NOT EXISTS automatic_captures (sequence INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL UNIQUE, mission_id TEXT NOT NULL UNIQUE, payload TEXT NOT NULL); PRAGMA user_version=3;",
         );
+      });
+    if (version < 4)
+      this.transaction(() => {
+        this.db.exec(`
+      CREATE TABLE IF NOT EXISTS capture_contract_links (capture_id TEXT PRIMARY KEY,contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE RESTRICT,attached INTEGER NOT NULL DEFAULT 1,associated_at TEXT NOT NULL,payload TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS contract_capture_evidence ON capture_contract_links(contract_id,attached);
+      CREATE TABLE IF NOT EXISTS ocr_review_audit (id TEXT PRIMARY KEY,capture_id TEXT NOT NULL,contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE RESTRICT,at TEXT NOT NULL,submission_hash TEXT NOT NULL,payload TEXT NOT NULL,UNIQUE(capture_id,submission_hash));
+      PRAGMA user_version=4;
+    `);
       });
   }
   transaction<T>(action: () => T): T {
@@ -121,11 +130,17 @@ export class CargoDatabase {
   }
   saveDomain(state: DomainSnapshot): void {
     this.db.exec(
-      "DELETE FROM cargo_objectives; DELETE FROM contracts; DELETE FROM cargo_runs; DELETE FROM ships;",
+      "DELETE FROM cargo_objectives; DELETE FROM cargo_runs; DELETE FROM ships;",
     );
+    const retained = new Set(state.contracts.map((c) => c.id));
+    for (const row of this.db.prepare("SELECT id FROM contracts").all())
+      if (!retained.has(String(row.id)))
+        this.db.prepare("DELETE FROM contracts WHERE id=?").run(String(row.id));
     const shipInsert = this.db.prepare("INSERT INTO ships VALUES(?,?)");
     state.ships.forEach((s) => shipInsert.run(s.id, JSON.stringify(s)));
-    const insert = this.db.prepare("INSERT INTO contracts VALUES(?,?,?,?)");
+    const insert = this.db.prepare(
+      "INSERT INTO contracts VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET mission_id=excluded.mission_id,origin=excluded.origin,payload=excluded.payload",
+    );
     const objectiveInsert = this.db.prepare(
       "INSERT INTO cargo_objectives VALUES(?,?,?,?)",
     );

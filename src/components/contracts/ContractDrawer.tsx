@@ -15,7 +15,7 @@ const emptyStop = (): ObjectiveDraft => ({
 });
 const emptyDraft = (): ContractDraft => ({
   name: "",
-  payout: Number.NaN,
+  payout: null,
   objectives: [emptyStop()],
 });
 export function ContractDrawer({
@@ -37,7 +37,8 @@ export function ContractDrawer({
         contract
           ? {
               name: contract.name,
-              payout: contract.payout ?? Number.NaN,
+              payout: contract.payout,
+              company: contract.company ?? null,
               objectives: contract.cargoObjectives.map((o) => ({ ...o })),
             }
           : emptyDraft(),
@@ -97,16 +98,31 @@ export function ContractDrawer({
             />
           </label>
           <label>
-            Payout (aUEC)
+            Company (optional)
             <input
-              required
+              value={draft.company ?? ""}
+              onChange={(e) =>
+                setDraft({ ...draft, company: e.target.value || null })
+              }
+            />
+          </label>
+          <label>
+            Payout (aUEC, optional)
+            <input
               type="number"
               min="0"
               step="0.01"
               placeholder="0"
-              value={Number.isNaN(draft.payout) ? "" : draft.payout}
+              value={
+                draft.payout === null || Number.isNaN(draft.payout)
+                  ? ""
+                  : draft.payout
+              }
               onChange={(e) =>
-                setDraft({ ...draft, payout: e.target.valueAsNumber })
+                setDraft({
+                  ...draft,
+                  payout: e.target.value === "" ? null : e.target.valueAsNumber,
+                })
               }
             />
           </label>
@@ -169,6 +185,21 @@ export function ContractDrawer({
                   />
                 </label>
               </div>
+              {contract?.source === "OCR" && (
+                <label>
+                  Delivered SCU
+                  <input
+                    type="number"
+                    min="0"
+                    max={o.quantitySCU}
+                    step="any"
+                    value={o.deliveredSCU ?? 0}
+                    onChange={(e) =>
+                      updateStop(i, { deliveredSCU: e.target.valueAsNumber })
+                    }
+                  />
+                </label>
+              )}
               {draft.objectives.length > 1 && (
                 <button
                   type="button"
@@ -205,7 +236,8 @@ export function ContractDrawer({
             </p>
           )}
           <p className="form-note">
-            Source: Manual · Saved to local SQLite storage.
+            Source: {contract?.source ?? "Manual"} · Edits are manual
+            corrections saved locally.
           </p>
         </div>
         <div className="dialog-actions">

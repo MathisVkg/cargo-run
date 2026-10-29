@@ -6,6 +6,7 @@ export interface CapturePolicy {
   delaySeconds: number;
   maxAttempts: number;
   autoSource: CaptureMode;
+  autoSourceOverride?: boolean;
   cleanupEnabled: boolean;
   unlinkedDays: 1 | 7 | 14 | 30;
 }
@@ -46,7 +47,8 @@ export const defaultCapturePolicy: CapturePolicy = {
   autoEnabled: false,
   delaySeconds: 3,
   maxAttempts: 3,
-  autoSource: "Window",
+  autoSource: "Display",
+  autoSourceOverride: false,
   cleanupEnabled: true,
   unlinkedDays: 7,
 };
@@ -57,6 +59,8 @@ export function validatePolicy(value: unknown): CapturePolicy {
   if (
     !["Automatic", "Window", "Display"].includes(p.source) ||
     !["Automatic", "Window", "Display"].includes(p.autoSource) ||
+    (p.autoSourceOverride !== undefined &&
+      typeof p.autoSourceOverride !== "boolean") ||
     typeof p.allowDisplayFallback !== "boolean" ||
     typeof p.autoEnabled !== "boolean" ||
     !Number.isInteger(p.delaySeconds) ||
@@ -78,6 +82,7 @@ export function validatePolicy(value: unknown): CapturePolicy {
     delaySeconds: p.delaySeconds,
     maxAttempts: p.maxAttempts,
     autoSource: p.autoSource,
+    autoSourceOverride: p.autoSourceOverride ?? p.autoSource !== p.source,
     cleanupEnabled: p.cleanupEnabled,
     unlinkedDays: p.unlinkedDays,
   };

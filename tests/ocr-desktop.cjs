@@ -247,7 +247,7 @@ async function run() {
     assert.equal(
       (await state()).captures.find((c) => c.id === selected.id).observation
         .parserVersion,
-      "0.3.2",
+      "0.4.0",
     );
     const before = (await state()).captures;
     await app.close();
@@ -264,7 +264,7 @@ async function run() {
     await navigate("Settings");
     await page
       .getByRole("heading", {
-        name: "Windows capture & OCR prototype",
+        name: "OCR & Capture",
         exact: true,
       })
       .scrollIntoViewIfNeeded();

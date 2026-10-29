@@ -77,10 +77,19 @@ export class OcrQueue {
   ) {
     mkdirSync(directory, { recursive: true });
     this.settings = repository.settings();
-    this.policy = validatePolicy({
-      ...defaultCapturePolicy,
-      ...repository.database.getSetting<Partial<CapturePolicy>>("ocr.policy"),
-    });
+    const savedPolicy =
+      repository.database.getSetting<Partial<CapturePolicy>>("ocr.policy");
+    this.policy = validatePolicy(
+      savedPolicy
+        ? {
+            ...defaultCapturePolicy,
+            ...savedPolicy,
+            autoSourceOverride:
+              savedPolicy.autoSourceOverride ??
+              savedPolicy.autoSource !== savedPolicy.source,
+          }
+        : defaultCapturePolicy,
+    );
     this.retention = new CaptureRetention(repository, directory);
     this.automatic = new AutomaticCapture(
       repository.database,
@@ -218,6 +227,9 @@ export class OcrQueue {
       limit: 50,
     };
   }
+  refreshEvidence() {
+    return this.publish();
+  }
   private publish() {
     if (this.closing) return this.snapshot();
     this.revision++;
@@ -292,6 +304,8 @@ export class OcrQueue {
     if (
       [
         "autoSource",
+        "autoSourceOverride",
+        "source",
         "autoEnabled",
         "maxAttempts",
         "delaySeconds",
@@ -811,7 +825,9 @@ export class OcrQueue {
   ): Promise<AutoOutcome> {
     const state = await this.capture("Automatic", {
       trigger,
-      mode: this.policy.autoSource,
+      mode: this.policy.autoSourceOverride
+        ? this.policy.autoSource
+        : this.policy.source,
       valid,
     });
     const id = state.captures.at(-1)!.id;

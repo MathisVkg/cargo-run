@@ -58,7 +58,7 @@ export function Navigation({
       <div className="nav-footer">
         <Box size={19} />
         <span>
-          Cargo Run <span className="muted">/ 0.3.3</span>
+          Cargo Run <span className="muted">/ 0.4.0</span>
           <small>Local desktop companion</small>
         </span>
       </div>

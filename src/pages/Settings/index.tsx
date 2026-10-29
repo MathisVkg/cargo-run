@@ -24,12 +24,13 @@ export default function Settings() {
         description="Your local operations environment."
       />
       <div className="settings-grid">
+        <OcrSettings />
         <LogMonitoring />
         <section className="panel setting-card">
           <div className="setting-icon">
             <Rocket size={21} />
           </div>
-          <h2>Selected ship</h2>
+          <h2>Ships</h2>
           <p>Capacity updates across your current operations.</p>
           <label htmlFor="settings-ship">Demonstration ship</label>
           <select
@@ -51,7 +52,8 @@ export default function Settings() {
           <div className="setting-icon">
             <Database size={21} />
           </div>
-          <h2>Local application data</h2>
+          <h2>Storage &amp; Data</h2>
+          <OcrSettings section="storage" />
           <p>
             Contracts, objectives, runs, ship selection, monitoring
             configuration, and event checkpoints are saved locally in SQLite.
@@ -84,22 +86,26 @@ export default function Settings() {
             run together.
           </p>
         </section>
-        <OcrSettings />
-        <section className="panel setting-card app-info">
-          <div className="setting-icon">
-            <Info size={21} />
-          </div>
-          <div>
-            <h2>
-              Cargo Run <Badge>0.3.3</Badge>
-            </h2>
-            <p>Fleet Operations · SQLite, Game.log & local OCR prototype</p>
-            <p className="form-note">
-              Independent companion application. Not affiliated with Cloud
-              Imperium Games or Roberts Space Industries.
-            </p>
-          </div>
-        </section>
+        <details className="panel setting-card advanced-panel">
+          <summary>Advanced &amp; Diagnostics</summary>
+          <OcrSettings section="advanced" />
+          <LogMonitoring diagnosticsOnly />
+          <section className="app-info">
+            <div className="setting-icon">
+              <Info size={21} />
+            </div>
+            <div>
+              <h2>
+                Cargo Run <Badge>0.4.0</Badge>
+              </h2>
+              <p>Fleet Operations · SQLite, Game.log & local OCR prototype</p>
+              <p className="form-note">
+                Independent companion application. Not affiliated with Cloud
+                Imperium Games or Roberts Space Industries.
+              </p>
+            </div>
+          </section>
+        </details>
       </div>
       <Overlay
         open={confirm}

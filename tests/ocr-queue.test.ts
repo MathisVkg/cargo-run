@@ -387,7 +387,7 @@ describe("schema compatibility", () => {
     ).toContain("Preserved legacy cargo");
     expect(new CaptureRepository(upgraded).list()).toEqual([]);
     expect(upgraded.db.prepare("PRAGMA user_version").get()?.user_version).toBe(
-      3,
+      4,
     );
     upgraded.close();
   });
@@ -481,7 +481,7 @@ describe("shortcut lifecycle diagnostics and recording", () => {
     expect(fixed.observation?.objectives).toHaveLength(2);
     expect(fixed.result).toEqual(observedAluminumFixture());
     expect(fixed.screenshot).toBe(r.screenshot);
-    expect(fixed.observation?.parserVersion).toBe("0.3.2");
+    expect(fixed.observation?.parserVersion).toBe("0.4.0");
     expect(fixed.attempts).toBe(r.attempts);
     expect(s.order).toHaveLength(1);
     expect(
@@ -778,4 +778,58 @@ it("retains changed screenshots with identical contract text as independent unas
   } finally {
     vi.useRealTimers();
   }
+});
+describe("shared and explicitly overridden capture methods", () => {
+  it.each([false, true])(
+    "routes manual, shortcut and automatic capture with override=%s",
+    async (override) => {
+      vi.useFakeTimers();
+      try {
+        const s = setup();
+        await s.queue.initialize();
+        s.queue.configurePolicy({
+          ...s.queue.snapshot().policy,
+          source: "Window",
+          autoSource: "Display",
+          autoSourceOverride: override,
+          autoEnabled: true,
+          delaySeconds: 1,
+          maxAttempts: 1,
+        });
+        await s.queue.capture("Manual");
+        await vi.advanceTimersByTimeAsync(100);
+        s.setFrame("shortcut-frame");
+        s.fireShortcut();
+        await vi.advanceTimersByTimeAsync(100);
+        s.setFrame("automatic-frame");
+        s.queue.automatic.setMonitoring(true);
+        s.queue.automatic.accept({
+          id: "shared-method",
+          kind: "Accepted",
+          missionId: "00000000-0000-4000-8000-000000000090",
+          objectiveId: null,
+          timestamp: new Date().toISOString(),
+          receivedAt: new Date().toISOString(),
+          title: "Cargo Haul",
+        });
+        await vi.advanceTimersByTimeAsync(1200);
+        const rows = s.repository.list();
+        expect(rows.map((c) => c.source)).toEqual([
+          "Manual",
+          "Shortcut",
+          "Automatic",
+        ]);
+        expect(rows.map((c) => c.requestedSource)).toEqual([
+          "Window",
+          "Window",
+          override ? "Display" : "Window",
+        ]);
+        expect(
+          s.db.db.prepare("SELECT COUNT(*) AS n FROM contracts").get()?.n,
+        ).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 });

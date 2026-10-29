@@ -1,3 +1,5 @@
+import { ContractDetails } from "../../components/contracts/ContractDetails";
+import type { Contract } from "../../types/models";
 import { useState } from "react";
 import {
   Files,
@@ -14,6 +16,7 @@ import { PageHeader, StatCard, Badge, EmptyState } from "../../components/ui";
 export default function History() {
   const contracts = useCargoStore((s) => s.contracts);
   const runs = useCargoStore((s) => s.runs);
+  const [detail, setDetail] = useState<Contract | null>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
   const stats = historyStats(contracts);
@@ -33,6 +36,7 @@ export default function History() {
   );
   return (
     <>
+      <ContractDetails contract={detail} onClose={() => setDetail(null)} />
       <PageHeader
         eyebrow="RECORDS / HISTORY"
         title="Contract History"
@@ -116,6 +120,13 @@ export default function History() {
                   <tr key={c.id}>
                     <td>
                       <strong>{c.name}</strong>
+                      <button
+                        className="text-button"
+                        aria-label={"Details for " + c.name}
+                        onClick={() => setDetail(c)}
+                      >
+                        Details / evidence
+                      </button>
                       {c.dataOrigin === "Sample" && (
                         <small className="sample-tag">SAMPLE DATA</small>
                       )}
@@ -152,10 +163,16 @@ export default function History() {
                         {c.status}
                       </Badge>
                     </td>
-                    <td>{c.source}</td>
+                    <td>{(c.sources ?? [c.source]).join(" + ")}</td>
                     <td className="date-cell">
                       {date(c.completedAt ?? c.acceptedAt)}
-                      <small>{c.completedAt ? "Completed" : "Accepted"}</small>
+                      <small>
+                        {c.completedAt
+                          ? c.status === "Abandoned"
+                            ? "Abandoned"
+                            : "Completed"
+                          : "Accepted"}
+                      </small>
                     </td>
                   </tr>
                 ))}

@@ -1735,3 +1735,70 @@ nav {
   display: block;
   overflow-wrap: anywhere;
 }
+
+/* OCR-first review uses the existing Fleet Operations form and panel styles. */
+.settings-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.advanced-panel > summary {
+  cursor: pointer;
+  color: #d2b58c;
+  font-size: 15px;
+  padding: 4px 0;
+}
+.advanced-settings,
+.advanced-panel > section {
+  margin-top: 20px;
+}
+.review-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.review-form label {
+  margin: 12px 0;
+}
+.review-form label > small {
+  display: block;
+  margin-top: 6px;
+  line-height: 1.7;
+}
+.review-form select,
+.review-form input:not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
+}
+.review-form details {
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.review-confirmation {
+  margin: 20px 0;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+.review-confirmation fieldset {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 12px;
+}
+.review-confirmation input[type="radio"] {
+  margin-right: 8px;
+}
+.evidence-record {
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.evidence-record .screenshot-preview img {
+  max-height: 220px;
+  object-fit: contain;
+}
+.review-form .notice {
+  display: block;
+}
+@media (max-width: 1250px) {
+  .review-fields {
+    grid-template-columns: 1fr;
+  }
+}

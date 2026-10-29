@@ -5,7 +5,10 @@ import type { CargoRun, Contract, ContractDraft, Page } from "../types/models";
 
 export function validateDraft(draft: ContractDraft): string | null {
   if (!draft.name.trim()) return "Enter a contract name.";
-  if (!Number.isFinite(draft.payout) || draft.payout < 0)
+  if (
+    draft.payout !== null &&
+    (!Number.isFinite(draft.payout) || draft.payout < 0)
+  )
     return "Payout must be a finite, non-negative number.";
   if (!draft.objectives.length) return "Add at least one delivery stop.";
   for (const o of draft.objectives) {
@@ -15,6 +18,13 @@ export function validateDraft(draft: ContractDraft): string | null {
       !o.commodity.trim()
     )
       return "Complete the pickup, destination, and commodity for each stop.";
+    if (
+      o.deliveredSCU !== undefined &&
+      (!Number.isFinite(o.deliveredSCU) ||
+        o.deliveredSCU < 0 ||
+        o.deliveredSCU > o.quantitySCU)
+    )
+      return "Delivered quantity must be between zero and required quantity.";
     if (!Number.isFinite(o.quantitySCU) || o.quantitySCU <= 0)
       return "Cargo quantity must be greater than zero.";
   }
@@ -50,7 +60,9 @@ export function createCargoStore(seed: Contract[] = sampleContracts()) {
     contracts: structuredClone(seed),
     runs: [],
     currentRun: newRun(
-      seed.filter((c) => c.status === "Active").map((c) => c.id),
+      seed
+        .filter((c) => c.status === "Active" && !c.supersededBy)
+        .map((c) => c.id),
     ),
     sampleMode: seed.some((c) => c.dataOrigin === "Sample"),
     setPage: (page) => set({ page }),
@@ -71,27 +83,106 @@ export function createCargoStore(seed: Contract[] = sampleContracts()) {
           throw new Error(
             "Log contracts are updated by observed mission events; create a manual contract to enter separate details.",
           );
-        if (existing?.cargoObjectives.some((o) => o.deliveredSCU > 0))
+        if (
+          existing?.source !== "OCR" &&
+          existing?.cargoObjectives.some((o) => o.deliveredSCU > 0)
+        )
           throw new Error("Partially delivered contracts cannot be edited.");
+        if (existing?.source === "OCR") {
+          const mapped = draft.objectives.map((o) => o.id).filter(Boolean);
+          if (
+            new Set(mapped).size !== mapped.length ||
+            mapped.some(
+              (id) => !existing.cargoObjectives.some((o) => o.id === id),
+            )
+          )
+            throw Error("Invalid objective mapping.");
+          if (
+            existing.cargoObjectives.some(
+              (o) => o.deliveredSCU > 0 && !mapped.includes(o.id),
+            )
+          )
+            throw Error("Cannot remove delivered objectives.");
+          for (const o of draft.objectives) {
+            const prior = existing.cargoObjectives.find((x) => x.id === o.id);
+            if (
+              prior &&
+              (o.quantitySCU < prior.deliveredSCU ||
+                (o.deliveredSCU ?? prior.deliveredSCU) < prior.deliveredSCU)
+            )
+              throw Error("Delivered progress cannot regress.");
+          }
+        }
+        const fieldProvenance = { ...existing?.fieldProvenance };
+        const corrected = (key: string, a: unknown, b: unknown) => {
+          if (existing && a !== b)
+            fieldProvenance[key] = {
+              source: "Manual",
+              at: new Date().toISOString(),
+            };
+        };
+        corrected("name", draft.name.trim(), existing?.name);
+        corrected("company", draft.company ?? null, existing?.company ?? null);
+        corrected("payout", draft.payout, existing?.payout);
+        draft.objectives.forEach((o, i) => {
+          const prior =
+            existing?.source === "OCR"
+              ? existing.cargoObjectives.find((x) => x.id === o.id)
+              : existing?.cargoObjectives[i];
+          for (const key of [
+            "commodity",
+            "pickupLocation",
+            "destination",
+            "quantitySCU",
+            "deliveredSCU",
+          ] as const)
+            corrected(
+              "objectives." + (o.id ?? i) + "." + key,
+              o[key],
+              prior?.[key],
+            );
+        });
         const contract: Contract = {
+          ...existing,
+          fieldProvenance,
           id: contractId,
           name: draft.name.trim(),
           payout: draft.payout,
+          company: draft.company ?? existing?.company ?? null,
+          sources:
+            existing?.source === "OCR"
+              ? [
+                  ...new Set([
+                    ...(existing.sources ?? ["OCR" as const]),
+                    "Manual" as const,
+                  ]),
+                ]
+              : existing?.sources,
           status: "Active",
           source: existing?.source ?? "Manual",
           ...(existing?.missionId ? { missionId: existing.missionId } : {}),
           dataOrigin: existing?.dataOrigin ?? "Manual",
-          confirmedEarnings: 0,
-          acceptedAt: existing?.acceptedAt ?? new Date().toISOString(),
-          cargoObjectives: draft.objectives.map((o, i) => ({
-            id: existing?.cargoObjectives[i]?.id ?? crypto.randomUUID(),
-            contractId,
-            commodity: o.commodity.trim(),
-            pickupLocation: o.pickupLocation.trim(),
-            destination: o.destination.trim(),
-            quantitySCU: o.quantitySCU,
-            deliveredSCU: 0,
-          })),
+          confirmedEarnings: existing?.confirmedEarnings ?? 0,
+          acceptedAt: existing ? existing.acceptedAt : new Date().toISOString(),
+          cargoObjectives: draft.objectives.map((o, i) => {
+            const prior =
+              existing?.source === "OCR"
+                ? existing.cargoObjectives.find((x) => x.id === o.id)
+                : existing?.cargoObjectives[i];
+            return {
+              id: prior?.id ?? crypto.randomUUID(),
+              contractId,
+              commodity: o.commodity.trim(),
+              pickupLocation: o.pickupLocation.trim(),
+              destination: o.destination.trim(),
+              quantitySCU: o.quantitySCU,
+              deliveredSCU: Math.max(
+                o.deliveredSCU ?? 0,
+                prior?.deliveredSCU ?? 0,
+              ),
+              externalObjectiveId: prior?.externalObjectiveId,
+            };
+          }),
         };
         return {
           contracts: existing
@@ -111,7 +202,12 @@ export function createCargoStore(seed: Contract[] = sampleContracts()) {
       set((state) => ({
         contracts: state.contracts.map((c) =>
           c.id === id && c.status === "Active"
-            ? { ...c, status: "Abandoned" as const, confirmedEarnings: 0 }
+            ? {
+                ...c,
+                status: "Abandoned" as const,
+                completedAt: new Date().toISOString(),
+                confirmedEarnings: c.confirmedEarnings,
+              }
             : c,
         ),
       })),

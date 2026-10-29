@@ -58,7 +58,8 @@ describe("actual 3840x2160 Mobiglas screenshot OCR", () => {
       "Rayari Cantwell Research Outpost on Clio",
       "Rayari McGrath Research Outpost on Clio",
     ]);
-    expect(o.view.state).toBe("Ambiguous");
+    expect(o.view.value).toBe("Accepted");
+    expect(o.view.evidence?.region).toBe("Contract action buttons");
   });
   it("preserves NB Int. punctuation and marks visibly clipped destination text ambiguous", () => {
     expect(parse(fixture(1)).objectives[0].destination.value).toBe(

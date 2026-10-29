@@ -6,7 +6,7 @@ export function applyMissionEvent(
   event: MissionEvent,
 ): { contracts: Contract[]; resolved: boolean; createdId?: string } {
   const existing = contracts.find(
-    (c) => c.missionId === event.missionId && c.dataOrigin === "Log",
+    (c) => c.missionId === event.missionId && !c.supersededBy,
   );
   const time = event.timestamp ?? event.receivedAt;
   if (event.kind === "Accepted") {
@@ -66,10 +66,11 @@ export function applyMissionEvent(
         o.commodity === event.commodity &&
         o.destination === event.destination &&
         o.quantitySCU === event.quantitySCU &&
-        (!event.objectiveId || o.externalObjectiveId?.startsWith("fallback-")),
+        (!event.objectiveId ||
+          !o.externalObjectiveId ||
+          o.externalObjectiveId?.startsWith("fallback-")),
     );
-    if (!event.objectiveId && candidates.length > 1)
-      return { contracts, resolved: false };
+    if (candidates.length > 1) return { contracts, resolved: false };
     if (candidates.length === 1) {
       previous = candidates[0];
       if (!event.objectiveId)

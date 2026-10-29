@@ -24,7 +24,7 @@ const objectiveText = (s: string) =>
 const excludedTitle = (s: string) =>
   navigation(s) ||
   heading(s) ||
-  /^(?:REWARD|CONTRACTED\s+BY|ABANDON|UNTRACK|TRACK|DELIVER|COLLECT|PICK\s*UP|TITLE\s*:|CONTRACT\s+TITLE\s*:)\b/i.test(
+  /^(?:ACCEPT\s+OFFER|REWARD|CONTRACTED\s+BY|ABANDON|UNTRACK|TRACK|DELIVER|COLLECT|PICK\s*UP|TITLE\s*:|CONTRACT\s+TITLE\s*:)\b/i.test(
     s,
   ) ||
   /\b(?:SCU|a?UEC)\b/i.test(s) ||
@@ -188,7 +188,7 @@ export function extractContract(
   }
   const navLines = sorted.filter((l) => navigation(l.text));
   let view = missing<"Offers" | "Accepted">();
-  const explicit = navLines.filter((l) =>
+  const explicit = sorted.filter((l) =>
     /^(?:SELECTED\s*:?\s*|CONTRACTS\s*[/>-]\s*|\[)(?:OFFERS|ACCEPTED)\]?$/i.test(
       l.text,
     ),
@@ -204,12 +204,48 @@ export function extractContract(
   ];
   const offers = navLines.filter((l) => /\bOFFERS\b/i.test(l.text)),
     accepted = navLines.filter((l) => /\bACCEPTED\b/i.test(l.text));
-  if (explicitViews.length === 1)
-    view = field(explicitViews[0], explicit, "Navigation", "Explicit");
-  else if (explicitViews.length > 1 || (offers.length && accepted.length)) {
+  const actions = sorted.filter(
+    (l) =>
+      (!positioned || (ny(l) > 0.5 && nx(l) > 0.2)) &&
+      /^(?:ACCEPT\s+OFFER|ABANDON|(?:UN)?TRACK)(?:\s*\|\s*(?:ABANDON|(?:UN)?TRACK))*$/i.test(
+        l.text,
+      ),
+  );
+  const offerActions = actions.filter((l) => /ACCEPT\s+OFFER/i.test(l.text));
+  const acceptedActions = actions.filter((l) =>
+    /\b(?:ABANDON|(?:UN)?TRACK)\b/i.test(l.text),
+  );
+  const actionView =
+    offerActions.length && !acceptedActions.length
+      ? "Offers"
+      : acceptedActions.length && !offerActions.length
+        ? "Accepted"
+        : null;
+  const contradiction =
+    (offerActions.length && acceptedActions.length) ||
+    explicitViews.length > 1 ||
+    (actionView &&
+      explicitViews.length === 1 &&
+      explicitViews[0] !== actionView);
+  if (contradiction) {
     view = field<"Offers" | "Accepted">(
       null,
-      [...new Map([...offers, ...accepted].map((l) => [l.id, l])).values()],
+      [...actions, ...explicit],
+      "Action buttons and selected tab",
+      "Structured",
+      true,
+    );
+    warnings.push(
+      "Contradictory contract action/tab indicators; acceptance must be explicitly confirmed.",
+    );
+  } else if (actionView)
+    view = field(actionView, actions, "Contract action buttons", "Structured");
+  else if (explicitViews.length === 1)
+    view = field(explicitViews[0], explicit, "Navigation", "Explicit");
+  else if (offers.length && accepted.length) {
+    view = field<"Offers" | "Accepted">(
+      null,
+      [...offers, ...accepted],
       "Navigation",
       "Explicit",
       true,
@@ -217,10 +253,14 @@ export function extractContract(
     warnings.push(
       "Both OFFERS and ACCEPTED are visible; OCR text alone cannot prove the selected tab.",
     );
-  } else if (accepted.length)
-    view = field("Accepted", accepted, "Navigation", "Explicit");
-  else if (offers.length)
-    view = field("Offers", offers, "Navigation", "Explicit");
+  } else if (accepted.length || offers.length)
+    view = field<"Offers" | "Accepted">(
+      null,
+      [...offers, ...accepted],
+      "Navigation without action evidence",
+      "Structured",
+      true,
+    );
   const metadataLabel = (s: string) =>
     /^(?:Contracted\s+By|Reward|Contract\s+Title|Title)\b/i.test(s);
   function metadata(
@@ -633,7 +673,7 @@ export function extractContract(
   if (!objectives.length)
     warnings.push("No validated visible delivery objectives were extracted.");
   return {
-    parserVersion: "0.3.2",
+    parserVersion: "0.4.0",
     captureId,
     capturedAt,
     acceptanceTimestamp: null,

@@ -1,3 +1,8 @@
+import {
+  reviewCaptures,
+  failedAutomaticAttempt,
+} from "../../utils/captureReview";
+import { ContractReview } from "./ContractReview";
 import { useEffect, useState } from "react";
 import { Camera, RefreshCw, Trash2, Expand, ScanLine } from "lucide-react";
 import { PageHeader, Badge, EmptyState } from "../../components/ui";
@@ -55,7 +60,7 @@ export default function ScanReview() {
     [confirm, setConfirm] = useState(false);
   useEffect(() => {
     if (!state) return;
-    if (!state.captures.some((c) => c.id === id))
+    if (!reviewCaptures(state.captures).some((c) => c.id === id))
       setId(state.captures.at(-1)?.id ?? null);
   }, [state?.captures, id]);
   const [imageError, setImageError] = useState(false);
@@ -67,7 +72,7 @@ export default function ScanReview() {
       <PageHeader
         eyebrow="OBSERVATIONS / OCR PROTOTYPE"
         title="Scan Review"
-        description="Inspect captured screens and local OCR. Nothing here changes your contracts."
+        description="Inspect captured screens, correct OCR fields and explicitly confirm contract changes."
       >
         <button
           className="button"
@@ -89,9 +94,9 @@ export default function ScanReview() {
       <div className="notice scan-notice">
         <ScanLine size={18} />
         <p>
-          Prototype observations only. Captures can be incomplete or
-          misrecognized. OCR does not create contracts, confirm acceptance, or
-          reconcile Game.log IDs.
+          Captures can be incomplete or misrecognized. Review the fields and
+          confirm acceptance before saving. Automatic capture never saves
+          contracts; Game.log is optional.
         </p>
         <button className="button" onClick={() => setPage("Settings")}>
           OCR Settings
@@ -112,10 +117,11 @@ export default function ScanReview() {
       ) : (
         <div className="scan-layout">
           <aside className="panel capture-list" aria-label="Captured screens">
-            {[...state.captures].reverse().map((c) => (
+            {reviewCaptures(state.captures).map((c) => (
               <button
                 className={"capture-item " + (c.id === id ? "selected" : "")}
                 key={c.id}
+                data-capture-id={c.id}
                 onClick={() => setId(c.id)}
               >
                 {c.screenshot ? (
@@ -134,6 +140,26 @@ export default function ScanReview() {
                       "Capture " + c.id.slice(0, 8)}
                   </strong>
                   <small>{date(c.capturedAt)}</small>
+                  <small>
+                    Review:{" "}
+                    {c.evidenceLink
+                      ? "Linked to Contract"
+                      : c.validation === "Rejected"
+                        ? "Rejected"
+                        : c.observation
+                          ? "Awaiting Review"
+                          : "Needs Correction"}
+                  </small>
+                  {failedAutomaticAttempt(c) && (
+                    <small>
+                      {
+                        state.captures.filter(
+                          (p) => p.trigger?.requestId === c.trigger?.requestId,
+                        ).length
+                      }{" "}
+                      attempts grouped · {c.validationMessage ?? c.error}
+                    </small>
+                  )}
                   <Badge
                     tone={
                       c.validation === "Duplicate" ||
@@ -181,14 +207,23 @@ export default function ScanReview() {
                           Reprocess saved OCR
                         </button>
                       )}
-                      {selected.status === "Failed" && (
+                      {(selected.status === "Failed" || imageError) && (
                         <button
                           className="button"
-                          disabled={busy || !selected.screenshot}
+                          disabled={busy || !selected.screenshot || imageError}
                           onClick={() => void retry(selected.id)}
                         >
                           <RefreshCw size={14} />
                           Retry OCR
+                        </button>
+                      )}
+                      {(!selected.screenshot || imageError) && (
+                        <button
+                          className="button"
+                          disabled={busy || !state.captureAvailable}
+                          onClick={() => void capture()}
+                        >
+                          Retry capture (new screenshot)
                         </button>
                       )}
                       <button
@@ -378,6 +413,9 @@ export default function ScanReview() {
                       ))}
                     </ul>
                   </section>
+                )}
+                {observation && (
+                  <ContractReview key={selected.id} capture={selected} />
                 )}
                 {selected.result && (
                   <section className="panel">

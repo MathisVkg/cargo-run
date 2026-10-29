@@ -49,6 +49,9 @@ async function run() {
         "abandonContract",
         "chooseLog",
         "close",
+        "completeContract",
+        "confirmOcr",
+        "contractEvidence",
         "finishRun",
         "getState",
         "importHistory",
@@ -72,12 +75,14 @@ async function run() {
         "onMaximized",
         "onOcrState",
         "onState",
+        "prepareOcr",
         "removeSamples",
         "saveContract",
         "selectShip",
         "startMonitoring",
         "stopMonitoring",
         "toggleMaximize",
+        "unlinkEvidence",
       ],
     );
     await page.evaluate(() => window.cargoRun.loadSamples());
@@ -101,7 +106,9 @@ async function run() {
     await page
       .getByLabel("Contract name", { exact: true })
       .fill("Desktop validation cargo");
-    await page.getByLabel("Payout (aUEC)", { exact: true }).fill("15000");
+    await page
+      .getByLabel("Payout (aUEC, optional)", { exact: true })
+      .fill("15000");
     await page
       .getByLabel("Pickup location", { exact: true })
       .fill("Everus Harbor");

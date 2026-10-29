@@ -104,6 +104,7 @@ else
       registerCaptureProtocol(ocr);
       await ocr.initialize();
       service.onChange = (state) => {
+        ocr.refreshEvidence();
         if (mainWindow && !mainWindow.isDestroyed())
           mainWindow.webContents.send("cargo:state", state);
       };
@@ -129,6 +130,41 @@ else
       register("ocr:reparse", (id) => ocr.reparse(id));
       register("ocr:policy", (input) => ocr.configurePolicy(input));
       register("ocr:cleanup", () => ocr.cleanup());
+      register("ocr:prepareReview", (input) => service.prepareOcr(input), true);
+      register(
+        "ocr:confirmReview",
+        (input) => {
+          const result = service.confirmOcr(input);
+          ocr.refreshEvidence();
+          return result;
+        },
+        true,
+      );
+      register("ocr:evidence", (id) =>
+        service.contractEvidence(id).map((link) => {
+          let imageAvailable = false;
+          try {
+            imageAvailable = !!ocr.imagePath(link.captureId);
+          } catch {
+            /* Expired capture keeps minimal evidence. */
+          }
+          return { ...link, imageAvailable };
+        }),
+      );
+      register(
+        "ocr:unlink",
+        (input) => {
+          const state = service.unlinkEvidence(input);
+          ocr.refreshEvidence();
+          return state;
+        },
+        true,
+      );
+      register(
+        "cargo:completeContract",
+        (id) => service.completeContract(id),
+        true,
+      );
       register("ocr:state", () => ocr.snapshot());
       register("ocr:configure", (settings) => ocr.configure(settings));
       register("ocr:capture", () => ocr.capture("Manual"));

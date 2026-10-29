@@ -79,7 +79,9 @@ async function run() {
     await page
       .getByLabel("Contract name", { exact: true })
       .fill("Persistent manual cargo");
-    await page.getByLabel("Payout (aUEC)", { exact: true }).fill("5000");
+    await page
+      .getByLabel("Payout (aUEC, optional)", { exact: true })
+      .fill("5000");
     await page
       .getByLabel("Pickup location", { exact: true })
       .fill("Everus Harbor");
@@ -213,6 +215,7 @@ async function run() {
       'Added notification "Contract Accepted: malformed:" MissionId: [invalid]\n',
     );
     await until((s) => s.tracking.parsingErrors === 1);
+    await page.getByText("Advanced & Diagnostics", { exact: true }).click();
     await page.getByLabel("Show parsing failures only").check();
     await page
       .getByText(

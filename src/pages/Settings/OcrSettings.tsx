@@ -1,43 +1,157 @@
 import { useState } from "react";
-import { ScanLine, Camera, RefreshCw, Trash2 } from "lucide-react";
 import { useOcrStore } from "../../stores/useOcrStore";
 import { useCargoStore } from "../../stores/useCargoStore";
 import { Badge } from "../../components/ui";
 import { Overlay } from "../../components/ui/Overlay";
 import { CapturePolicyControls } from "./CapturePolicyControls";
 import { ShortcutControls } from "./ShortcutControls";
-export function OcrSettings() {
+export function OcrSettings({
+  section = "capture",
+}: {
+  section?: "capture" | "storage" | "advanced";
+}) {
   const { state, error, busy, configure, capture, clear, displays } =
-      useOcrStore((s) => s),
-    setPage = useCargoStore((s) => s.setPage);
-  const [confirm, setConfirm] = useState(false);
-  if (!state)
-    return (
-      <section className="panel setting-card">
-        <h2>OCR prototype</h2>
-        <p>{error ?? "Loading local OCR capability…"}</p>
-      </section>
-    );
+    useOcrStore((s) => s);
+  const setPage = useCargoStore((s) => s.setPage),
+    [confirm, setConfirm] = useState(false);
+  if (!state) return <p>{error ?? "Loading OCR capability…"}</p>;
   const s = state.settings;
+  const mayCaptureDisplay = (mode: string) =>
+    mode === "Display" ||
+    (mode === "Automatic" && state.policy.allowDisplayFallback);
+  const showDisplay =
+    mayCaptureDisplay(state.policy.source) ||
+    (state.policy.autoSourceOverride &&
+      mayCaptureDisplay(state.policy.autoSource));
+  if (section === "advanced")
+    return (
+      <div className="advanced-settings">
+        <p>
+          OCR provider: {state.engine.name} ·{" "}
+          {state.engine.available ? "Available" : "Unavailable"}
+        </p>
+        <p>
+          Capture status:{" "}
+          {state.captureError ??
+            state.lastCapture?.message ??
+            "No recent error"}
+        </p>
+        <ShortcutControls diagnosticsOnly />
+        <CapturePolicyControls section="advanced" />
+        <p className="form-note">
+          Parser boxes, raw OCR and recognition warnings are available in Scan
+          Review. Experimental input backends remain development-only and
+          unchanged.
+        </p>
+        {error && <p className="form-error">{error}</p>}
+      </div>
+    );
+  if (section === "storage")
+    return (
+      <>
+        <CapturePolicyControls section="storage" />
+        <p className="log-path">{state.storagePath}</p>
+        <div className="setting-divider" />
+        <h3>Remove stored captures</h3>
+        <p className="form-note">
+          Deletes screenshot files and capture records. Contracts, linked text
+          evidence and review audit remain. This is separate from automatic
+          retention.
+        </p>
+        <button
+          className="button danger"
+          disabled={busy || !state.captures.length}
+          onClick={() => setConfirm(true)}
+        >
+          Clear stored captures
+        </button>
+        <Overlay
+          open={confirm}
+          onClose={() => setConfirm(false)}
+          title="Clear stored captures?"
+          subtitle="LOCAL SCREENSHOTS & OCR"
+          side="center"
+        >
+          <div className="dialog-body">
+            <p>
+              Remove all stored screenshot files and raw OCR observations?
+              Contracts, minimal evidence, review audit and run history remain.
+            </p>
+          </div>
+          <div className="dialog-actions">
+            <button className="button" onClick={() => setConfirm(false)}>
+              Cancel
+            </button>
+            <button
+              className="button danger"
+              onClick={() => {
+                setConfirm(false);
+                void clear();
+              }}
+            >
+              Confirm clear captures
+            </button>
+          </div>
+        </Overlay>
+      </>
+    );
   return (
     <section className="panel setting-card ocr-settings">
-      <div className="setting-icon">
-        <ScanLine size={21} />
-      </div>
       <div className="monitor-heading">
-        <h2>Windows capture & OCR prototype</h2>
+        <h2>OCR &amp; Capture</h2>
         <Badge tone={state.engine.available ? "green" : "red"}>
           {state.engine.available ? "Engine available" : "Engine unavailable"}
         </Badge>
       </div>
       <p>
-        {state.engine.name}. Screenshots are observations for review and never
-        create or update contracts.
+        Capture a contract, review and correct its fields, then confirm saving.
+        Works without Game.log monitoring.
       </p>
       {!state.engine.available && (
         <p className="form-error">{state.engine.error}</p>
       )}
       <div className="ocr-settings-grid">
+        <div>
+          <CapturePolicyControls />
+          {showDisplay && (
+            <>
+              <label htmlFor="capture-display">
+                Display for Full Display / fallback
+              </label>
+              <select
+                id="capture-display"
+                value={s.displayId}
+                disabled={busy}
+                onChange={(e) =>
+                  void configure({ ...s, displayId: e.target.value })
+                }
+              >
+                <option value="auto">Automatic · Star Citizen display</option>
+                {state.displays.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label} · {d.width} × {d.height}
+                  </option>
+                ))}
+                {s.displayId !== "auto" &&
+                  !state.displays.some((d) => d.id === s.displayId) && (
+                    <option value={s.displayId}>
+                      Disconnected display · {s.displayId}
+                    </option>
+                  )}
+              </select>
+              <p className="form-note">
+                Full Display includes other visible content on that monitor.
+              </p>
+              <button
+                className="button"
+                disabled={busy}
+                onClick={() => void displays()}
+              >
+                Refresh displays
+              </button>
+            </>
+          )}
+        </div>
         <div>
           <ShortcutControls />
           <label className="checkbox-label">
@@ -52,90 +166,35 @@ export function OcrSettings() {
             Capture confirmation sounds
           </label>
           <p className="form-note">
-            A short tone confirms a saved screenshot. A warning tone indicates
-            capture failure. Neither sound reports OCR accuracy.
+            A saved screenshot tone does not confirm OCR accuracy.
           </p>
-        </div>
-        <div>
-          <CapturePolicyControls />
-          <div className="setting-divider" />
-          <label htmlFor="capture-display">Capture display</label>
-          <select
-            id="capture-display"
-            value={s.displayId}
-            disabled={busy}
-            onChange={(e) =>
-              void configure({ ...s, displayId: e.target.value })
-            }
-          >
-            <option value="auto">Automatic · Star Citizen display</option>
-            {state.displays.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.label} · {d.width} × {d.height}
-              </option>
-            ))}
-            {s.displayId !== "auto" &&
-              !state.displays.some((d) => d.id === s.displayId) && (
-                <option value={s.displayId}>
-                  Disconnected display · {s.displayId}
-                </option>
-              )}
-          </select>
-          <p className="form-note">
-            Automatic targets Star Citizen’s foreground window, or its only
-            visible window. Select a display explicitly for a desktop test. Full
-            displays are captured, including any other visible content.
-          </p>
-          <button
-            className="button"
-            disabled={busy}
-            onClick={() => void displays()}
-          >
-            <RefreshCw size={14} />
-            Refresh displays
-          </button>
-          {state.captureError && (
-            <p className="form-error" role="alert">
-              {state.captureError}
-            </p>
-          )}
         </div>
       </div>
-      <div className="setting-divider" />
+      {state.policy.autoSourceOverride && (
+        <p className="notice warning">
+          Automatic capture uses a preserved source override. Review it in
+          Advanced &amp; Diagnostics.
+        </p>
+      )}
       <div className="monitor-buttons">
         <button
           className="button primary"
           disabled={busy || state.recording || !state.captureAvailable}
           onClick={() => void capture()}
         >
-          <Camera size={15} />
           Capture now
         </button>
         <button className="button" onClick={() => setPage("Scan Review")}>
-          <ScanLine size={15} />
           Open Scan Review
-        </button>
-        <button
-          className="button"
-          disabled={busy || !state.captures.length}
-          onClick={() => setConfirm(true)}
-        >
-          <Trash2 size={14} />
-          Clear stored captures
         </button>
       </div>
       <p className="form-note">
         {state.captures.length} / {state.limit} stored · {state.queued} queued ·{" "}
-        {state.processing ? "OCR processing" : "OCR idle"} · at most 12 pending
-        and 512 MiB storage.
+        {state.processing ? "OCR processing" : "OCR idle"}
       </p>
-      <div className="log-path">{state.storagePath}</div>
-      {state.lastCapture && (
-        <p
-          className={state.lastCapture.success ? "form-note" : "form-error"}
-          role="status"
-        >
-          {state.lastCapture.message}
+      {state.captureError && (
+        <p className="form-error" role="alert">
+          {state.captureError}
         </p>
       )}
       {error && (
@@ -143,35 +202,6 @@ export function OcrSettings() {
           {error}
         </p>
       )}
-      <Overlay
-        open={confirm}
-        onClose={() => setConfirm(false)}
-        title="Clear stored captures?"
-        subtitle="OCR OBSERVATIONS ONLY"
-        side="center"
-      >
-        <div className="dialog-body">
-          <p>
-            This deletes screenshot files and OCR observations. Existing
-            contracts, Game.log events and run history are unaffected. In-flight
-            recognition results for deleted captures will be discarded.
-          </p>
-        </div>
-        <div className="dialog-actions">
-          <button className="button" onClick={() => setConfirm(false)}>
-            Cancel
-          </button>
-          <button
-            className="button danger"
-            onClick={() => {
-              setConfirm(false);
-              void clear();
-            }}
-          >
-            Confirm clear captures
-          </button>
-        </div>
-      </Overlay>
     </section>
   );
 }
