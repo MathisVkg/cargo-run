@@ -27,6 +27,7 @@ interface RendererState extends AppSnapshot {
 }
 const initial: AppSnapshot = {
   preferences: {
+    navigationMode: "expanded",
     dashboardView: "location",
     favoriteShipIds: [],
     recentShipIds: [],

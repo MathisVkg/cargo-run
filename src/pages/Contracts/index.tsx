@@ -33,12 +33,7 @@ export default function Contracts() {
         eyebrow="FLEET OPERATIONS / CONTRACTS"
         title="Contracts"
         description="Individual active records. Completed and abandoned contracts remain in History."
-      >
-        <button className="button primary" onClick={() => setAdding(true)}>
-          <Plus size={16} />
-          Add Contract
-        </button>
-      </PageHeader>
+      />
       <div className="contracts-toolbar">
         <label className="search-field">
           <Search size={16} />
@@ -61,7 +56,13 @@ export default function Contracts() {
           <option value="unknown">Unknown reward</option>
           <option value="local">No verified mission ID</option>
         </select>
-        <span className="muted">{results.length} contracts</span>
+        <span className="muted contract-result-count" role="status">
+          {results.length} contracts
+        </span>
+        <button className="button primary" onClick={() => setAdding(true)}>
+          <Plus size={16} />
+          Add Contract
+        </button>
       </div>
       <ContractCards contracts={results} />
       <ContractDrawer

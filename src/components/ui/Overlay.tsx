@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 interface Props {
   open: boolean;
@@ -6,6 +7,8 @@ interface Props {
   title: string;
   subtitle?: string;
   side?: "left" | "right" | "center";
+  className?: string;
+  dismissOnOutside?: boolean;
   children: ReactNode;
 }
 export function Overlay({
@@ -14,36 +17,36 @@ export function Overlay({
   title,
   subtitle,
   side = "right",
+  className = "",
+  dismissOnOutside = false,
   children,
 }: Props) {
-  const ref = useRef<HTMLDialogElement>(null);
-  const id = useId();
-  const returnFocus = useRef<HTMLElement | null>(null);
+  const ref = useRef<HTMLDialogElement>(null),
+    returnFocus = useRef<HTMLElement | null>(null),
+    id = useId();
   useEffect(() => {
     const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      returnFocus.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null;
-      dialog.showModal();
-    }
-    if (!open && dialog.open) {
-      dialog.close();
-      returnFocus.current?.focus();
-    }
+    if (!dialog || !open) return;
+    returnFocus.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    if (!dialog.open) dialog.showModal();
     return () => {
-      if (dialog.open) {
-        dialog.close();
-        returnFocus.current?.focus();
-      }
+      const ownedFocus =
+        dialog.contains(document.activeElement) ||
+        document.activeElement === document.body;
+      if (dialog.open) dialog.close();
+      if (ownedFocus && returnFocus.current?.isConnected)
+        returnFocus.current.focus();
     };
   }, [open]);
-  return (
+  // A native top-layer dialog still inherits CSS from its DOM ancestors. Portaling
+  // prevents a ship picker opened in the title bar from inheriting its drag region.
+  return createPortal(
     <dialog
       ref={ref}
-      className={"overlay-dialog " + side}
+      className={"overlay-dialog " + side + " " + className}
       aria-labelledby={id}
       aria-hidden={!open}
       inert={!open}
@@ -52,16 +55,15 @@ export function Overlay({
         onClose();
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          const rect = event.currentTarget.getBoundingClientRect();
-          if (
-            event.clientX < rect.left ||
-            event.clientX > rect.right ||
-            event.clientY < rect.top ||
-            event.clientY > rect.bottom
-          )
-            onClose();
-        }
+        if (!dismissOnOutside || event.target !== event.currentTarget) return;
+        const r = event.currentTarget.getBoundingClientRect();
+        if (
+          event.clientX < r.left ||
+          event.clientX > r.right ||
+          event.clientY < r.top ||
+          event.clientY > r.bottom
+        )
+          onClose();
       }}
     >
       <div className="dialog-heading">
@@ -70,6 +72,7 @@ export function Overlay({
           <h2 id={id}>{title}</h2>
         </div>
         <button
+          type="button"
           className="icon-button"
           aria-label="Close panel"
           onClick={onClose}
@@ -78,6 +81,7 @@ export function Overlay({
         </button>
       </div>
       {children}
-    </dialog>
+    </dialog>,
+    document.body,
   );
 }

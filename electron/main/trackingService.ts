@@ -114,6 +114,7 @@ export class TrackingService {
           ...defaultPreferences(),
           ...validatePreferences(
             {
+              navigationMode: prefs.navigationMode ?? "expanded",
               dashboardView: prefs.dashboardView,
               favoriteShipIds: prefs.favoriteShipIds,
             },

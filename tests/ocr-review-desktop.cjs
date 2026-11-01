@@ -78,6 +78,13 @@ let app;
     );
     assert.deepEqual(state.captures[0].result, record.result);
     assert.equal(state.captures[0].attempts, 7);
+    if (
+      await page
+        .getByLabel("Hide navigation", { exact: true })
+        .first()
+        .isVisible()
+    )
+      await page.getByLabel("Hide navigation", { exact: true }).first().click();
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
       .getByRole("navigation", { name: "Temporary navigation" })
@@ -100,6 +107,13 @@ let app;
       path: "work/ocr-review-v032.png",
       animations: "disabled",
     });
+    if (
+      await page
+        .getByLabel("Hide navigation", { exact: true })
+        .first()
+        .isVisible()
+    )
+      await page.getByLabel("Hide navigation", { exact: true }).first().click();
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
       .getByRole("navigation", { name: "Temporary navigation" })

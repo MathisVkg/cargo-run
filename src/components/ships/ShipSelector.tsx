@@ -39,6 +39,14 @@ export function ShipSelector() {
       }),
     [ships, query, manufacturer, concepts, prefs],
   );
+  const eligibleFlightReady = useMemo(
+    () => filterShips(ships, query, manufacturer, false).length,
+    [ships, query, manufacturer],
+  );
+  const eligibleAll = useMemo(
+    () => filterShips(ships, query, manufacturer, true).length,
+    [ships, query, manufacturer],
+  );
   return (
     <>
       <button
@@ -97,6 +105,15 @@ export function ShipSelector() {
           <p className="form-note">
             Favorites first, then recently selected. {matches.length} matching
             ships.
+          </p>
+          <p className="ship-filter-status" role="status">
+            {concepts
+              ? eligibleAll - eligibleFlightReady > 0
+                ? eligibleAll -
+                  eligibleFlightReady +
+                  " additional non-flight-ready ships match these filters."
+                : "No additional non-flight-ready ships match these filters."
+              : "Flight-ready and saved custom ships only."}
           </p>
           <div className="ship-results" role="list" aria-label="Ship catalog">
             {matches.map((s) => (

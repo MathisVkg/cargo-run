@@ -28,6 +28,18 @@ async function launch() {
 }
 const state = () => page.evaluate(() => window.cargoRun.getState());
 async function nav(name) {
+  const main = page.getByRole("navigation", {
+    name: "Main navigation",
+    exact: true,
+  });
+  if (!(await main.isVisible())) {
+    await page.getByLabel("Open navigation", { exact: true }).click();
+    await page
+      .getByRole("navigation", { name: "Temporary navigation" })
+      .getByRole("button", { name, exact: true })
+      .click();
+    return;
+  }
   await page
     .getByRole("navigation", { name: "Main navigation", exact: true })
     .getByRole("button", { name, exact: true })
@@ -110,6 +122,13 @@ async function choose(query, name) {
         .evaluate((el) => el.getBoundingClientRect().width),
       62,
     );
+    if (
+      await page
+        .getByLabel("Hide navigation", { exact: true })
+        .first()
+        .isVisible()
+    )
+      await page.getByLabel("Hide navigation", { exact: true }).first().click();
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
       .getByRole("navigation", { name: "Temporary navigation" })
@@ -118,6 +137,13 @@ async function choose(query, name) {
     await page
       .getByRole("navigation", { name: "Temporary navigation" })
       .waitFor({ state: "hidden" });
+    if (
+      await page
+        .getByLabel("Hide navigation", { exact: true })
+        .first()
+        .isVisible()
+    )
+      await page.getByLabel("Hide navigation", { exact: true }).first().click();
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page.mouse.click(900, 300);
     await page

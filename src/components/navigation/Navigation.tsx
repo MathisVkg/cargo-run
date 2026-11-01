@@ -5,9 +5,13 @@ import {
   Settings,
   ScanLine,
   Files,
+  PanelLeftClose,
+  PanelLeftOpen,
+  EyeOff,
 } from "lucide-react";
 import { Overlay } from "../ui/Overlay";
 import { useCargoStore } from "../../stores/useCargoStore";
+import type { NavigationMode } from "../../utils/navigation";
 const entries = [
   { page: "Dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { page: "Manifest", icon: List, label: "Manifest" },
@@ -40,13 +44,53 @@ function Items({ onClose }: { onClose(): void }) {
     </>
   );
 }
-export function Sidebar() {
+export function Sidebar({
+  mode,
+  width,
+}: {
+  mode: NavigationMode;
+  width: number;
+}) {
+  const setPreferences = useCargoStore((s) => s.setPreferences);
+  if (mode === "hidden") return null;
   return (
-    <aside className="sidebar">
+    <aside className={"sidebar " + mode} aria-label={mode + " sidebar"}>
       <p className="sidebar-label">OPERATIONS</p>
       <nav aria-label="Main navigation">
         <Items onClose={() => {}} />
       </nav>
+      <div className="sidebar-controls">
+        {mode === "compact" && width >= 1400 && (
+          <button
+            className="icon-button"
+            aria-label="Expand navigation"
+            title="Expand navigation"
+            onClick={() => void setPreferences({ navigationMode: "expanded" })}
+          >
+            <PanelLeftOpen size={18} />
+          </button>
+        )}
+        <button
+          className="icon-button"
+          aria-label={
+            mode === "expanded" ? "Collapse navigation" : "Hide navigation"
+          }
+          title={
+            mode === "expanded" ? "Collapse navigation" : "Hide navigation"
+          }
+          onClick={() =>
+            void setPreferences({
+              navigationMode: mode === "expanded" ? "compact" : "hidden",
+            })
+          }
+        >
+          {mode === "expanded" ? (
+            <PanelLeftClose size={18} />
+          ) : (
+            <EyeOff size={18} />
+          )}
+        </button>
+      </div>
       <p className="sidebar-foot">
         LOCAL COMPANION
         <br />
@@ -58,10 +102,17 @@ export function Sidebar() {
 export function Navigation({
   open,
   onClose,
+  width,
 }: {
   open: boolean;
   onClose(): void;
+  width: number;
 }) {
+  const setPreferences = useCargoStore((s) => s.setPreferences);
+  const pin = (mode: NavigationMode) => {
+    void setPreferences({ navigationMode: mode });
+    onClose();
+  };
   return (
     <Overlay
       open={open}
@@ -69,11 +120,24 @@ export function Navigation({
       title="Cargo Run"
       subtitle="FLEET OPERATIONS 2.0"
       side="left"
+      dismissOnOutside
     >
       <nav aria-label="Temporary navigation">
         <Items onClose={onClose} />
       </nav>
-      <div className="nav-footer">Cargo Run / 0.5.0</div>
+      <div className="navigation-pinning">
+        {width >= 1400 && (
+          <button className="button" onClick={() => pin("expanded")}>
+            Show expanded sidebar
+          </button>
+        )}
+        {width >= 1100 && (
+          <button className="button" onClick={() => pin("compact")}>
+            Show compact sidebar
+          </button>
+        )}
+      </div>
+      <div className="nav-footer">Cargo Run / 0.5.1</div>
     </Overlay>
   );
 }

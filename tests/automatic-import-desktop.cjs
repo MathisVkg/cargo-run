@@ -45,6 +45,13 @@ async function launch() {
   );
 }
 async function nav(name) {
+  if (
+    await page
+      .getByLabel("Hide navigation", { exact: true })
+      .first()
+      .isVisible()
+  )
+    await page.getByLabel("Hide navigation", { exact: true }).first().click();
   await page.getByLabel("Open navigation", { exact: true }).click();
   await page
     .getByRole("navigation", { name: "Temporary navigation" })

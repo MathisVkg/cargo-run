@@ -60,6 +60,13 @@ async function until(check, timeout = 120000) {
   throw Error("OCR integration condition timed out");
 }
 async function navigate(name) {
+  if (
+    await page
+      .getByLabel("Hide navigation", { exact: true })
+      .first()
+      .isVisible()
+  )
+    await page.getByLabel("Hide navigation", { exact: true }).first().click();
   await page.getByLabel("Open navigation", { exact: true }).click();
   await page
     .getByRole("navigation", { name: "Temporary navigation" })
@@ -69,9 +76,18 @@ async function navigate(name) {
 async function command(text) {
   fixtureLines.length = 0;
   fixture.stdin.write(text + "\n");
-  await until(() => {
-    if (fixtureLines.includes("NOT_FOCUSED"))
-      throw Error("Synthetic fixture is not focused for " + text);
+  await until(async () => {
+    if (fixtureLines.includes("NOT_FOCUSED")) {
+      const probe = await page.evaluate(() =>
+        window.cargoRun.ocrProbeShortcut(),
+      );
+      throw Error(
+        "Synthetic fixture is not focused for " +
+          text +
+          "; context: " +
+          JSON.stringify(probe.shortcutDiagnostics.context),
+      );
+    }
     return fixtureLines.includes(
       text.startsWith("keys") ? "KEYS_SENT" : text === "black" ? "BLACK" : text,
     );

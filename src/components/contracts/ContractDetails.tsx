@@ -2,10 +2,17 @@ import { useEffect, useState } from "react";
 import type { Contract } from "../../types/models";
 import type { EvidenceLink } from "../../types/review";
 import { Overlay } from "../ui/Overlay";
+import { Badge } from "../ui";
 import { captureImage, useOcrStore } from "../../stores/useOcrStore";
 import { ContractDrawer } from "./ContractDrawer";
 import { useCargoStore } from "../../stores/useCargoStore";
-import { date, money } from "../../utils/format";
+import {
+  contractSCU,
+  outstandingSCU,
+  uniqueObjectives,
+  remainingSCU,
+} from "../../stores/selectors";
+import { date, money, number } from "../../utils/format";
 export function ContractDetails({
   contract: selectedContract,
   onClose,
@@ -22,10 +29,10 @@ export function ContractDetails({
     [large, setLarge] = useState<string | null>(null),
     [complete, setComplete] = useState(false),
     [editing, setEditing] = useState(false),
-    [abandon, setAbandon] = useState(false);
-  const abandonContract = useCargoStore((s) => s.abandonContract);
-
-  const refresh = useOcrStore((s) => s.refresh);
+    [abandon, setAbandon] = useState(false),
+    [submitting, setSubmitting] = useState(false);
+  const abandonContract = useCargoStore((s) => s.abandonContract),
+    refresh = useOcrStore((s) => s.refresh);
   const reload = () =>
     contract &&
     window.cargoRun
@@ -33,13 +40,28 @@ export function ContractDetails({
       .then(setLinks)
       .catch((e) => setError(String(e)));
   useEffect(() => {
+    let active = true;
     setLinks([]);
     setError("");
     setComplete(false);
     setEditing(false);
     setAbandon(false);
-    void reload();
+    setLarge(null);
+    if (contract)
+      void window.cargoRun
+        .contractEvidence(contract.id)
+        .then((value) => {
+          if (active) setLinks(value);
+        })
+        .catch((e) => {
+          if (active) setError(String(e));
+        });
+    return () => {
+      active = false;
+    };
   }, [contract?.id]);
+  const required = contract ? contractSCU(contract) : 0,
+    remaining = contract ? outstandingSCU(contract) : 0;
   return (
     <>
       <Overlay
@@ -47,163 +69,204 @@ export function ContractDetails({
         onClose={onClose}
         title={contract?.name ?? "Contract details"}
         subtitle="CONTRACT & EVIDENCE"
+        side="center"
+        className="contract-details"
       >
-        <div className="drawer-body">
+        <div className="contract-details-body">
           {contract && (
             <>
-              <h2>Overview</h2>
-              <p>
-                {contract.status} ·{" "}
-                {(contract.sources ?? [contract.source]).join(" + ")} ·{" "}
-                {contract.company ?? "Unknown company"}
-              </p>
-              <p>Accepted: {date(contract.acceptedAt)}</p>
-              <p>
-                Potential reward: {money(contract.payout)} · Confirmed earnings:{" "}
-                {money(contract.confirmedEarnings)}
-              </p>
-              <h2>Cargo Objectives</h2>
-              {contract.cargoObjectives.map((o) => (
-                <p key={o.id}>
-                  {o.commodity} · {o.pickupLocation || "Unknown pickup"} →{" "}
-                  {o.destination} · {o.deliveredSCU} / {o.quantitySCU} SCU
+              <section aria-label="Contract overview">
+                <h2>Overview</h2>
+                <dl className="details-overview">
+                  <div>
+                    <dt>Company</dt>
+                    <dd>{contract.company || "Unknown company"}</dd>
+                  </div>
+                  <div>
+                    <dt>Status</dt>
+                    <dd>
+                      <Badge>{contract.status}</Badge>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>
+                      {(contract.sources ?? [contract.source]).join(" + ")}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Accepted</dt>
+                    <dd>{date(contract.acceptedAt)}</dd>
+                  </div>
+                </dl>
+                <dl className="details-stats">
+                  <div>
+                    <dt>Full potential payout</dt>
+                    <dd>{money(contract.payout)}</dd>
+                  </div>
+                  <div>
+                    <dt>Confirmed earnings</dt>
+                    <dd>{money(contract.confirmedEarnings)}</dd>
+                  </div>
+                  <div>
+                    <dt>Required SCU</dt>
+                    <dd>{number(required)}</dd>
+                  </div>
+                  <div>
+                    <dt>Delivered SCU</dt>
+                    <dd>{number(required - remaining)}</dd>
+                  </div>
+                  <div>
+                    <dt>Remaining SCU</dt>
+                    <dd>{number(remaining)}</dd>
+                  </div>
+                </dl>
+              </section>
+              <section aria-label="Cargo objectives">
+                <h2>Cargo Objectives</h2>
+                {!contract.cargoObjectives.length ? (
+                  <p className="form-note">
+                    No supported cargo objectives are recorded.
+                  </p>
+                ) : (
+                  <div className="table-scroll">
+                    <table className="cargo-table details-objectives">
+                      <thead>
+                        <tr>
+                          <th>Commodity</th>
+                          <th>Pickup</th>
+                          <th>Destination</th>
+                          <th className="align-right">Required SCU</th>
+                          <th className="align-right">Delivered SCU</th>
+                          <th className="align-right">Remaining SCU</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {uniqueObjectives(contract).map((o) => (
+                          <tr key={o.id}>
+                            <td>{o.commodity || "Unknown commodity"}</td>
+                            <td>{o.pickupLocation || "Unknown pickup"}</td>
+                            <td>{o.destination || "Unknown destination"}</td>
+                            <td className="align-right numeric">
+                              {number(o.quantitySCU)}
+                            </td>
+                            <td className="align-right numeric">
+                              {number(o.deliveredSCU)}
+                            </td>
+                            <td className="align-right numeric">
+                              {number(remainingSCU(o))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+              <section aria-label="Contract evidence">
+                <h2>Evidence</h2>
+                <p className="form-note">
+                  Active linked screenshots are protected. Closed contract
+                  screenshots expire 30 days after closure. Unlinking preserves
+                  the contract and review audit.
                 </p>
-              ))}
-              {!contract.missionId && contract.status === "Active" && (
-                <>
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={complete}
-                      onChange={(e) => setComplete(e.target.checked)}
-                    />
-                    I confirm completion of this local contract. This does not
-                    confirm earnings.
-                  </label>
-                  <button
-                    className="button"
-                    disabled={!complete}
-                    onClick={() =>
-                      void window.cargoRun
-                        .completeContract(contract.id)
-                        .then(onClose)
-                        .catch((e) => setError(String(e)))
-                    }
-                  >
-                    Complete local contract
-                  </button>
-                </>
-              )}
-              {contract.status === "Active" && (
-                <div className="details-actions">
-                  <button
-                    className="button"
-                    disabled={contract.source === "Log"}
-                    onClick={() => setEditing(true)}
-                  >
-                    Edit contract
-                  </button>
-                  <button
-                    className="button danger"
-                    onClick={() => setAbandon(true)}
-                  >
-                    Abandon contract
-                  </button>
-                </div>
-              )}
-              <h2>Evidence</h2>
-              <p className="form-note">
-                Active linked screenshots are protected. Closed contract
-                screenshots expire 30 days after closure. Unlinking removes
-                protection; it preserves the contract and the review audit.
-              </p>
-              {!links.length && <p>No linked OCR observations.</p>}
-              {links.map((l) => (
-                <section className="evidence-record" key={l.captureId}>
-                  <h3>
-                    {l.attached ? "Linked evidence" : "Unlinked evidence"} ·{" "}
-                    {date(l.capturedAt)}
-                  </h3>
-                  <p>
-                    {l.source} · {l.title ?? "Untitled observation"} ·
-                    Associated {date(l.associatedAt)}
-                  </p>
-                  {l.imageAvailable ? (
-                    <button
-                      className="screenshot-preview"
-                      aria-label="Inspect evidence screenshot"
-                      onClick={() => setLarge(l.captureId)}
-                    >
-                      <img
-                        src={captureImage(l.captureId, true)}
-                        alt="OCR evidence thumbnail"
-                        onError={(e) => {
-                          e.currentTarget.style.display = "none";
-                          setError(
-                            "Screenshot unavailable; structured evidence is preserved.",
-                          );
-                        }}
-                      />
-                      <span>Inspect evidence screenshot</span>
-                    </button>
-                  ) : (
-                    <p>
-                      Screenshot unavailable or expired. Minimal structured
-                      evidence and review history are preserved.
-                    </p>
-                  )}
-                  <ul>
-                    {l.warnings.map((w, i) => (
-                      <li key={i}>{w}</li>
-                    ))}
-                  </ul>
-                  <p>
-                    Manual corrections: {l.corrections.join(", ") || "None"}
-                  </p>
-                  <details>
-                    <summary>
-                      Advanced · Original OCR, reviewed fields and conflict
-                      decisions
-                    </summary>
-                    <pre className="ocr-raw">
-                      {JSON.stringify(
-                        {
-                          rawText: l.rawText,
-                          observation: l.observation,
-                          original: l.original,
-                          reviewed: l.reviewed,
-                          conflicts: l.conflicts,
-                          choices: l.choices,
-                        },
-                        null,
-                        2,
+                {!links.length && (
+                  <p className="form-note">No linked OCR observations.</p>
+                )}
+                <div className="details-evidence">
+                  {links.map((l) => (
+                    <article className="evidence-record" key={l.captureId}>
+                      <div className="evidence-heading">
+                        <h3>{date(l.capturedAt)}</h3>
+                        <Badge>
+                          {l.attached ? "Linked evidence" : "Unlinked evidence"}
+                        </Badge>
+                      </div>
+                      <p className="form-note">
+                        {l.source} · {l.title ?? "Untitled observation"}
+                      </p>
+                      {l.imageAvailable ? (
+                        <button
+                          className="screenshot-preview"
+                          aria-label="Inspect evidence screenshot"
+                          onClick={() => setLarge(l.captureId)}
+                        >
+                          <img
+                            src={captureImage(l.captureId, true)}
+                            alt="OCR evidence thumbnail"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                              setError(
+                                "Screenshot unavailable; structured evidence is preserved.",
+                              );
+                            }}
+                          />
+                          <span>Open full screenshot</span>
+                        </button>
+                      ) : (
+                        <p className="form-note">
+                          Screenshot unavailable or expired. Structured evidence
+                          and review history are preserved.
+                        </p>
                       )}
-                    </pre>
-                  </details>
-                  {l.attached && (
-                    <button
-                      className="button"
-                      onClick={() =>
-                        void window.cargoRun
-                          .unlinkEvidence({
-                            contractId: contract.id,
-                            captureId: l.captureId,
-                          })
-                          .then(async () => {
-                            await refresh();
-                            await reload();
-                          })
-                          .catch((e) => setError(String(e)))
-                      }
-                    >
-                      Unlink evidence
-                    </button>
-                  )}
-                </section>
-              ))}
+                      <details>
+                        <summary>Advanced · Recognition and review</summary>
+                        <p className="form-note">
+                          Associated {date(l.associatedAt)} ·{" "}
+                          {l.verified
+                            ? "Verified association"
+                            : "Unverified association"}
+                        </p>
+                        <ul className="warning-text">
+                          {l.warnings.map((w, i) => (
+                            <li key={i}>{w}</li>
+                          ))}
+                        </ul>
+                        <p className="form-note">
+                          Manual corrections:{" "}
+                          {l.corrections.join(", ") || "None"}
+                        </p>
+                        <pre className="ocr-raw">
+                          {JSON.stringify(
+                            {
+                              rawText: l.rawText,
+                              observation: l.observation,
+                              original: l.original,
+                              reviewed: l.reviewed,
+                              conflicts: l.conflicts,
+                              choices: l.choices,
+                            },
+                            null,
+                            2,
+                          )}
+                        </pre>
+                      </details>
+                      {l.attached && (
+                        <button
+                          className="text-button"
+                          onClick={() =>
+                            void window.cargoRun
+                              .unlinkEvidence({
+                                contractId: contract.id,
+                                captureId: l.captureId,
+                              })
+                              .then(async () => {
+                                await refresh();
+                                await reload();
+                              })
+                              .catch((e) => setError(String(e)))
+                          }
+                        >
+                          Unlink evidence
+                        </button>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              </section>
               <details>
                 <summary>Advanced · Identity and field provenance</summary>
-                <p>
+                <p className="form-note">
                   ContractId: {contract.id} · MissionId:{" "}
                   {contract.missionId ?? "Unverified / local"}
                 </p>
@@ -218,6 +281,60 @@ export function ContractDetails({
               {error}
             </p>
           )}
+        </div>
+        <div className="dialog-actions contract-details-actions">
+          {contract?.status === "Active" && (
+            <>
+              {!contract.missionId && (
+                <label className="checkbox-label completion-confirmation">
+                  <input
+                    type="checkbox"
+                    checked={complete}
+                    disabled={submitting}
+                    onChange={(e) => setComplete(e.target.checked)}
+                  />
+                  I confirm completion of this local contract. This does not
+                  confirm earnings.
+                </label>
+              )}
+              <button
+                className="button"
+                disabled={contract.source === "Log" || submitting}
+                onClick={() => setEditing(true)}
+              >
+                Edit contract
+              </button>
+              {!contract.missionId && (
+                <button
+                  className="button"
+                  disabled={!complete || submitting}
+                  onClick={async () => {
+                    setSubmitting(true);
+                    try {
+                      await window.cargoRun.completeContract(contract.id);
+                      onClose();
+                    } catch (e) {
+                      setError(String(e));
+                    } finally {
+                      setSubmitting(false);
+                    }
+                  }}
+                >
+                  Complete local contract
+                </button>
+              )}
+              <button
+                className="button danger"
+                disabled={submitting}
+                onClick={() => setAbandon(true)}
+              >
+                Abandon contract
+              </button>
+            </>
+          )}
+          <button className="button" onClick={onClose}>
+            Close
+          </button>
         </div>
       </Overlay>
       {editing && (
@@ -242,11 +359,17 @@ export function ContractDetails({
           </button>
           <button
             className="button danger"
+            disabled={submitting}
             onClick={async () => {
               if (contract) {
-                await abandonContract(contract.id);
-                setAbandon(false);
-                onClose();
+                setSubmitting(true);
+                try {
+                  await abandonContract(contract.id);
+                  setAbandon(false);
+                  onClose();
+                } finally {
+                  setSubmitting(false);
+                }
               }
             }}
           >

@@ -767,42 +767,7 @@ table {
   background: transparent;
   color: var(--muted);
 }
-.overlay-dialog {
-  color: var(--text);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  padding: 0;
-  max-height: 100vh;
-  outline: 0;
-  overflow: auto;
-}
-.overlay-dialog::backdrop {
-  background: var(--backdrop);
-  backdrop-filter: blur(2px);
-  animation: backdrop-in 0.2s ease-out;
-}
-.overlay-dialog.right {
-  margin: 0 0 0 auto;
-  width: 470px;
-  height: 100vh;
-  max-width: 90vw;
-  border-width: 0 0 0 1px;
-  animation: slide-right 0.2s ease-out;
-}
-.overlay-dialog.left {
-  margin: 0 auto 0 0;
-  width: 320px;
-  height: 100vh;
-  border-width: 0 1px 0 0;
-  animation: slide-left 0.2s ease-out;
-}
-.overlay-dialog.center {
-  margin: auto;
-  width: 520px;
-  max-width: 90vw;
-  border-radius: 7px;
-  animation: page-in 0.18s ease-out;
-}
+
 .dialog-heading {
   display: flex;
   justify-content: space-between;
@@ -1188,40 +1153,7 @@ nav {
   border-radius: 6px;
   border: 2px solid var(--border);
 }
-@keyframes slide-right {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-@keyframes slide-left {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-@keyframes backdrop-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-@keyframes page-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
+
 @media (max-width: 1200px) {
   .top-label,
   .brand-separator {
@@ -1260,62 +1192,6 @@ nav {
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
-  }
-}
-
-/* Native dialog transitions keep focus containment and top-layer behavior during dismissal. */
-.overlay-dialog {
-  opacity: 0;
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease,
-    display 0.2s allow-discrete,
-    overlay 0.2s allow-discrete;
-}
-.overlay-dialog[open] {
-  opacity: 1;
-}
-.overlay-dialog.right {
-  animation: none;
-  transform: translateX(100%);
-}
-.overlay-dialog.left {
-  animation: none;
-  transform: translateX(-100%);
-}
-.overlay-dialog.center {
-  animation: none;
-  transform: translateY(8px);
-}
-.overlay-dialog[open] {
-  transform: translate(0);
-}
-.overlay-dialog::backdrop {
-  animation: none;
-  background: transparent;
-  transition:
-    background-color 0.2s,
-    display 0.2s allow-discrete,
-    overlay 0.2s allow-discrete;
-}
-.overlay-dialog[open]::backdrop {
-  background: var(--backdrop);
-}
-@starting-style {
-  .overlay-dialog[open] {
-    opacity: 0;
-  }
-  .overlay-dialog.right[open] {
-    transform: translateX(100%);
-  }
-  .overlay-dialog.left[open] {
-    transform: translateX(-100%);
-  }
-  .overlay-dialog.center[open] {
-    transform: translateY(8px);
-  }
-  .overlay-dialog[open]::backdrop {
-    background: transparent;
   }
 }
 
@@ -1673,9 +1549,7 @@ nav {
   max-width: none;
   display: block;
 }
-.overlay-dialog.center:has(.full-screenshot) {
-  width: min(1200px, 90vw);
-}
+
 .screenshot-help {
   padding: 0 20px 15px;
 }
@@ -2441,34 +2315,7 @@ h3 {
   font-size: 10px;
   white-space: nowrap;
 }
-.overlay-dialog.center {
-  width: 680px;
-  max-width: calc(100vw - 40px);
-  max-height: calc(100vh - 48px);
-}
-.overlay-dialog.center[open] {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transform: none;
-  animation: none;
-  transition: none;
-}
-.overlay-dialog.center::backdrop {
-  background: var(--backdrop);
-  transition: none;
-  backdrop-filter: none;
-}
-.overlay-dialog.center .dialog-heading,
-.overlay-dialog.center .dialog-actions {
-  flex-shrink: 0;
-}
-.overlay-dialog.center .dialog-body {
-  overflow: auto;
-}
-.overlay-dialog.center:has(.contract-form) {
-  height: min(790px, calc(100vh - 48px));
-}
+
 .contract-form {
   min-height: 0;
   overflow: hidden;
@@ -2585,12 +2432,6 @@ h3 {
 .sidebar nav {
   padding: 0;
 }
-.overlay-dialog.left nav {
-  padding: 16px;
-}
-.overlay-dialog.left .nav-item {
-  margin-bottom: 6px;
-}
 
 .capture-indicator.capture-success {
   color: var(--success);
@@ -2621,4 +2462,327 @@ h3 {
   border: 1px solid var(--error);
   color: var(--error);
   background: var(--surface);
+}
+
+/* Task 04.1: one stable native-dialog lifecycle; no exit layout or top-layer transitions. */
+.overlay-dialog {
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0;
+  max-width: calc(100vw - 40px);
+  max-height: 88vh;
+  outline: 0;
+  overflow: hidden;
+  opacity: 1;
+  transform: none;
+  animation: none;
+  transition: none;
+  -webkit-app-region: no-drag;
+}
+.overlay-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.overlay-dialog,
+.overlay-dialog * {
+  -webkit-app-region: no-drag;
+}
+.overlay-dialog::backdrop {
+  background: var(--backdrop);
+  animation: none;
+  transition: none;
+  backdrop-filter: none;
+}
+.overlay-dialog.center {
+  margin: auto;
+  width: 680px;
+  border-radius: 7px;
+}
+.overlay-dialog.right {
+  margin: 0 0 0 auto;
+  width: 470px;
+  height: 100vh;
+  max-height: 100vh;
+  border-width: 0 0 0 1px;
+}
+.overlay-dialog.left {
+  margin: 0 auto 0 0;
+  width: 320px;
+  height: 100vh;
+  max-height: 100vh;
+  border-width: 0 1px 0 0;
+}
+.overlay-dialog .dialog-heading,
+.overlay-dialog .dialog-actions {
+  flex-shrink: 0;
+}
+.overlay-dialog .dialog-heading > div {
+  min-width: 0;
+}
+.overlay-dialog .dialog-heading h2 {
+  overflow-wrap: anywhere;
+}
+.overlay-dialog .dialog-heading .icon-button {
+  flex-shrink: 0;
+}
+.overlay-dialog .dialog-body,
+.overlay-dialog > .drawer-body {
+  overflow: auto;
+  min-height: 0;
+}
+.overlay-dialog.center:has(.contract-form) {
+  height: min(790px, 88vh);
+}
+.overlay-dialog.center:has(.full-screenshot) {
+  width: min(1100px, calc(100vw - 40px));
+}
+.navigation-toggle {
+  display: inline-grid;
+}
+.sidebar {
+  transition: none;
+}
+.sidebar.compact {
+  width: 62px;
+  flex-basis: 62px;
+  padding: 18px 6px;
+}
+.sidebar.compact .nav-item {
+  justify-content: center;
+  padding: 12px 0;
+}
+.sidebar.compact .nav-item > span,
+.sidebar.compact .sidebar-label,
+.sidebar.compact .sidebar-foot {
+  display: none;
+}
+.sidebar-controls {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding: 18px 6px 0;
+}
+.sidebar.compact .sidebar-controls {
+  align-items: center;
+  flex-direction: column;
+  padding: 18px 0 0;
+}
+.navigation-pinning {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+}
+.associated-contracts {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.associated-contracts summary {
+  font-size: 11px;
+  color: var(--accent-light);
+  cursor: pointer;
+}
+.associated-contracts ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+}
+.associated-contracts li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+}
+.associated-contracts li > span {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.associated-contracts .text-button {
+  white-space: normal;
+  text-align: left;
+}
+.stop-contract-link {
+  margin-top: 12px;
+}
+.commodity-list li > .numeric {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.overlay-dialog.center.contract-details {
+  width: 900px;
+  max-height: 88vh;
+}
+.contract-details-body {
+  overflow: auto;
+  min-height: 0;
+  padding: 20px 22px;
+  flex: 1;
+}
+.contract-details-body > section {
+  margin-bottom: 24px;
+}
+.contract-details-body h2 {
+  margin-bottom: 13px;
+}
+.details-overview {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 2fr;
+  gap: 14px;
+  margin: 0 0 18px;
+}
+.details-overview dt,
+.details-stats dt {
+  font-size: 10px;
+  color: var(--muted);
+  margin-bottom: 7px;
+}
+.details-overview dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.details-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.details-stats > div {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 12px;
+}
+.details-stats dd {
+  margin: 0;
+  font:
+    15px/1.6 Consolas,
+    monospace;
+  overflow-wrap: anywhere;
+}
+.details-objectives {
+  min-width: 740px;
+  width: 100%;
+  font-size: 11px;
+}
+.details-objectives th,
+.details-objectives td {
+  padding: 12px;
+  white-space: normal;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.details-objectives td:nth-child(-n + 3) {
+  max-width: 205px;
+}
+.details-evidence {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.details-evidence .evidence-record {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  min-width: 0;
+}
+.evidence-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.evidence-heading h3 {
+  font-size: 12px;
+}
+.details-evidence .screenshot-preview {
+  width: 100%;
+  margin: 12px 0;
+  background: var(--bg);
+}
+.details-evidence .screenshot-preview img {
+  height: 135px;
+  width: 100%;
+  object-fit: contain;
+  display: block;
+}
+.details-evidence .screenshot-preview > span {
+  display: block;
+  padding: 8px;
+  font-size: 11px;
+  color: var(--accent-light);
+}
+.details-evidence details {
+  font-size: 11px;
+  margin: 10px 0;
+}
+.details-evidence summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.contract-details-actions {
+  flex-wrap: wrap;
+}
+.contract-details-actions .completion-confirmation {
+  width: 100%;
+  margin: 0;
+  font-size: 11px;
+}
+.contract-details-actions .completion-confirmation input {
+  margin: 0;
+  flex-shrink: 0;
+}
+.contracts-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.contracts-toolbar .search-field {
+  position: relative;
+  flex: 1 1 300px;
+  min-width: 240px;
+  max-width: none;
+  margin: 0;
+}
+.contracts-toolbar .search-field input {
+  margin: 0;
+  min-height: 38px;
+  width: 100%;
+}
+.contracts-toolbar .search-field svg {
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.contracts-toolbar > select,
+.contracts-toolbar > .button {
+  min-height: 38px;
+  margin: 0;
+}
+.contract-result-count {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.ship-filter-status {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 10px;
+  line-height: 1.6;
+}
+@media (max-width: 800px) {
+  .details-overview {
+    grid-template-columns: 1fr 1fr;
+  }
+  .details-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .details-evidence {
+    grid-template-columns: 1fr;
+  }
 }

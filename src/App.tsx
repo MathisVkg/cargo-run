@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { HardDrive, CircleHelp } from "lucide-react";
 import { TopBar } from "./components/layout/TopBar";
 import { Navigation, Sidebar } from "./components/navigation/Navigation";
@@ -10,11 +10,28 @@ import History from "./pages/History";
 import Settings from "./pages/Settings";
 import ScanReview from "./pages/ScanReview";
 import { initializeOcrStore } from "./stores/useOcrStore";
+import { navigationModeForWidth } from "./utils/navigation";
+const subscribeWidth = (callback: () => void) => {
+  window.addEventListener("resize", callback);
+  return () => window.removeEventListener("resize", callback);
+};
 export default function App() {
+  const width = useSyncExternalStore(subscribeWidth, () => window.innerWidth);
+  const preferred = useCargoStore((s) => s.preferences.navigationMode);
+  const setPreferences = useCargoStore((s) => s.setPreferences);
+  const navigationMode = navigationModeForWidth(width, preferred);
   const page = useCargoStore((s) => s.page);
   const setPage = useCargoStore((s) => s.setPage);
   const sampleMode = useCargoStore((s) => s.sampleMode);
   const [nav, setNav] = useState(false);
+  useEffect(() => setNav(false), [width, navigationMode]);
+  const toggleNavigation = () => {
+    if (navigationMode === "hidden") setNav((v) => !v);
+    else
+      void setPreferences({
+        navigationMode: navigationMode === "expanded" ? "compact" : "hidden",
+      });
+  };
   const ready = useCargoStore((s) => s.ready);
   const error = useCargoStore((s) => s.actionError);
   const dismissError = useCargoStore((s) => s.dismissError);
@@ -28,9 +45,13 @@ export default function App() {
   }, []);
   return (
     <div className="app-shell">
-      <TopBar onMenu={() => setNav(true)} />
+      <TopBar
+        onMenu={toggleNavigation}
+        navigationMode={navigationMode}
+        drawerOpen={nav}
+      />
       <div className="workspace">
-        <Sidebar />
+        <Sidebar mode={nav ? "hidden" : navigationMode} width={width} />
         <main key={page} className="page-content">
           {error && (
             <div className="notice error" role="alert">
@@ -87,10 +108,14 @@ export default function App() {
           >
             <CircleHelp size={13} />
           </button>
-          <span className="status-divider">/</span>v0.5.0
+          <span className="status-divider">/</span>v0.5.1
         </span>
       </footer>
-      <Navigation open={nav} onClose={() => setNav(false)} />
+      <Navigation
+        open={nav && navigationMode === "hidden"}
+        onClose={() => setNav(false)}
+        width={width}
+      />
     </div>
   );
 }

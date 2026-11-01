@@ -262,6 +262,7 @@ describe("Offline ship catalog and preferences", () => {
     service = new TrackingService(file);
     expect(service.snapshot().selectedShipId).toBe("hull-c");
     expect(service.snapshot().preferences).toEqual({
+      navigationMode: "expanded",
       dashboardView: "contract",
       favoriteShipIds: ["custom", "c2"],
       recentShipIds: ["hull-c"],

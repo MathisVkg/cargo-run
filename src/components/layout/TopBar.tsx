@@ -3,7 +3,16 @@ import { Menu, Box, Minus, Square, Copy, X } from "lucide-react";
 import { useCargoStore } from "../../stores/useCargoStore";
 import { useOcrStore } from "../../stores/useOcrStore";
 import { ShipSelector } from "../ships/ShipSelector";
-export function TopBar({ onMenu }: { onMenu(): void }) {
+import type { NavigationMode } from "../../utils/navigation";
+export function TopBar({
+  onMenu,
+  navigationMode,
+  drawerOpen,
+}: {
+  onMenu(): void;
+  navigationMode: NavigationMode;
+  drawerOpen: boolean;
+}) {
   const ocr = useOcrStore((s) => s.state);
   const setPage = useCargoStore((s) => s.setPage);
   const tracking = useCargoStore((s) => s.tracking);
@@ -25,7 +34,21 @@ export function TopBar({ onMenu }: { onMenu(): void }) {
     <header className="topbar">
       <div className="brand">
         <button
-          aria-label="Open navigation"
+          aria-label={
+            navigationMode === "expanded"
+              ? "Collapse navigation"
+              : navigationMode === "compact"
+                ? "Hide navigation"
+                : "Open navigation"
+          }
+          title={
+            navigationMode === "expanded"
+              ? "Collapse navigation"
+              : navigationMode === "compact"
+                ? "Hide navigation"
+                : "Open navigation"
+          }
+          aria-expanded={navigationMode === "expanded" || drawerOpen}
           className="icon-button navigation-toggle"
           onClick={onMenu}
         >
