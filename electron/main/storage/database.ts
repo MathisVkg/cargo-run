@@ -88,11 +88,15 @@ export class CargoDatabase {
         for (const c of projection) this.savePendingMission(c);
       });
   }
-  pendingMissions(): Contract[] {
+  pendingMissions(includeArchived = false): Contract[] {
+    const archived = new Set(
+      this.getSetting<string[]>("tracking.archivedMissions") ?? [],
+    );
     return this.db
       .prepare("SELECT payload FROM pending_log_missions ORDER BY rowid")
       .all()
-      .map((r) => JSON.parse(String(r.payload)) as Contract);
+      .map((r) => JSON.parse(String(r.payload)) as Contract)
+      .filter((c) => includeArchived || !archived.has(c.missionId!));
   }
   savePendingMission(c: Contract) {
     this.db

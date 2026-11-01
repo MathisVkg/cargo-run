@@ -56,6 +56,7 @@ export interface ContractObservation {
   acceptanceTimestamp: null;
 }
 export interface CaptureRecord {
+  historyRemoved?: boolean;
   importResult?: import("./review").ScanOutcome;
   id: string;
   capturedAt: string;

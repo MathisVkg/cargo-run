@@ -36,6 +36,7 @@ export interface MatchCandidate {
   reasons: string[];
 }
 export interface ScanOutcome {
+  matchingDiagnostics?: MatchingDiagnostic[];
   status:
     | "Imported"
     | "Updated"
@@ -57,6 +58,19 @@ export interface ResolveScan {
   choices?: Record<string, "Keep" | "Reviewed">;
   observationHash?: string;
   targetVersion?: string;
+}
+export interface MatchingDiagnostic {
+  captureId: string;
+  candidateId: string;
+  missionId: string | null;
+  origin: "Pending Game.log" | "Stored contract";
+  status: string;
+  titleMatches: boolean;
+  objectiveOverlap: number;
+  objectiveCount: number;
+  timeDeltaSeconds: number | null;
+  decision: "Included" | "Excluded" | "Selected";
+  reason: string;
 }
 export interface ScanIssue {
   review: OcrReview;

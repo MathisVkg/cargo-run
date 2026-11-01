@@ -245,7 +245,10 @@ export class OcrQueue {
     }
     return state;
   }
-  async initialize() {
+  continueRevision(previous: number) {
+    this.revision = previous + 1;
+  }
+  async initialize(maintenance = false) {
     const records = this.repository.list();
     for (const record of records)
       if (record.status === "Processing" || record.status === "Captured") {
@@ -259,7 +262,7 @@ export class OcrQueue {
         });
       }
     this.automatic.recover();
-    if (this.policy.cleanupEnabled)
+    if (this.policy.cleanupEnabled && !maintenance)
       this.retention.cleanup(this.policy, this.automatic.protectedIds());
     this.cleanupTimer = setInterval(() => {
       if (!this.closing && this.policy.cleanupEnabled) this.cleanup();
@@ -852,6 +855,11 @@ export class OcrQueue {
         : this.policy.source,
       valid,
     });
+    if (this.closing || !valid())
+      return {
+        validation: "Cancelled",
+        message: "Automatic capture cancelled during data maintenance.",
+      };
     const id = state.captures.at(-1)!.id;
     const record = await new Promise<CaptureRecord | null>((resolve) => {
       const current = this.repository.get(id);
@@ -961,5 +969,6 @@ export class OcrQueue {
     await this.provider.close();
     await this.captureTail.catch(() => {});
     if (this.processor) await this.processor.catch(() => {});
+    await this.automatic.drain();
   }
 }

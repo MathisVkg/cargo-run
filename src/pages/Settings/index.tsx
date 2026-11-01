@@ -6,6 +6,7 @@ import { useCargoStore } from "../../stores/useCargoStore";
 import { LogMonitoring } from "./LogMonitoring";
 import { ShipSelector } from "../../components/ships/ShipSelector";
 import { shipCatalog } from "../../data/ships";
+import { LocalDataManagement } from "./LocalDataManagement";
 import { OcrSettings } from "./OcrSettings";
 export default function Settings() {
   const databasePath = useCargoStore((s) => s.databasePath);
@@ -77,6 +78,7 @@ export default function Settings() {
             run together.
           </p>
         </section>
+        <LocalDataManagement />
         <details className="panel setting-card advanced-panel">
           <summary>Advanced &amp; Diagnostics</summary>
           <OcrSettings section="advanced" />
@@ -88,7 +90,7 @@ export default function Settings() {
           </div>
           <div>
             <h2>
-              Cargo Run <Badge>0.5.2</Badge>
+              Cargo Run <Badge>0.5.3</Badge>
             </h2>
             <p>Fleet Operations 2.0 · Local OCR and optional Game.log</p>
             <p className="form-note">

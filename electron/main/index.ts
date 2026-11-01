@@ -6,6 +6,7 @@ import {
   dialog,
   protocol,
 } from "electron";
+import { LocalDataManager } from "./storage/maintenance";
 import { join } from "node:path";
 import { TrackingService } from "./trackingService";
 import { createOcrQueue, registerCaptureProtocol } from "./ocr/integration";
@@ -20,6 +21,8 @@ let ocr: OcrQueue;
 let service: TrackingService;
 let trackingQueue: Promise<unknown> = Promise.resolve();
 let quitting = false;
+let maintenance: LocalDataManager;
+let maintenanceEpoch = 0;
 
 let mainWindow: BrowserWindow | null = null;
 const isTrusted = (event: Electron.IpcMainInvokeEvent): boolean => {
@@ -94,15 +97,35 @@ else
         join(app.getPath("userData"), "cargo-run.sqlite"),
       );
       ocr = createOcrQueue(service.database);
-      ocr.onRecognized = (id) => service.processScan(id);
-      ocr.onChange = (state) => {
-        if (mainWindow && !mainWindow.isDestroyed())
-          mainWindow.webContents.send("ocr:state", state);
+      const connectOcr = () => {
+        ocr.onRecognized = (id) => service.processScan(id);
+        ocr.onChange = (state) => {
+          if (mainWindow && !mainWindow.isDestroyed())
+            mainWindow.webContents.send("ocr:state", state);
+        };
       };
+      connectOcr();
       service.onLiveAcceptance = (event) => ocr.automatic.accept(event);
       service.onMonitoringChange = (running) =>
         ocr.automatic.setMonitoring(running);
-      registerCaptureProtocol(ocr);
+      registerCaptureProtocol(() => ocr);
+      let ocrRevision = 0;
+      maintenance = new LocalDataManager(
+        service,
+        join(app.getPath("userData"), "captures"),
+        {
+          pause: async () => {
+            await ocr.close();
+            ocrRevision = ocr.snapshot().revision;
+          },
+          resume: async () => {
+            ocr = createOcrQueue(service.database);
+            ocr.continueRevision(ocrRevision);
+            connectOcr();
+            await ocr.initialize(true);
+          },
+        },
+      );
       await ocr.initialize();
       service.onChange = (state) => {
         ocr.refreshEvidence();
@@ -116,12 +139,32 @@ else
       ): void => {
         ipcMain.handle(channel, (event, payload: unknown) => {
           if (!isTrusted(event)) throw new Error("Untrusted Cargo Run request");
+          if (
+            maintenance.busy &&
+            !["cargo:getState", "ocr:state", "data:stats"].includes(channel)
+          )
+            throw Error("Local data maintenance is in progress.");
+          const epoch = maintenanceEpoch;
           if (!serial) return action(payload);
-          const next = trackingQueue.then(() => action(payload));
+          const next = trackingQueue.then(() => {
+            if (epoch !== maintenanceEpoch || maintenance.busy)
+              throw Error("This request predates data maintenance; retry it.");
+            return action(payload);
+          });
           trackingQueue = next.catch(() => {});
           return next;
         });
       };
+      register("data:stats", () => maintenance.stats());
+      register("data:preview", (mode) => maintenance.preview(mode));
+      register(
+        "data:execute",
+        (input) => {
+          maintenanceEpoch++;
+          return maintenance.execute(input);
+        },
+        true,
+      );
       register("ocr:beginRecording", () => ocr.beginShortcutRecording());
       register("ocr:endRecording", () => ocr.endShortcutRecording());
       register("ocr:probeShortcut", () => ocr.probeShortcut());

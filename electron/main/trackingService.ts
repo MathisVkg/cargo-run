@@ -151,7 +151,9 @@ export class TrackingService {
       tracking: {
         status: this.status,
         path: this.config.path,
-        enabled: this.config.enabled,
+        enabled:
+          this.config.enabled &&
+          !this.database.getSetting<boolean>("tracking.resumeBlocked"),
         importing: this.importing,
         error: this.error,
         ...this.database.counts(),
@@ -477,6 +479,7 @@ export class TrackingService {
     this.ensureRealMode();
     if (!this.config.path) throw new Error("Select Game.log first.");
     await this.halt();
+    this.database.setSetting("tracking.resumeBlocked", false);
     this.config = { ...this.config, enabled: true };
     this.database.setSetting("monitor", this.config);
     this.running = true;
@@ -494,7 +497,11 @@ export class TrackingService {
     return this.publish();
   }
   async resume(): Promise<void> {
-    if (this.config.enabled) await this.start();
+    if (
+      this.config.enabled &&
+      !this.database.getSetting<boolean>("tracking.resumeBlocked")
+    )
+      await this.start();
   }
   private notifyMonitoring(active: boolean) {
     try {
@@ -589,6 +596,25 @@ export class TrackingService {
             continue;
           }
           const event = parsed.event;
+          if (
+            (
+              this.database.getSetting<string[]>("tracking.archivedMissions") ??
+              []
+            ).includes(event.missionId)
+          ) {
+            if (this.database.recordEvent(event, context)) {
+              this.database.resolve(event.id);
+              this.database.diagnostic(
+                "Archived",
+                "Event retained without recreating cleared closed history.",
+                line.text,
+                context,
+                event,
+              );
+              changed = true;
+            }
+            continue;
+          }
           const firstAcceptance =
             event.kind === "Accepted" &&
             !this.database.db
@@ -753,6 +779,24 @@ export class TrackingService {
       this.publish();
     }
     return this.snapshot();
+  }
+  maintenanceRecoveryError(message: string) {
+    this.error = "Data maintenance recovery: " + message;
+    this.status = "ERROR";
+    this.publish();
+  }
+  async pauseForMaintenance() {
+    const wasRunning = this.running;
+    await this.halt();
+    return wasRunning;
+  }
+  applyMaintenance(state: DomainSnapshot, reset: boolean) {
+    this.store.setState(state);
+    if (reset) {
+      this.status = "OFFLINE";
+      this.error = null;
+    }
+    return this.publish();
   }
   async close(): Promise<void> {
     await this.halt();

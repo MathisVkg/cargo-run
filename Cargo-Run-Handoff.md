@@ -1,89 +1,88 @@
-# Cargo Run v0.5.2 — Task 04.2 handoff
+# Cargo Run v0.5.3 — Task 04.3 handoff
 
-Small corrective patch in `C:\Users\zeyros\Documents\repository\cargo-run`, continuing the clean, locally committed v0.5.1 tree. Reversible copies are under ignored `work/task042-backup/`. No live user database/captures were read or modified. No dependencies, migration, commit, PR or installer were added.
+Reliability and local maintenance release in `C:\Users\zeyros\Documents\repository\cargo-run`. Fleet Operations 2.0 remains intact. No new dependencies, schema migration, cargo loading/delivery tracking, commit, PR or installer. SQLite schema stays **5**; additive JSON metadata/settings are understood by v0.5.3. Pre-edit copies are under ignored `work/task043-backup/`.
 
-## Navigation correction
+## Matching root cause and rules
 
-The controls and the bottom information block both had auto top margins, pushing the controls down. The primary collapse/hide action now directly follows the six navigation items with the same 5px gap. All sidebar rows use 40px height and 19px icons. Expanded controls align with item labels; compact controls center their icons. The existing wide-compact Expand action follows Hide; no toggle was added. Application information remains at the bottom.
+An empty Dashboard did not imply empty matching state. Accepted Game.log missions live in `pending_log_missions`, separate from visible stored contracts. Previously, identical titles alone admitted pending records into the competing candidate set. The 11:13:05 and 19:55:29 Junior missions could therefore block an accepted 65,250 aUEC / 18 SCU OCR import despite having no known cargo.
 
-Hamburger behavior, expanded/compact/hidden logic, responsive widths and preference persistence are unchanged. There is no width animation.
+Routine matching now distinguishes stored active contracts, pending projections and closed history:
 
-## Shared Contract Card footer correction
+- Pending missions without objectives are excluded from routine competition; their immutable events and pending projections remain available under Advanced. No arbitrary expiration, nearest-time guess or silent event deletion was added.
+- Objective-supported candidates compare commodity, destination, available pickup and quantities. Quantity conflicts remain candidates requiring resolution; genuinely different cargo does not compete merely because the title matches.
+- A unique title/objective-supported MissionId can be selected, preserving available ObjectiveIds. Visible rows must map uniquely to distinct stored objective IDs. Missing pickup evidence is not invented, and existing field/coverage/conflict checks still apply.
+- Existing capture bindings retain identity. Unverified automatic-capture triggers do not establish a MissionId.
+- Distinct active MissionIds with identical details remain ambiguous. Repeated CaptureIds are idempotent; a new identical OCR-only capture still requires identity selection or explicit separate creation.
+- Closed history is excluded from ordinary active candidates. The existing recent closed-mission safety check (30 minutes from known acceptance time) remains an explicit recovery gate, not a matching rule or deletion policy.
+- Stored title-only active ledger records still require identity choice. Manual corrections, raw OCR, observations, objective IDs and audit evidence keep their existing safeguards.
 
-Root cause: the old Details `.text-button` had 17px bottom padding, icon actions used 25×27px boxes, and inline source text contained a nested inline-flex Evidence span. The outer flex row aligned these unequal boxes, not their actual text/icon centerlines. Long titles also left shorter cards' footers above their grid partners.
+Each import result stores at most **50** relevant candidate diagnostic entries: CaptureId, candidate/mission identity, origin, status, title agreement, exact objective overlap/count, acceptance-to-capture seconds, inclusion/selection/exclusion and reason. Candidate evaluation itself is not truncated. See Scan History → Advanced diagnostics. Ordinary issues show concise origin, MissionId suffix, cargo/source/time, and explicit existing/separate choices. Timestamps are diagnostic evidence, never sufficient identity.
 
-The shared component now uses explicit metadata and action groups. Source is a compact badge; Evidence text/icon are centered together. Actions use consistent 32px height/minimum width, 8px padding/gaps and 16px icons. Details is readable, Edit retains accessible labels/tooltips, and Abandon has a tooltip and destructive color. No per-action top margins, transforms or absolute nudges were added.
+## Local Data Management
 
-Metadata/actions wrap into clean rows when needed; the action row stays right-aligned. Flex-column cards keep footers bottom-aligned across long/short titles. The same component serves Dashboard → By Contract and Contracts. Action handlers, permissions, data and calculations are unchanged.
+Settings now displays persisted total/active/completed/abandoned contracts, finished runs, captures, pending unlinked active log missions and approximate database/WAL/SHM + managed-image bytes. Backups are excluded. Total includes superseded source records; status counts exclude superseded aliases.
 
-## Limited OCR title findings
+| Action                         | Removes                                                                                                                                                             | Preserves                                                                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clear closed contract history  | Completed/abandoned contracts, closed superseded aliases, their objectives, capture links and review audits                                                         | Active contracts/evidence, current run identity, finished runs with removed IDs/snapshots pruned, configuration                                    |
+| Clear contract and run history | The above plus finished runs                                                                                                                                        | Active contracts/evidence and current run with closed references pruned, configuration                                                             |
+| Reset all local tracking data  | All contracts/objectives, current/finished runs, captures/images, links/audits, pending missions, events/diagnostics, automatic requests, checkpoints/deduplication | New empty current run, installed app, catalog/selection/favorites, navigation/appearance, OCR/shortcut/capture settings and Game.log configuration |
 
-The offline Tesseract provider exports recognized text, boxes and confidence with line-edge trimming. The parser uses title regions/explicit metadata, joins wrapped lines and excludes navigation/objective labels. Its normalization is conservative whitespace/case handling, not semantic replacement of corrupted words.
+The smaller cleanups retain capture records/images unlinked; normal later retention still applies. Those captures carry a history-cleared guard, so reprocessing cannot silently recreate cleared contracts. Explicit separate-instance confirmation is required. Closed MissionIds are archived in a local exclusion setting while authoritative raw events/projections remain; replay cannot reactivate those projections. Full reset clears both archival and event state.
 
-Exact current extraction passes from genuine repository OCR exports:
+Run JSON associations/snapshots are explicitly pruned, not left dangling. Removed-contract review audits and links are deleted together; retained-active evidence remains. Full reset deletes all tracking tables in foreign-key-safe order. Every cleanup commits in one main-process SQLite transaction with `PRAGMA foreign_key_check` before commit. No schema migration was needed.
 
-| Fixture                                     | Extracted title                       |
-| ------------------------------------------- | ------------------------------------- |
-| `de84af0a-5ad9-4458-a490-288293bdf989.json` | Rookie Rank - Extra Small Cargo Haul  |
-| `88825398-27e5-4561-9516-c717ae7e750b.json` | Rookie Rank - Direct Small Cargo Haul |
-| `9ccc7ea4-c6f6-49bc-8bfc-701980e610da.json` | Junior Rank - Small Cargo Haul        |
+## Confirmation, backups and failure behavior
 
-Tests verify complete endings, no reported unwanted glyphs and unchanged original input/evidence. No current title-parser defect was reproduced, so production OCR code remains unchanged.
+Every action opens a protected confirmation preview with contract/run/capture/link/audit/reference/request counts and preservation/monitoring behavior. Reset additionally requires exact **RESET**. Preview tokens are one-use, bounded and expire after ten minutes; stale persisted state requires a fresh preview. Trusted-sender, fixed validated IPC methods stay in main. No arbitrary renderer SQL/path operations were introduced.
 
-Chosen OCR titles are stored as contract `name` in SQLite JSON. Startup loads that value and saved run snapshots; it does not recalculate names when the parser changes. Reprocess is an explicit action and follows existing import/conflict/manual-correction rules. A seeded isolated database confirms an old malformed title, run snapshot and older-version observation/raw payload remain unchanged after restart, even while a separate current parse returns the correct title.
+Monitoring pauses and capture/recognition/automatic workers drain before backup. IPC mutation guards and a request epoch prevent stale queued mutations. The OCR queue is recreated after maintenance with increasing revisions, so mounted renderer state and the capture protocol use the new queue. Smaller cleanups resume monitoring only if actually running; pending automatic work is canceled.
 
-The user's malformed title **could therefore persist from older recognition data**. Its actual origin/version was not inspected or proven. Fresh OCR can still misread glyphs; fixture parsing is not a guarantee of perfect new image recognition. Check the recognized and raw title on a newly accepted contract during live testing.
+Each operation creates `<userData>/backups/<UTC timestamp>-<UUID>/` with:
 
-No parser fix, fuzzy mapping, sanitizer, automatic rename, historical reprocess or evidence overwrite was introduced. Parser evidence version stays 0.4.1; application version is 0.5.2.
+- `cargo-run.sqlite`, using the [SQLite online backup API](https://nodejs.org/api/sqlite.html#sqlitebackupsourcedb-path-options), including committed WAL state;
+- all owned UUID screenshot/thumbnail files and a manifest;
+- integrity and foreign-key verification before destructive writes.
 
-## Files modified
+The directory is outside cleanup targets and is never overwritten. Linked/unexpected managed file entries are rejected. Only UUID capture files are removed, never the entire userData directory. Actual Star Citizen Game.log is never modified. If backup fails, cleanup is canceled; a partial backup may remain and its path is reported. A transaction failure rolls back database changes. Successful backup location is shown in Settings and remembered across restart.
 
-| Files                                                                    | Purpose                                                                  |
-| ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `src/components/navigation/Navigation.tsx`                               | Control order/layout, matching icons and version label                   |
-| `src/components/contracts/ContractCards.tsx`                             | Shared footer groups, consistent action classes/icons and tooltip        |
-| `src/styles/global.css`                                                  | Navigation placement, footer geometry/wrapping and card bottom alignment |
-| `src/App.tsx`, `src/pages/Settings/index.tsx`                            | Visible version labels                                                   |
-| `package.json`, `package-lock.json`, `resources/native/capture.manifest` | Version metadata and alignment-test command; dependencies unchanged      |
-| New `tests/alignment-desktop.cjs`                                        | Windows geometry/screenshots/actions/persistence verification            |
-| New `tests/title-inspection.test.ts`                                     | Three exact title fixtures and historical-data preservation              |
-| README, this handoff                                                     | Current results and limitations                                          |
+There is **no one-click undo or complete filesystem rollback**. File deletion happens after the reset transaction; locked files produce an actionable completion warning while tracking state remains empty. Recovery/startup failure is reported. To restore, close Cargo Run, first preserve the current database/sidecars and captures elsewhere, then restore the backup database and captures together. Remove stale live WAL/SHM only while the app is fully closed, before opening the restored database. Restore is a manual whole-snapshot operation, including its saved settings.
 
-No production backend, schema, parser/importer, Game.log, identity, payout/cargo selector, capture/input, retention or ship-catalog code changed. The existing v0.5.1 dialogs, navigation state model and workflows remain.
+## Monitoring after full reset
 
-## Verification executed
+Full reset cancels pending captures, drains in-flight recognition, clears checkpoints/events and creates a fresh empty current run. A persisted resume block keeps monitoring stopped across restart while preserving user configuration. **Start monitoring** explicitly removes that block and tails from the current end of the configured log. The first subsequent supported acceptance is processed normally. **Import existing history** remains a separate intentional replay action; reset itself does not replay old bytes.
 
-| Command                                   | Result                                                                                                                                                                                                                                                                                           |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `npm run typecheck`                       | Pass                                                                                                                                                                                                                                                                                             |
-| `npm run lint`                            | Pass                                                                                                                                                                                                                                                                                             |
-| `npm test`                                | 232 tests / 18 files pass: all previous 228 retained, four inspection/preservation cases added                                                                                                                                                                                                   |
-| `npm run build`                           | Pass: native helper and production main/preload/renderer                                                                                                                                                                                                                                         |
-| `node tests/alignment-desktop.cjs`        | Pass: 1440×900 expanded/compact and 1100×700 compact; both card contexts; actual text/SVG centers, matched dimensions, source/evidence variants, long titles, wrapping, hover/focus, Details/Edit/Abandon cancellation, Log permissions, preference restart and byte-identical contract payloads |
-| `node tests/polish-desktop.cjs`           | Pass: previous protected dialogs, navigation, ships, details/evidence, completion/abandonment; both sizes and maximized                                                                                                                                                                          |
-| `node tests/desktop.cjs`                  | Pass: Fleet/manual workflows, 20 contracts/40 objectives, calculations, Manifest/History/runs, security/window controls                                                                                                                                                                          |
-| `node tests/tracking-desktop.cjs`         | Pass: pending identities, log replay/checkpoints/restart/rotation/recovery/completion                                                                                                                                                                                                            |
-| `node tests/automatic-import-desktop.cjs` | Pass: OCR import/correction, multi-objective promotion, evidence, migration/restart                                                                                                                                                                                                              |
-| `node tests/ocr-review-desktop.cjs`       | Pass: reprocess, original evidence/attempts, recorder and import; Raw Input reported Listening                                                                                                                                                                                                   |
+An active capture/monitor mutation that changes the preview fingerprint can require reviewing a fresh preview rather than cleaning against stale counts. A/B may leave pending raw log evidence visible in Advanced; unknown-cargo pending rows no longer block routine valid OCR.
 
-The alignment test measures actual text ranges and SVG rectangles. OCR/source, Evidence text/icon, Details and Edit/Abandon centers are within 1 CSS pixel. All action boxes are 32px high with 16px icons. It checks matched 40px sidebar rows/19px icons and bottom application information. DOM structure alone is not the visual assertion.
+## Files changed
 
-Native minimum size remains 1100×700. A separate 300px card-width constraint exercises wrapping inside that supported window; cards wrap only when needed. Synthetic source variants are isolated test records, not user contracts.
+| Area                                               | Files                                                                                                                                                                     |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Candidate selection, diagnostics, reuse guard      | `electron/main/ocr/matching.ts`, `importer.ts`; `src/types/review.ts`, `ocr.ts`; `ScanIssueCard.tsx`                                                                      |
+| Transactional cleanup, backup and pending archival | `electron/main/storage/maintenance.ts`, `database.ts`, `trackingService.ts`; `src/types/maintenance.ts`                                                                   |
+| Runtime drain/restart, protocol, IPC               | `electron/main/index.ts`, `ocr/queue.ts`, `automatic.ts`, `integration.ts`, `electron/preload/index.ts`, `src/types/desktop.ts`                                           |
+| Settings and version                               | `LocalDataManagement.tsx`, Settings index, global CSS, App, Navigation, package/lock, native manifest                                                                     |
+| Regressions                                        | New `matching-reliability.test.ts`, `local-data.test.ts`, `data-management-desktop.cjs`; adjusted obsolete title-only ambiguity expectation in `automatic-import.test.ts` |
+| Documentation                                      | README and this handoff                                                                                                                                                   |
 
-Screenshots visually inspected: `work/alignment-1440-expanded-contracts.png`, `work/alignment-1100-contracts.png`, `work/alignment-footer-wrap.png`, `work/alignment-footer-focus.png`. Additional Dashboard/compact/hover screenshots and detailed geometry are in ignored `work/alignment-*.png` and `work/alignment-metrics-v052.json`. Images reflect Windows display scaling.
+## Verification
 
-## Limits and next verification
+All data operations below used synthetic events, repository OCR fixtures and isolated temporary databases/profiles, never the user's real tracking database, capture folder or personal Game.log.
 
-No live Star Citizen session or fresh screenshot OCR was run. The historical title's original OCR/version is unknown. Physical in-game shortcuts, Vulkan/exclusive fullscreen and native full-display capture were not revalidated for this component/CSS-only patch. The v0.5.1 full-display shortcut harness's foreground limitation remains historical, not a new v0.5.2 pass. No focus takeover was attempted.
+- TypeScript validation, ESLint, **253 tests across 20 files** (232 existing + 21 new cases), and production build all pass.
+- Matching regression cases cover the reported Junior 65,250 / 18 example with four quantities 4/5/5/4, two unknown-cargo pending MissionIds, fresh/unique matching, closed/recent history, different cargo, genuine identical active instances, verified/unverified bindings and repeated captures. Coordinates come from the genuine repository Junior export; those representative quantities are explicitly synthetic. The untouched genuine export reads 25 SCU.
+- Cleanup tests cover linked evidence/audits, all options, FK integrity, backup failure, transaction rollback, in-flight real OcrQueue cancellation/drain, pending automatic requests, locked-file warnings, protected configuration, stale/double confirmation, reset/restart, fresh tail and explicit history replay.
+- `node tests/data-management-desktop.cjs`: actual Windows Electron, all three dialogs, typed RESET guard, outside-click protection, immediate UI/Settings/Scan History refresh, three unique verified backups, active evidence/current-run preservation, preference persistence, automatic cancellation, monotonic OCR revisions, reset/restart staying stopped, first new event and explicit history import. Original test Game.log bytes preserved by cleanup. Matching Advanced screenshot inspected.
+- Existing Windows `alignment-desktop`, `polish-desktop`, `desktop`, `tracking-desktop`, `automatic-import-desktop` and `ocr-review-desktop` pass on this build. Their historical version strings identify their original coverage, not this build's application version.
+- Ignored screenshots: `work/local-data-v053.png`, `data-preview-{closed,history,reset}.png`, `local-data-reset-v053.png`, `matching-diagnostics-v053.png`. Test profiles/backups remain under ignored `work/`.
 
-No cargo-loading state, cloud service or new OCR phase was added. Next: inspect the footer in normal gameplay and capture one newly accepted contract before explicitly correcting any historical title.
+No fresh in-game OCR, physical Star Citizen shortcut, Vulkan/exclusive-fullscreen or native display capture verification was performed. Input/capture backends and parser remain unchanged; Raw Input Listening is not proof of physical/in-game delivery. Genuine indistinguishable missions still need explicit identity decisions.
 
-## Launch
+## Fresh v0.6.0 testing environment
 
-```powershell
-cd C:\Users\zeyros\Documents\repository\cargo-run
-npm run build
-npm start
-```
-
-Development: `npm run dev`. Alignment regression: `npm run test:alignment:desktop`. If a shell inherited Electron Node mode, first run `Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue`.
+1. Launch v0.5.3 and open Settings → Local Data Management. Review persisted counts and capture the existing state if needed.
+2. Choose Reset all local tracking data. Review its scope, type RESET and confirm. Wait for completion and record the unique backup path. This intentionally removes active tracking data after backup.
+3. Verify Dashboard/Manifest/Contracts/History/Scan History are empty, Settings counts are zero, a new current run exists, favorites/configuration remain, and monitoring is stopped. Restart once and confirm it stays stopped.
+4. With automatic capture off initially, explicitly Start monitoring. Existing Game.log content must not populate history. Accept a new supported contract, then capture its accepted Mobiglas details. Verify Dashboard/Manifest, reward/SCU/routes and diagnostics. A title-only pending event may leave the OCR identity unbound until objective evidence or an explicit association exists.
+5. Reprocess the same CaptureId without duplication; test genuinely separate identical missions with explicit selection/separate creation. Check manual corrections/evidence survive supported updates.
+6. Use Import existing history only when deliberately testing replay. Enable optional automatic capture separately. Test physical in-game shortcut/capture backends on the user's machine; registration/Listening alone does not establish callback delivery.

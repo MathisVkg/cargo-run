@@ -94,7 +94,7 @@ export function createOcrQueue(database: CargoDatabase) {
     prototype,
   );
 }
-export function registerCaptureProtocol(queue: OcrQueue) {
+export function registerCaptureProtocol(current: OcrQueue | (() => OcrQueue)) {
   protocol.handle("cargo-capture", (request) => {
     try {
       const url = new URL(request.url);
@@ -105,6 +105,7 @@ export function registerCaptureProtocol(queue: OcrQueue) {
         url.password
       )
         return new Response("Unavailable", { status: 404 });
+      const queue = typeof current === "function" ? current() : current;
       const file = queue.imagePath(
         url.pathname.slice(1),
         url.hostname === "thumb",

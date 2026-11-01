@@ -1,4 +1,4 @@
-# Cargo Run 0.5.2 — Fleet Operations 2.0
+# Cargo Run 0.5.3 — Fleet Operations 2.0
 
 Cargo Run is a local Windows companion for Star Citizen hauling. The graphite and royal-purple workspace organizes accepted contracts, planned cargo, pickups and deliveries. OCR remains the primary contract source; Game.log is optional secondary evidence. SQLite, offline recognition, capture backends, identity matching and screenshot retention remain in place.
 
@@ -9,7 +9,7 @@ Cargo Run is a local Windows companion for Star Citizen hauling. The graphite an
 - **Contracts:** active records, title/commodity/pickup/destination search, compact active filters, full rewards and source/evidence access. Completed and abandoned records remain in History.
 - **Details:** centered, responsive modal up to 900px wide and 88% of viewport height. Overview statistics separate potential reward, confirmed earnings and required/delivered/remaining SCU. Objectives use a structured table; evidence uses thumbnails and a separate full viewer. IDs/raw OCR/provenance remain under Advanced, and permitted edit/completion/abandon/unlink actions remain accessible.
 - **Add/Edit Contract:** centered 680px native-dialog modal, scrollable body, visible Save/Cancel footer, multiple objectives, total SCU, validation, duplicate-submit protection and an unsaved-changes warning.
-- **History / Scan History / Settings:** existing workflows share the new semantic palette. Settings order is OCR & Capture, optional Game.log, Ships, Storage & Data, collapsed Advanced & Diagnostics, Application Information.
+- **History / Scan History / Settings:** existing workflows share the new semantic palette. Settings order is OCR & Capture, optional Game.log, Ships, Storage & Data, Local Data Management, collapsed Advanced & Diagnostics, Application Information.
 
 The sidebar follows actual viewport width and a saved expanded / compact / hidden preference. Wide windows (1400px+) default to 212px expanded; 1100–1399px constrain it to 62px compact while retaining the wide preference. Below 1100px the effective mode is hidden, but the Windows minimum intentionally remains 1100 × 700. The hamburger beside Cargo Run collapses expanded, hides compact, and opens a temporary drawer from hidden. Compact mode can expand when width permits; the drawer can pin expanded/compact navigation. Selecting a page or pressing Escape closes the temporary drawer; outside clicks close only navigation. Persistent and temporary navigation never overlap, and width transitions do not animate. The title bar retains native controls and transient OCR success.
 
@@ -156,7 +156,7 @@ Back up the database and captures folder with Cargo Run closed before upgrading.
 
 ## Exact in-game test
 
-1. Back up local data with Cargo Run closed, launch v0.5.2, and leave Game.log monitoring and automatic screenshot capture off.
+1. Back up local data with Cargo Run closed, launch v0.5.3, and leave Game.log monitoring and automatic screenshot capture off.
 2. Show the accepted **Rookie Rank - Direct Small Cargo Haul**, 34,500 aUEC, 8 SCU Agricultural Supplies, NB Int. Spaceport → Port Tressler above microTech. Capture once. Without opening review, verify one active contract, correct route/SCU/reward and an Imported entry.
 3. Inspect the saved screenshot. Reprocess the same CaptureId: contract count must not increase. Capture the same OCR-only instance again: choose the existing contract from the compact issue; no row reconstruction should be required.
 4. With two genuinely separate identical accepted instances, choose **Create a separate contract**. Keep different MissionIds separate.
@@ -177,16 +177,36 @@ The current parser extracts **Rookie Rank - Extra Small Cargo Haul**, **Rookie R
 
 Stored contract names and historical run snapshots are loaded from SQLite; parser updates do not automatically recalculate them. An older malformed title can remain visible. An isolated restart test confirms the ledger title, saved observation and raw payload remain unchanged. This does not establish which parser created the user's record or guarantee that fresh OCR never misrecognizes glyphs. Check the recognized/raw title on a newly accepted contract during live testing. Historical records are not automatically renamed or reprocessed.
 
+## Matching reliability and local data management (v0.5.3)
+
+An empty Dashboard can still have pending Game.log missions. Previously, title-only pending missions could cause an ambiguous match without any cargo evidence. They are now excluded from routine candidate competition and retained under Advanced, without expiration or deletion of authoritative events. Titles and nearest timestamps never establish identity alone. Objective-supported MissionId/ObjectiveId associations and existing capture bindings retain priority; distinct plausible active instances still require an explicit choice. Saved corrections and raw evidence remain protected. Scan History → Advanced diagnostics explains up to 50 relevant candidate decisions, including origin, status, objective overlap and time relationship.
+
+Settings → **Local Data Management** shows real persisted counts and approximate database/managed-image storage. Each action requires a preview and confirmation:
+
+| Action                         | Effect                                                                                                                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Clear closed contract history  | Remove completed/abandoned contracts, their objectives/links/audits and references/snapshots from retained runs; preserve active contracts/evidence and current run.                     |
+| Clear contract and run history | Also remove finished runs; preserve active contracts/current run and configuration.                                                                                                      |
+| Reset all local tracking data  | Remove contracts, runs, OCR records/images, events/pending missions/diagnostics, automatic requests and checkpoints; create an empty current run. Type **RESET** to enable confirmation. |
+
+All options preserve ship catalog/selection/favorites, layout/navigation and OCR/capture/shortcut/Game.log preferences. Smaller cleanups retain unlinked captures under normal retention, with a guard against silently reimporting cleared history. Removed closed MissionIds remain archived out of routine pending matching while raw log evidence is preserved.
+
+A unique timestamp/UUID backup of SQLite and owned screenshot evidence is required before deletion, under the displayed userData `backups` path. SQLite online backup accounts for committed WAL data; backup integrity and foreign keys are verified. Backup failure cancels cleanup. Database cleanup is transactional and checks foreign keys. Backup directories are outside deletion targets; Game.log is never modified.
+
+Backups provide **manual whole-snapshot recovery**, not one-click undo. Close Cargo Run, preserve current data separately, then restore the backup database and captures together; remove stale live WAL/SHM only while the app is fully closed. File deletion follows database commit: locked images are reported as warnings, without claiming filesystem rollback. Schema remains 5; there are no new dependencies.
+
+Reset stops monitoring, cancels/drains capture and OCR work, and leaves monitoring stopped across restart. Explicitly starting monitoring tails **new events going forward** because checkpoints were cleared. **Import existing history** is the separate deliberate replay action. Other cleanups pause monitoring and resume only if it was running.
+
+For a fresh v0.6.0 test, use Reset, record its backup path, verify empty pages and preserved settings, restart and confirm monitoring stays stopped. Then explicitly Start monitoring, accept a new mission and capture its accepted screen. Reprocess the same CaptureId to check idempotence. Exercise distinct identical missions with explicit identity choices. Enable automatic capture separately after this baseline.
+
 ## Verification and known limits
 
-Task 04.2: TypeScript, lint, **232 tests across 18 files**, and production build pass. All previous 228 tests remain; four additional cases cover exact titles and historical-record/evidence preservation.
+Task 04.3: TypeScript, lint, **253 tests across 20 files**, and production build pass (232 existing tests plus 21 new matching/cleanup regressions). Regression coverage includes matching origins/identity, all cleanup scopes, active evidence/audits, actual in-flight OCR drain, pending automatic cancellation, backup failure, transactional rollback, locked-file warnings, reset/restart and explicit history replay.
 
-Actual Windows verification passed at **1440 × 900 expanded**, **1440 × 900 compact**, and **1100 × 700 compact** in both shared-card contexts. Geometry tests measure source/Evidence/Details text ranges and Edit/Abandon SVGs, verifying centerlines within one CSS pixel, matched 32px action heights/icons, bottom alignment, no overlap, wrapping, hover/focus, navigation placement and persistence. Screenshots were visually inspected; see ignored `work/alignment-*.png` and `work/alignment-metrics-v052.json`.
+Actual Windows Electron verification uses isolated profiles: all three confirmation workflows, required RESET, immediate refresh, unique verified backups, active evidence/current run preservation, settings/favorites persistence, OCR revision continuity and restart/fresh-tail behavior. Existing alignment, protected-dialog, Fleet/manual, Game.log, automatic import/evidence and OCR reprocess suites pass. No destructive operation was run against the user's actual local data.
 
-Existing Windows interaction, Fleet, Game.log, automatic OCR import/evidence and OCR reprocess/recorder suites pass on v0.5.2. They cover protected dialogs, ships/favorites, manual contracts, run finalization, Manifest/History and reconciliation. Repository fixtures and generated preview pixels avoid reliance on temporary user screenshots.
+No live Star Citizen session, fresh screenshot OCR accuracy, physical in-game shortcut, Vulkan/exclusive fullscreen or native full-display capture was revalidated. Existing Electron and optional Raw Input backends remain unchanged; Listening/registration does not prove callback delivery. Identical active mission instances can remain genuinely ambiguous.
 
-No live Star Citizen session, fresh image OCR accuracy, physical in-game shortcut, Vulkan/exclusive fullscreen or native full-display capture was revalidated in this small UI task. Earlier native display tests and the v0.5.1 foreground limitation are historical, not new v0.5.2 passes. No production capture/input or identity algorithm changed.
+The genuine 61,500 fixture reads 7 SCU and the genuine 65,250 fixture reads 25 SCU; representative regression quantities are separate synthetic variants. Production quantities are never changed to fit an example.
 
-The genuine 61,500 fixture reads 7 SCU and the genuine 65,250 fixture reads 25 SCU; earlier reported representative quantities remain separate fixtures. No production calculation or historical record was changed to fit an example.
-
-See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for files, root causes, exact fixtures and verification details.
+See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for implementation files, backup restoration details, test coverage and fresh-environment instructions.

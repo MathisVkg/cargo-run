@@ -1,6 +1,15 @@
 import type { AppSnapshot, SaveContractRequest } from "./tracking";
 import type { OcrSnapshot, CaptureSettings } from "./ocr";
 export interface DesktopBridge {
+  localDataStats(): Promise<import("./maintenance").LocalDataStats>;
+  previewCleanup(
+    mode: import("./maintenance").CleanupMode,
+  ): Promise<import("./maintenance").CleanupPreview>;
+  executeCleanup(input: {
+    token: string;
+    confirmed: true;
+    resetText?: string;
+  }): Promise<import("./maintenance").CleanupResult>;
   scanIssue(
     input: import("./review").ResolveScan,
   ): Promise<import("./review").ScanIssue>;

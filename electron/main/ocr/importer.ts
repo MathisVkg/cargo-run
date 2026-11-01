@@ -10,6 +10,7 @@ import type {
   ReviewedDraft,
 } from "../../../src/types/review";
 import { observedDraft, prepareReview, versionOf, evidence } from "./review";
+import { matchingCandidates } from "./matching";
 const norm = (v: string) =>
   v
     .toLowerCase()
@@ -42,20 +43,23 @@ export function inspectScan(
       .pendingMissions()
       .filter((p) => !state.contracts.some((c) => c.missionId === p.missionId)),
   ].filter((c) => !c.supersededBy && c.dataOrigin !== "Sample");
-  const candidates = all.filter(
-    (t) =>
-      t.status === "Active" &&
-      (prior?.contractId === t.id ||
-        norm(t.name) === norm(original.name) ||
-        original.objectives.some((o) =>
-          t.cargoObjectives.some((r) => rowMatch(o, r)),
-        )),
+  const { candidates, diagnostics } = matchingCandidates(
+    all,
+    state.contracts,
+    original,
+    c,
+    prior?.contractId,
   );
   const strong = candidates.filter(
     (t) =>
       !!t.missionId &&
       norm(t.name) === norm(original.name) &&
       original.objectives.length > 0 &&
+      new Set(
+        original.objectives.map(
+          (o) => t.cargoObjectives.find((r) => rowMatch(o, r))?.id,
+        ),
+      ).size === original.objectives.length &&
       original.objectives.every(
         (o) => t.cargoObjectives.filter((r) => rowMatch(o, r)).length === 1,
       ),
@@ -68,6 +72,13 @@ export function inspectScan(
         (strong.length === 1 && candidates.length === 1
           ? strong[0]
           : undefined));
+  if (selected)
+    for (const diagnostic of diagnostics)
+      if (diagnostic.candidateId === selected.id) {
+        diagnostic.decision = "Selected";
+        diagnostic.reason =
+          "Existing association or unique title/objective identity selected; field safeguards still apply.";
+      }
   if (options.targetId && !selected)
     throw Error(
       "This active candidate is no longer available. Reload the issue.",
@@ -143,7 +154,10 @@ export function inspectScan(
       selected.cargoObjectives.length > 0 &&
       d.objectives.length > 0 &&
       d.objectives.every((o) => !!o.existingObjectiveId));
-  if (state.sampleMode)
+  if (c.historyRemoved && !options.separate)
+    message =
+      "Closed history was cleared. Explicitly create a separate accepted contract to reuse this observation.";
+  else if (state.sampleMode)
     message = "Remove demonstration data before importing real cargo.";
   else if (
     c.validation === "Cancelled" ||
@@ -230,6 +244,7 @@ export function inspectScan(
       message,
       contractId: selected?.id,
       candidateIds: candidates.map((c) => c.id),
+      matchingDiagnostics: diagnostics,
       processedHash: versionOf([c.result, c.observation]),
     },
   };

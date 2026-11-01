@@ -191,7 +191,7 @@ describe("operational automatic OCR importing", () => {
     s.processScan(c.id);
     expect(s.snapshot().contracts[0].missionId).toBeUndefined();
   });
-  it("requires a compact choice for a title-only log candidate", () => {
+  it("imports without binding a title-only pending mission; explicit Advanced association remains available", () => {
     const s = service();
     feed(
       s,
@@ -201,11 +201,14 @@ describe("operational automatic OCR importing", () => {
       ),
     );
     const c = capture(s);
-    expect(s.processScan(c.id)?.status).toBe("Ambiguous match");
-    expect(s.snapshot().contracts).toHaveLength(0);
-    expect(resolveIssue(s, c, { targetId: "log-" + missionA })?.status).toBe(
-      "Updated",
-    );
+    expect(s.processScan(c.id)?.status).toBe("Imported");
+    expect(s.snapshot().contracts).toHaveLength(1);
+    expect(s.snapshot().contracts[0].missionId).toBeUndefined();
+    expect(
+      s
+        .prepareOcr({ captureId: c.id, advanced: true })
+        .targets.some((t) => t.missionId === missionA),
+    ).toBe(true);
   });
   it("makes repeated CaptureId processing and reparsing idempotent", () => {
     const s = service(),

@@ -73,7 +73,8 @@ export function ScanIssueCard({ capture }: { capture: CaptureRecord }) {
     <div className="compact-scan-issue">
       <p>{issue.outcome.message}</p>
       {(issue.review.targets.length > 0 ||
-        issue.outcome.message.includes("already closed")) && (
+        issue.outcome.message.includes("already closed") ||
+        capture.historyRemoved) && (
         <>
           <p>Which active contract is this?</p>
           <div className="scan-candidate-actions">
@@ -90,6 +91,11 @@ export function ScanIssueCard({ capture }: { capture: CaptureRecord }) {
                 }}
               >
                 {c.name} ·{" "}
+                {issue.outcome.matchingDiagnostics?.find(
+                  (d) => d.candidateId === c.id,
+                )?.origin ?? c.source}{" "}
+                · {c.missionId ? "Mission …" + c.missionId.slice(-8) : "Local"}{" "}
+                ·{" "}
                 {c.cargoObjectives.length
                   ? c.cargoObjectives.reduce((n, o) => n + o.quantitySCU, 0) +
                     " SCU"

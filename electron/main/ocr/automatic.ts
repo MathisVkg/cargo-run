@@ -20,6 +20,10 @@ export class AutomaticCapture {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private monitoring = false;
   private busy = false;
+  private activeRun: Promise<void> | null = null;
+  async drain() {
+    await this.activeRun?.catch(() => {});
+  }
   private closed = false;
   private generation = 0;
   onChange = () => {};
@@ -149,7 +153,7 @@ export class AutomaticCapture {
     this.timer = setTimeout(
       () => {
         this.timer = null;
-        void this.run(next);
+        this.activeRun = this.run(next);
       },
       Math.max(0, Date.parse(next.dueAt) - Date.now()),
     );
