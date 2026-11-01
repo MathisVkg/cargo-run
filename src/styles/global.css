@@ -2078,6 +2078,8 @@ h3 {
   gap: 14px;
 }
 .contract-card {
+  display: flex;
+  flex-direction: column;
   padding: 17px;
   min-width: 0;
 }
@@ -2132,13 +2134,15 @@ h3 {
   margin: 0;
   overflow-wrap: anywhere;
 }
-.contract-card footer {
+.contract-card-footer {
+  margin-top: auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-top: 1px solid var(--border);
   padding-top: 10px;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 .source-label {
   font-size: 10px;
@@ -2559,14 +2563,14 @@ h3 {
 }
 .sidebar-controls {
   display: flex;
-  gap: 6px;
-  margin-top: auto;
-  padding: 18px 6px 0;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 5px;
+  padding: 0;
 }
 .sidebar.compact .sidebar-controls {
-  align-items: center;
-  flex-direction: column;
-  padding: 18px 0 0;
+  align-items: stretch;
+  padding: 0;
 }
 .navigation-pinning {
   display: grid;
@@ -2785,4 +2789,79 @@ h3 {
   .details-evidence {
     grid-template-columns: 1fr;
   }
+}
+
+/* Shared card footer: center fixed-height content boxes, never text baselines. */
+.contract-card-footer__metadata,
+.contract-card-footer__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+.contract-card-footer__metadata {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.contract-card-footer__metadata > .badge {
+  min-height: 24px;
+  line-height: 16px;
+  font-size: 11px;
+}
+.contract-card-evidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.contract-card-evidence svg {
+  flex-shrink: 0;
+}
+.contract-card-footer__actions {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.contract-card-footer__actions > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--accent-light);
+  white-space: nowrap;
+}
+.contract-card-footer__actions > button:hover:not(:disabled) {
+  background: var(--surface);
+  color: var(--text);
+}
+.contract-card-footer__actions > .danger-text {
+  color: var(--error);
+}
+.contract-card-footer__actions > .danger-text:hover:not(:disabled) {
+  color: var(--error);
+}
+.contract-card-footer__actions svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.sidebar nav .nav-item,
+.sidebar-controls .nav-item {
+  height: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+}
+.sidebar.compact nav .nav-item,
+.sidebar.compact .sidebar-controls .nav-item {
+  padding: 0;
 }

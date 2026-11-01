@@ -60,18 +60,8 @@ export function Sidebar({
         <Items onClose={() => {}} />
       </nav>
       <div className="sidebar-controls">
-        {mode === "compact" && width >= 1400 && (
-          <button
-            className="icon-button"
-            aria-label="Expand navigation"
-            title="Expand navigation"
-            onClick={() => void setPreferences({ navigationMode: "expanded" })}
-          >
-            <PanelLeftOpen size={18} />
-          </button>
-        )}
         <button
-          className="icon-button"
+          className="nav-item sidebar-control"
           aria-label={
             mode === "expanded" ? "Collapse navigation" : "Hide navigation"
           }
@@ -85,11 +75,25 @@ export function Sidebar({
           }
         >
           {mode === "expanded" ? (
-            <PanelLeftClose size={18} />
+            <PanelLeftClose size={19} />
           ) : (
-            <EyeOff size={18} />
+            <EyeOff size={19} />
           )}
+          <span>
+            {mode === "expanded" ? "Collapse navigation" : "Hide navigation"}
+          </span>
         </button>
+        {mode === "compact" && width >= 1400 && (
+          <button
+            className="nav-item sidebar-control"
+            aria-label="Expand navigation"
+            title="Expand navigation"
+            onClick={() => void setPreferences({ navigationMode: "expanded" })}
+          >
+            <PanelLeftOpen size={19} />
+            <span>Expand navigation</span>
+          </button>
+        )}
       </div>
       <p className="sidebar-foot">
         LOCAL COMPANION
@@ -137,7 +141,7 @@ export function Navigation({
           </button>
         )}
       </div>
-      <div className="nav-footer">Cargo Run / 0.5.1</div>
+      <div className="nav-footer">Cargo Run / 0.5.2</div>
     </Overlay>
   );
 }

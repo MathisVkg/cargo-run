@@ -1,4 +1,4 @@
-# Cargo Run 0.5.1 — Fleet Operations 2.0
+# Cargo Run 0.5.2 — Fleet Operations 2.0
 
 Cargo Run is a local Windows companion for Star Citizen hauling. The graphite and royal-purple workspace organizes accepted contracts, planned cargo, pickups and deliveries. OCR remains the primary contract source; Game.log is optional secondary evidence. SQLite, offline recognition, capture backends, identity matching and screenshot retention remain in place.
 
@@ -16,6 +16,8 @@ The sidebar follows actual viewport width and a saved expanded / compact / hidde
 Centered Add/Edit, Details, Finish Run and Ship Selector dialogs **do not close on outside clicks**. Escape closes read-only dialogs, protects unsaved edits with a discard warning, and cancels confirmations without executing them. Shared native dialogs are portaled outside the draggable title bar, with no slide/scale/discrete exit transition and with focus trapping/restoration. Ship search and the concept checkbox now accept mouse and keyboard interaction; a status line explains extra concept matches or no additional matches.
 
 Location cards link directly to one contract or expand a list of associated contracts, each with the relevant remaining SCU. Commodity quantities explicitly say “SCU remaining”; a secondary line labels delivered / required. Contract actions stay in the linked details. Contracts search, filter, count and Add share an aligned, wrapping toolbar.
+
+Sidebar collapse/hide controls sit directly below the main items, using the same row height and icon alignment; application information remains at the bottom. Shared Contract Cards in Dashboard → By Contract and Contracts center source/evidence and Details/Edit/Abandon on the same axis. Actions stay 32px high, long-title cards keep bottom-aligned footers, and metadata/actions wrap into clean rows when space requires.
 
 The shared tokens in `src/styles/global.css` are background #181A1D, secondary #23272B, panel #333B42, accent #613DC1, hover #7956D8, light accent #A994F0, text #F2F1E9, secondary text #A2B1BD, success #8BB79B, error #D57B84, warning #D8AD6F and border #424A52. Inter uses the installed system font when available, with Segoe UI fallback; numerical statistics use a restrained monospace stack. There are no downloaded fonts, gradients or added UI libraries.
 
@@ -61,10 +63,11 @@ For production use `npm run build`, then `npm start`.
 
 | Command                          | Purpose                                                   |
 | -------------------------------- | --------------------------------------------------------- |
+| `npm run test:alignment:desktop` | Windows footer/navigation geometry and screenshots        |
 | `npm run test:polish:desktop`    | Windows UI interaction regression for v0.5.1              |
 | `npm run typecheck`              | Strict TypeScript validation                              |
 | `npm run lint`                   | ESLint                                                    |
-| `npm test`                       | 228 automated tests in 17 files                           |
+| `npm test`                       | 232 automated tests in 18 files                           |
 | `npm run build`                  | Native capture helper and production Electron/React build |
 | `npm run test:desktop`           | Windows application and secondary Game.log workflows      |
 | `npm run test:ocr:contracts`     | Windows automatic import and compact correction workflow  |
@@ -153,7 +156,7 @@ Back up the database and captures folder with Cargo Run closed before upgrading.
 
 ## Exact in-game test
 
-1. Back up local data with Cargo Run closed, launch v0.5.1, and leave Game.log monitoring and automatic screenshot capture off.
+1. Back up local data with Cargo Run closed, launch v0.5.2, and leave Game.log monitoring and automatic screenshot capture off.
 2. Show the accepted **Rookie Rank - Direct Small Cargo Haul**, 34,500 aUEC, 8 SCU Agricultural Supplies, NB Int. Spaceport → Port Tressler above microTech. Capture once. Without opening review, verify one active contract, correct route/SCU/reward and an Imported entry.
 3. Inspect the saved screenshot. Reprocess the same CaptureId: contract count must not increase. Capture the same OCR-only instance again: choose the existing contract from the compact issue; no row reconstruction should be required.
 4. With two genuinely separate identical accepted instances, choose **Create a separate contract**. Keep different MissionIds separate.
@@ -168,18 +171,22 @@ Back up the database and captures folder with Cargo Run closed before upgrading.
 
 Electron remains the default input backend. Its existing quiet-period repeat guard, recorder and optional development-only Raw Input prototype are unchanged. Raw Input delivery remains unverified; only the explicitly selected backend triggers capture. Keep working Electron/manual capture if the native prototype is unreliable.
 
+## OCR title inspection
+
+The current parser extracts **Rookie Rank - Extra Small Cargo Haul**, **Rookie Rank - Direct Small Cargo Haul**, and **Junior Rank - Small Cargo Haul** completely from existing genuine repository OCR fixtures. Original OCR text and evidence remain unchanged. No current parser defect was reproduced, so the parser is unchanged.
+
+Stored contract names and historical run snapshots are loaded from SQLite; parser updates do not automatically recalculate them. An older malformed title can remain visible. An isolated restart test confirms the ledger title, saved observation and raw payload remain unchanged. This does not establish which parser created the user's record or guarantee that fresh OCR never misrecognizes glyphs. Check the recognized/raw title on a newly accepted contract during live testing. Historical records are not automatically renamed or reprocessed.
+
 ## Verification and known limits
 
-Task 04.1 checks: TypeScript, ESLint, **228 tests across 17 files**, and the native + production Electron build pass. All 225 prior tests are retained. Three additional tests cover adaptive mode constraints, validated patches and backward-compatible preference persistence. The new Windows interaction harness covers location access, quantities, protected dialogs, focus, mouse/keyboard ship search, concepts, responsive details, actions, evidence, aligned controls and restart.
+Task 04.2: TypeScript, lint, **232 tests across 18 files**, and production build pass. All previous 228 tests remain; four additional cases cover exact titles and historical-record/evidence preservation.
 
-Actual Windows Electron checks passed at **1100 × 700, 1440 × 900 and maximized**: adaptive navigation and active highlighting, temporary drawer dismissal, title-bar minimize/maximize/restore, centered modal and focus restoration/trapping, dirty warning, field validation, multiple objectives, duplicate submission, save/edit/abandon, run finalization/History, searchable ships, favorites/selection/view restart, capacity changes and twenty contracts with forty objectives. Generated screenshots are under ignored `work/fleet-*.png` and `work/polish-*.png`; screenshots reflect the Windows display scale.
+Actual Windows verification passed at **1440 × 900 expanded**, **1440 × 900 compact**, and **1100 × 700 compact** in both shared-card contexts. Geometry tests measure source/Evidence/Details text ranges and Edit/Abandon SVGs, verifying centerlines within one CSS pixel, matched 32px action heights/icons, bottom alignment, no overlap, wrapping, hover/focus, navigation placement and persistence. Screenshots were visually inspected; see ignored `work/alignment-*.png` and `work/alignment-metrics-v052.json`.
 
-Also passed: isolated Game.log monitoring/replay/rotation/restart; automatic OCR import and compact correction using repository exports; raw-evidence-preserving reprocess and shortcut recorder; separate-process native window capture (3840 × 2084, overlap excluded). Preview tests use clearly labeled generated images, with genuine repository OCR coordinates; no historical capture-directory image is required.
+Existing Windows interaction, Fleet, Game.log, automatic OCR import/evidence and OCR reprocess/recorder suites pass on v0.5.2. They cover protected dialogs, ships/favorites, manual contracts, run finalization, Manifest/History and reconciliation. Repository fixtures and generated preview pixels avoid reliance on temporary user screenshots.
 
-The native full-display automatic-capture suite passes in isolation. The separate display/shortcut/offline-OCR suite was attempted for v0.5.1 but stopped at its foreground guard because another application had focus; it did not send keys or complete that run. Its earlier v0.5.0 pass is historical. Synthetic SendKeys in this harness do not establish physical-key delivery inside Star Citizen. Full-display fixtures must run sequentially without other UI tests obscuring their foreground surface. No live Star Citizen session, physical in-game shortcut callback, production game-window identity, Vulkan or exclusive-fullscreen behavior was verified. Registration/Raw Input Listening alone does not verify callback delivery. No security settings or capture/reconciliation production algorithms were changed.
+No live Star Citizen session, fresh image OCR accuracy, physical in-game shortcut, Vulkan/exclusive fullscreen or native full-display capture was revalidated in this small UI task. Earlier native display tests and the v0.5.1 foreground limitation are historical, not new v0.5.2 passes. No production capture/input or identity algorithm changed.
 
-The genuine exported 61,500 screenshot reads 4+3 = 7 SCU; the earlier representative 8-SCU fixture is separate. The genuine 65,250 export remains 7+6+7+5 = 25 SCU. Existing examples are test fixtures only; no historical contract is hardcoded into production logic.
+The genuine 61,500 fixture reads 7 SCU and the genuine 65,250 fixture reads 25 SCU; earlier reported representative quantities remain separate fixtures. No production calculation or historical record was changed to fit an example.
 
-Recommended next task: complete live in-game acceptance testing, then design a separate, explicitly reported collection/onboard progress model with audit and reversal before introducing interactive cargo checkboxes. Route optimization, trading, live inventory and multi-ship allocation remain outside this release.
-
-See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for architecture, changed files and exact verification results.
+See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for files, root causes, exact fixtures and verification details.

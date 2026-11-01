@@ -81,25 +81,29 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
                   </dd>
                 </div>
               </dl>
-              <footer>
-                <span className="source-label">
-                  {(c.sources ?? [c.source]).join(" + ")}
+              <footer className="contract-card-footer">
+                <div className="contract-card-footer__metadata">
+                  <Badge>{(c.sources ?? [c.source]).join(" + ")}</Badge>
                   {hasEvidence && (
-                    <span title="OCR association recorded; inspect details for available evidence">
-                      <FileCheck2 size={14} /> Evidence
+                    <span
+                      className="contract-card-evidence"
+                      title="OCR association recorded; inspect details for available evidence"
+                    >
+                      <FileCheck2 size={16} aria-hidden="true" />
+                      <span>Evidence</span>
                     </span>
                   )}
-                </span>
-                <div className="row-actions">
+                </div>
+                <div className="contract-card-footer__actions">
                   <button
-                    className="text-button"
+                    className="contract-card-action"
                     aria-label={"Details for " + c.name}
                     onClick={() => setDetail(c)}
                   >
                     Details
                   </button>
                   <button
-                    className="icon-button"
+                    className="contract-card-action icon-button"
                     disabled={c.source === "Log"}
                     aria-label={"Edit " + c.name}
                     title={
@@ -109,14 +113,15 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
                     }
                     onClick={() => setEdit(c)}
                   >
-                    <Pencil size={15} />
+                    <Pencil size={16} aria-hidden="true" />
                   </button>
                   <button
-                    className="icon-button danger-text"
+                    className="contract-card-action icon-button danger-text"
+                    title="Abandon contract"
                     aria-label={"Abandon " + c.name}
                     onClick={() => setAbandon(c)}
                   >
-                    <Ban size={15} />
+                    <Ban size={16} aria-hidden="true" />
                   </button>
                 </div>
               </footer>
