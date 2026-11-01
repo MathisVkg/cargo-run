@@ -38,11 +38,16 @@ async function launch() {
     env,
   });
   page = await app.firstWindow();
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].setSize(1200, 800),
+  );
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => {
     if (m.type() === "error") errors.push(m.text());
   });
-  await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { name: "Cargo Operations", exact: true })
+    .waitFor();
   await until(async () => !!(await state()).displays.length);
 }
 const state = () => page.evaluate(() => window.cargoRun.ocrState());
@@ -57,7 +62,7 @@ async function until(check, timeout = 120000) {
 async function navigate(name) {
   await page.getByLabel("Open navigation", { exact: true }).click();
   await page
-    .getByRole("navigation")
+    .getByRole("navigation", { name: "Temporary navigation" })
     .getByRole("button", { name: new RegExp("^" + name) })
     .click();
 }
@@ -197,7 +202,7 @@ async function run() {
     assert.equal(
       (await page.evaluate(() => window.cargoRun.getState())).contracts.length,
       0,
-      "OCR must never create contracts",
+      "Unsupported synthetic acceptance must not auto-import",
     );
     await command("black");
     await command("keys");
@@ -233,9 +238,18 @@ async function run() {
       .locator(".scan-history-thumb img")
       .evaluate(async (img) => {
         await img.decode();
-        return img.naturalWidth > 1000;
+        return img.naturalWidth > 0;
       });
     assert.equal(imageWorks, true);
+    await usable.getByRole("button", { name: /^Preview / }).click();
+    assert.equal(
+      await page.locator(".full-screenshot img").evaluate(async (img) => {
+        await img.decode();
+        return img.naturalWidth > 1000;
+      }),
+      true,
+    );
+    await page.keyboard.press("Escape");
     await page.locator(".page-content").evaluate((el) => {
       el.scrollTop = 0;
     });
@@ -295,7 +309,7 @@ async function run() {
     );
     assert.deepEqual(errors, []);
     console.log(
-      "PASS actual Windows capture + offline OCR: physical display screenshot, genuine global shortcut while synthetic WinForms app focused and Cargo Run minimized, three captures queued, raw text/boxes and four objectives recognized, black screenshot rejected, review image protocol, metadata/settings restart, clear/disable, and no contracts created. No Star Citizen session was tested; audio routing was exercised but subjective audibility was not verified.",
+      "PASS actual Windows capture + offline OCR: physical display screenshot, actual Electron callback from synthetic SendKeys while WinForms app focused and Cargo Run minimized, three captures queued, raw text/boxes and four objectives recognized, black screenshot rejected, review image protocol, metadata/settings restart, clear/disable, and no contracts created. No Star Citizen session was tested; audio routing was exercised but subjective audibility was not verified.",
     );
   } finally {
     if (fixture) {

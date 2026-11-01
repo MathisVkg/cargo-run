@@ -4,15 +4,14 @@ import { PageHeader, Badge } from "../../components/ui";
 import { Overlay } from "../../components/ui/Overlay";
 import { useCargoStore } from "../../stores/useCargoStore";
 import { LogMonitoring } from "./LogMonitoring";
+import { ShipSelector } from "../../components/ships/ShipSelector";
+import { shipCatalog } from "../../data/ships";
 import { OcrSettings } from "./OcrSettings";
 export default function Settings() {
-  const ships = useCargoStore((s) => s.ships);
   const databasePath = useCargoStore((s) => s.databasePath);
   const contracts = useCargoStore((s) => s.contracts);
   const loadSamples = useCargoStore((s) => s.loadSamples);
   const tracking = useCargoStore((s) => s.tracking);
-  const selected = useCargoStore((s) => s.selectedShipId);
-  const selectShip = useCargoStore((s) => s.selectShip);
   const sampleMode = useCargoStore((s) => s.sampleMode);
   const clear = useCargoStore((s) => s.clearSampleData);
   const [confirm, setConfirm] = useState(false);
@@ -32,20 +31,12 @@ export default function Settings() {
           </div>
           <h2>Ships</h2>
           <p>Capacity updates across your current operations.</p>
-          <label htmlFor="settings-ship">Demonstration ship</label>
-          <select
-            id="settings-ship"
-            value={selected}
-            onChange={(e) => selectShip(e.target.value)}
-          >
-            {ships.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} — {s.cargoCapacitySCU} SCU
-              </option>
-            ))}
-          </select>
+          <ShipSelector />
           <p className="form-note">
-            Three demonstration records. Full ship database comes later.
+            {shipCatalog.coverage.flightReady} flight-ready ships;{" "}
+            {shipCatalog.coverage.eligible} positive-SCU entries. Star Citizen
+            Wiki · {shipCatalog.version} · CC BY-SA 4.0. Cargo SCU is a planning
+            reference; custom and existing selections are retained.
           </p>
         </section>
         <section className="panel setting-card">
@@ -90,22 +81,22 @@ export default function Settings() {
           <summary>Advanced &amp; Diagnostics</summary>
           <OcrSettings section="advanced" />
           <LogMonitoring diagnosticsOnly />
-          <section className="app-info">
-            <div className="setting-icon">
-              <Info size={21} />
-            </div>
-            <div>
-              <h2>
-                Cargo Run <Badge>0.4.1</Badge>
-              </h2>
-              <p>Fleet Operations · SQLite, Game.log & local OCR prototype</p>
-              <p className="form-note">
-                Independent companion application. Not affiliated with Cloud
-                Imperium Games or Roberts Space Industries.
-              </p>
-            </div>
-          </section>
         </details>
+        <section className="panel setting-card app-info">
+          <div className="setting-icon">
+            <Info size={21} />
+          </div>
+          <div>
+            <h2>
+              Cargo Run <Badge>0.5.0</Badge>
+            </h2>
+            <p>Fleet Operations 2.0 · Local OCR and optional Game.log</p>
+            <p className="form-note">
+              Independent companion application. Not affiliated with Cloud
+              Imperium Games or Roberts Space Industries.
+            </p>
+          </div>
+        </section>
       </div>
       <Overlay
         open={confirm}

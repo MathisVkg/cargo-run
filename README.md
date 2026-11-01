@@ -1,6 +1,47 @@
-# Cargo Run 0.4.1
+# Cargo Run 0.5.0 — Fleet Operations 2.0
 
-Cargo Run is a local Windows companion for Star Citizen hauling. Accepted contract screenshots now import automatically when their fields, objective coverage and identity are clear. **Scan History & Issues** is a history of imports and exceptions, rather than a required editing step. Game.log is an optional secondary source of mission events.
+Cargo Run is a local Windows companion for Star Citizen hauling. The graphite and royal-purple workspace organizes accepted contracts, planned cargo, pickups and deliveries. OCR remains the primary contract source; Game.log is optional secondary evidence. SQLite, offline recognition, capture backends, identity matching and screenshot retention remain in place.
+
+## Fleet Operations workspace
+
+- **Dashboard — Cargo Operations:** four statistics, separate Pickup Stops and Delivery Stops, and a remembered By Location / By Contract view. Each known full payout counts exactly once, never by destination. Unknown rewards are excluded. Planned cargo is outstanding required SCU, not physically loaded cargo.
+- **Manifest:** required/outstanding SCU and commodity/location counts, with separate collection and delivery tables. Rows keep their persistent objective IDs even when visible cargo matches. Collection requirements do not prove cargo is still awaiting pickup. There are no fictitious collection checkboxes.
+- **Contracts:** active records, title/commodity/pickup/destination search, compact active filters, full rewards and source/evidence access. Completed and abandoned records remain in History.
+- **Details:** Overview, Cargo Objectives and Evidence; IDs, raw OCR and provenance are under Advanced. Existing edit, completion, abandonment, screenshot preview and unlink actions remain.
+- **Add/Edit Contract:** centered 680px native-dialog modal, scrollable body, visible Save/Cancel footer, multiple objectives, total SCU, validation, duplicate-submit protection and an unsaved-changes warning.
+- **History / Scan History / Settings:** existing workflows share the new semantic palette. Settings order is OCR & Capture, optional Game.log, Ships, Storage & Data, collapsed Advanced & Diagnostics, Application Information.
+
+The sidebar uses the actual application viewport: 212px with labels at 1400px+, a 62px icon rail at 1100–1399px, and an overlay below 1100px if smaller windows are supported later. At medium widths the menu temporarily expands navigation; Escape and outside clicks dismiss it. Current minimum window size remains 1100 × 700. Navigation never reloads Electron. The title bar retains native controls and shows ship capacity, Game.log status and OCR status. Capture success expires after five seconds.
+
+The shared tokens in `src/styles/global.css` are background #181A1D, secondary #23272B, panel #333B42, accent #613DC1, hover #7956D8, light accent #A994F0, text #F2F1E9, secondary text #A2B1BD, success #8BB79B, error #D57B84, warning #D8AD6F and border #424A52. Inter uses the installed system font when available, with Segoe UI fallback; numerical statistics use a restrained monospace stack. There are no downloaded fonts, gradients or added UI libraries.
+
+### Planning assumptions
+
+Capacity utilization assumes all outstanding cargo travels together; unallocated capacity is max(0, selected capacity − outstanding SCU). An excess warns about staged deliveries or additional trips; it does not claim simultaneous carriage is required. Required, delivered and remaining quantities stay separate. Manifest distinguishes Planned, Reported manually, Supported Game.log progress and otherwise Reported progress only when backed by the existing model.
+
+Grouping is a pure presentation projection. Exact case/whitespace equivalence and a bounded NB Int. Spaceport / NB Int. Spaceport on microTech alias are supported. Original strings are preserved. No broad fuzzy geographic merge or mission/objective matching change was introduced. Distinct persistent contract/objective IDs remain distinct; superseded records are excluded.
+
+## Offline ship catalog
+
+The bundled snapshot is **wiki-ships-2026-11-01**, from the maintained [Star Citizen Wiki Ships table](https://starcitizen.tools/Category:Ships), category revision 396448. It includes all **126** eligible positive-SCU rows in that source: **105 flight ready** by default and **21** other production states behind an explicit option. All ship roles are eligible. Of 250 rendered table rows, 124 zero, unknown or unsupported-capacity rows are excluded. Canonical source-page duplicates are removed; distinct source-named variants are retained.
+
+Capacity means the Wiki **Cargo (SCU)** column, not personal storage in micro-SCU, an exact packing simulation or a verified onboard inventory reading. Wiki articles have different update dates; the snapshot makes no uniform game-patch guarantee. Source article links, available revisions/timestamps, production state, snapshot date and units are bundled. No price, image or article prose is bundled, and startup never scrapes a website.
+
+Data reuse follows the Wiki [copyright policy](https://starcitizen.tools/Star_Citizen_Wiki:Copyrights) and [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Attribution and adaptation details are in [ships.LICENSE.md](src/data/ships.LICENSE.md). The adapted catalog is CC BY-SA 4.0; application code retains its existing license.
+
+The searchable picker supports manufacturer/capacity text search, a manufacturer filter, favorites first and then the eight most recently selected ships. Favorites, recent selection, selected ship and Dashboard view persist locally. Ship selection immediately updates capacity statistics. Existing `c2`, `caterpillar` and `hull-c` IDs remain; custom/retired saved IDs are retained.
+
+Catalog maintenance is explicit development work:
+
+```powershell
+node scripts/update-ships.cjs --date 2026-11-01
+```
+
+The updater validates source column definitions, paginates article metadata, checks positive capacities/canonical duplicates and records an export hash. Review the resulting data/license/count changes before committing; it is never part of normal startup. The current snapshot was also reproduced from the downloaded source exports with `--from work/ship-research --date 2026-11-01`.
+
+### Local migration
+
+SQLite schema remains **5**. Startup transactionally upserts the merged catalog into the ships table; it does not rewrite contracts, objectives, evidence, audits, checkpoints or run history. Existing selected IDs are preserved. The additive `ui.preferences` setting stores view/favorites/recent IDs. A fixed, validated, trusted-sender IPC endpoint accepts only the Dashboard view and known unique favorite IDs; the main process manages recents. Database access stays in main, context isolation/sandbox remain enabled and renderer Node integration remains disabled.
 
 ## Run and verify
 
@@ -18,7 +59,7 @@ For production use `npm run build`, then `npm start`.
 | -------------------------------- | --------------------------------------------------------- |
 | `npm run typecheck`              | Strict TypeScript validation                              |
 | `npm run lint`                   | ESLint                                                    |
-| `npm test`                       | 213 automated tests in 15 files                           |
+| `npm test`                       | 225 automated tests in 16 files                           |
 | `npm run build`                  | Native capture helper and production Electron/React build |
 | `npm run test:desktop`           | Windows application and secondary Game.log workflows      |
 | `npm run test:ocr:contracts`     | Windows automatic import and compact correction workflow  |
@@ -107,7 +148,7 @@ Back up the database and captures folder with Cargo Run closed before upgrading.
 
 ## Exact in-game test
 
-1. Back up local data with Cargo Run closed, launch v0.4.1, and leave Game.log monitoring and automatic screenshot capture off.
+1. Back up local data with Cargo Run closed, launch v0.5.0, and leave Game.log monitoring and automatic screenshot capture off.
 2. Show the accepted **Rookie Rank - Direct Small Cargo Haul**, 34,500 aUEC, 8 SCU Agricultural Supplies, NB Int. Spaceport → Port Tressler above microTech. Capture once. Without opening review, verify one active contract, correct route/SCU/reward and an Imported entry.
 3. Inspect the saved screenshot. Reprocess the same CaptureId: contract count must not increase. Capture the same OCR-only instance again: choose the existing contract from the compact issue; no row reconstruction should be required.
 4. With two genuinely separate identical accepted instances, choose **Create a separate contract**. Keep different MissionIds separate.
@@ -124,10 +165,16 @@ Electron remains the default input backend. Its existing quiet-period repeat gua
 
 ## Verification and known limits
 
-TypeScript, lint, **213 tests**, and production build pass. Windows app regression, secondary Game.log tracking, automatic import/compact correction, saved OCR/recorder and separate-process window capture passed. The new import workflow exercised actual saved 34,500/8 OCR and its correct original image, plus the genuine 65,250/25 multi-objective OCR export. If an original fixture image is absent, tests mark it unavailable rather than substituting another contract's image.
+Task 04 checks: TypeScript, ESLint, **225 tests across 16 files**, and the native + production Electron build pass. The 213 existing tests remain; only the obsolete payout-allocation expectation was replaced with the full-reward/no-allocation rule, and an obsolete stop-level unknown-payout assertion was removed. Twelve new tests cover twenty-contract aggregation, IDs, aliases/unknown locations, progress, capacity, catalog filtering, migration and preference persistence.
 
-Two existing native suites were attempted but their compiled WinForms fixture failed to launch with `spawn UNKNOWN`. No Windows security settings were changed. Native helper compilation and separate Electron window capture succeeded. No live Star Citizen session, physical in-game shortcut, production game-window identity or Vulkan/exclusive-fullscreen capture was verified.
+Actual Windows Electron checks passed at **1100 × 700 and 1440 × 900**: adaptive navigation and active highlighting, temporary drawer dismissal, title-bar minimize/maximize/restore, centered modal and focus restoration/trapping, dirty warning, field validation, multiple objectives, duplicate submission, save/edit/abandon, run finalization/History, searchable ships, favorites/selection/view restart, capacity changes and twenty contracts with forty objectives. Generated screenshots are under ignored `work/fleet-*.png`; screenshots reflect the Windows display scale.
 
-New genuine exports preserve original coordinates/confidences and source image SHA-256. The additional 61,500 screenshot actually reads 4+3 = 7 SCU; the older representative 8-SCU fixture is a separate reported example and remains unchanged. The genuine 65,250 export remains 7+6+7+5 = 25 SCU. No actual quantity was replaced to fit earlier reports.
+Also passed: isolated Game.log monitoring/replay/rotation/restart; automatic OCR import and compact correction using repository exports; raw-evidence-preserving reprocess and shortcut recorder; separate-process native window capture (3840 × 2084, overlap excluded). Preview tests use clearly labeled generated images, with genuine repository OCR coordinates; no historical capture-directory image is required.
 
-See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for changed files, root causes and implementation details.
+The native full-display automatic-capture and display/shortcut/offline-OCR suites also pass when run in isolation. Their synthetic SendKeys verify Electron callback delivery from a separate Windows application, not physical keys inside Star Citizen. Full-display fixtures must run sequentially without other UI tests obscuring their foreground surface. No live Star Citizen session, physical in-game shortcut callback, production game-window identity, Vulkan or exclusive-fullscreen behavior was verified. Registration/Raw Input Listening alone does not verify callback delivery. No security settings or capture/reconciliation production algorithms were changed.
+
+The genuine exported 61,500 screenshot reads 4+3 = 7 SCU; the earlier representative 8-SCU fixture is separate. The genuine 65,250 export remains 7+6+7+5 = 25 SCU. Existing examples are test fixtures only; no historical contract is hardcoded into production logic.
+
+Recommended next task: complete live in-game acceptance testing, then design a separate, explicitly reported collection/onboard progress model with audit and reversal before introducing interactive cargo checkboxes. Route optimization, trading, live inventory and multi-ship allocation remain outside this release.
+
+See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for architecture, changed files and exact verification results.

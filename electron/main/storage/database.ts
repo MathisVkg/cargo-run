@@ -159,6 +159,12 @@ export class CargoDatabase {
     ).map((r) => JSON.parse(String(r.payload)) as Ship);
     return { ...meta, contracts, runs, ships };
   }
+  saveShips(ships: Ship[]): void {
+    const insert = this.db.prepare(
+      "INSERT INTO ships VALUES(?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
+    );
+    for (const ship of ships) insert.run(ship.id, JSON.stringify(ship));
+  }
   saveDomain(state: DomainSnapshot): void {
     this.db.exec(
       "DELETE FROM cargo_objectives; DELETE FROM cargo_runs; DELETE FROM ships;",

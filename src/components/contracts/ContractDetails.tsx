@@ -3,18 +3,28 @@ import type { Contract } from "../../types/models";
 import type { EvidenceLink } from "../../types/review";
 import { Overlay } from "../ui/Overlay";
 import { captureImage, useOcrStore } from "../../stores/useOcrStore";
+import { ContractDrawer } from "./ContractDrawer";
+import { useCargoStore } from "../../stores/useCargoStore";
 import { date, money } from "../../utils/format";
 export function ContractDetails({
-  contract,
+  contract: selectedContract,
   onClose,
 }: {
   contract: Contract | null;
   onClose(): void;
 }) {
+  const contract =
+    useCargoStore((s) =>
+      s.contracts.find((c) => c.id === selectedContract?.id),
+    ) ?? selectedContract;
   const [links, setLinks] = useState<EvidenceLink[]>([]),
     [error, setError] = useState(""),
     [large, setLarge] = useState<string | null>(null),
-    [complete, setComplete] = useState(false);
+    [complete, setComplete] = useState(false),
+    [editing, setEditing] = useState(false),
+    [abandon, setAbandon] = useState(false);
+  const abandonContract = useCargoStore((s) => s.abandonContract);
+
   const refresh = useOcrStore((s) => s.refresh);
   const reload = () =>
     contract &&
@@ -26,6 +36,8 @@ export function ContractDetails({
     setLinks([]);
     setError("");
     setComplete(false);
+    setEditing(false);
+    setAbandon(false);
     void reload();
   }, [contract?.id]);
   return (
@@ -39,19 +51,18 @@ export function ContractDetails({
         <div className="drawer-body">
           {contract && (
             <>
+              <h2>Overview</h2>
               <p>
                 {contract.status} ·{" "}
                 {(contract.sources ?? [contract.source]).join(" + ")} ·{" "}
                 {contract.company ?? "Unknown company"}
               </p>
-              <p>
-                MissionId: {contract.missionId ?? "Unverified / OCR-only"} ·
-                Accepted: {date(contract.acceptedAt)}
-              </p>
+              <p>Accepted: {date(contract.acceptedAt)}</p>
               <p>
                 Potential reward: {money(contract.payout)} · Confirmed earnings:{" "}
                 {money(contract.confirmedEarnings)}
               </p>
+              <h2>Cargo Objectives</h2>
               {contract.cargoObjectives.map((o) => (
                 <p key={o.id}>
                   {o.commodity} · {o.pickupLocation || "Unknown pickup"} →{" "}
@@ -83,7 +94,24 @@ export function ContractDetails({
                   </button>
                 </>
               )}
-              <h2>OCR evidence</h2>
+              {contract.status === "Active" && (
+                <div className="details-actions">
+                  <button
+                    className="button"
+                    disabled={contract.source === "Log"}
+                    onClick={() => setEditing(true)}
+                  >
+                    Edit contract
+                  </button>
+                  <button
+                    className="button danger"
+                    onClick={() => setAbandon(true)}
+                  >
+                    Abandon contract
+                  </button>
+                </div>
+              )}
+              <h2>Evidence</h2>
               <p className="form-note">
                 Active linked screenshots are protected. Closed contract
                 screenshots expire 30 days after closure. Unlinking removes
@@ -134,7 +162,8 @@ export function ContractDetails({
                   </p>
                   <details>
                     <summary>
-                      Original OCR, reviewed fields and conflict decisions
+                      Advanced · Original OCR, reviewed fields and conflict
+                      decisions
                     </summary>
                     <pre className="ocr-raw">
                       {JSON.stringify(
@@ -173,7 +202,11 @@ export function ContractDetails({
                 </section>
               ))}
               <details>
-                <summary>Field provenance</summary>
+                <summary>Advanced · Identity and field provenance</summary>
+                <p>
+                  ContractId: {contract.id} · MissionId:{" "}
+                  {contract.missionId ?? "Unverified / local"}
+                </p>
                 <pre className="ocr-raw">
                   {JSON.stringify(contract.fieldProvenance ?? {}, null, 2)}
                 </pre>
@@ -185,6 +218,40 @@ export function ContractDetails({
               {error}
             </p>
           )}
+        </div>
+      </Overlay>
+      {editing && (
+        <ContractDrawer
+          open={editing}
+          contract={contract}
+          onClose={() => setEditing(false)}
+        />
+      )}
+      <Overlay
+        open={abandon}
+        onClose={() => setAbandon(false)}
+        side="center"
+        title="Abandon contract?"
+      >
+        <div className="dialog-body">
+          This contract will remain in History. No earnings will be recorded.
+        </div>
+        <div className="dialog-actions">
+          <button className="button" onClick={() => setAbandon(false)}>
+            Cancel
+          </button>
+          <button
+            className="button danger"
+            onClick={async () => {
+              if (contract) {
+                await abandonContract(contract.id);
+                setAbandon(false);
+                onClose();
+              }
+            }}
+          >
+            Confirm abandonment
+          </button>
         </div>
       </Overlay>
       <Overlay

@@ -18,11 +18,27 @@ export function Overlay({
 }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
+  const returnFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (open && !dialog.open) {
+      returnFocus.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      dialog.showModal();
+    }
+    if (!open && dialog.open) {
+      dialog.close();
+      returnFocus.current?.focus();
+    }
+    return () => {
+      if (dialog.open) {
+        dialog.close();
+        returnFocus.current?.focus();
+      }
+    };
   }, [open]);
   return (
     <dialog

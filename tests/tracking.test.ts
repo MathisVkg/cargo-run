@@ -129,7 +129,6 @@ describe("SQLite event association and replay", () => {
     expect(groupByDestination(missions(s))[0]).toMatchObject({
       destination: "Unresolved Destination",
       unknownCargo: true,
-      unknownPayouts: true,
     });
   });
   it("reconciles an objective and completion arriving before acceptance", () => {

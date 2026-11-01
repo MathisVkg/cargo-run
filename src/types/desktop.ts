@@ -43,6 +43,9 @@ export interface DesktopBridge {
   onMaximized(callback: (maximized: boolean) => void): () => void;
   getState(): Promise<AppSnapshot>;
   saveContract(request: SaveContractRequest): Promise<AppSnapshot>;
+  setPreferences(
+    patch: import("./preferences").PreferencesPatch,
+  ): Promise<AppSnapshot>;
   selectShip(id: string): Promise<AppSnapshot>;
   abandonContract(id: string): Promise<AppSnapshot>;
   finishRun(): Promise<AppSnapshot>;

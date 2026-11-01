@@ -26,7 +26,7 @@ const draft: ContractDraft = {
   ],
 };
 describe("contract operations and selectors", () => {
-  it("counts a multi-destination contract once and reconciles allocated payout", () => {
+  it("counts full multi-destination payout once without allocating it to stops", () => {
     const store = createCargoStore([]);
     store.getState().saveContract(draft);
     expect(operationStats(store.getState().contracts)).toEqual({
@@ -36,8 +36,8 @@ describe("contract operations and selectors", () => {
       destinations: 2,
     });
     const groups = groupByDestination(store.getState().contracts);
-    expect(groups.map((g) => g.allocatedPayout)).toEqual([2500, 7500]);
-    expect(groups.reduce((n, g) => n + g.allocatedPayout, 0)).toBe(10000);
+    expect(groups.map((g) => g.scu)).toEqual([10, 30]);
+    expect(groups.every((g) => !("allocatedPayout" in g))).toBe(true);
   });
   it("validates missing, negative, non-finite, and zero cargo inputs", () => {
     expect(validateDraft({ ...draft, name: " " })).toBeTruthy();

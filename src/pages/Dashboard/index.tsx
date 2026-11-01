@@ -1,205 +1,169 @@
-import { useState } from "react";
-import {
-  Plus,
-  Flag,
-  Layers3,
-  Container,
-  Wallet,
-  MapPin,
-  TriangleAlert,
-  ArrowDownWideNarrow,
-} from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus, Flag, Layers3, Container, Wallet, Rocket } from "lucide-react";
 import { useCargoStore } from "../../stores/useCargoStore";
-import { operationStats, groupByDestination } from "../../stores/selectors";
-import { number, money } from "../../utils/format";
-import { PageHeader, StatCard, Badge } from "../../components/ui";
-import { DestinationGroups } from "../../components/contracts/DestinationGroups";
+import {
+  activeContracts,
+  operationStats,
+  contractSCU,
+  planningCapacity,
+} from "../../stores/selectors";
+import { number } from "../../utils/format";
+import { PageHeader, StatCard } from "../../components/ui";
 import { ContractDrawer } from "../../components/contracts/ContractDrawer";
 import { FinishRunDialog } from "../../components/contracts/FinishRunDialog";
-import type { Contract } from "../../types/models";
+import { ContractCards } from "../../components/contracts/ContractCards";
+import { LocationStops } from "../../components/contracts/LocationStops";
 export default function Dashboard() {
-  const contracts = useCargoStore((s) => s.contracts);
-  const ships = useCargoStore((s) => s.ships);
-  const shipId = useCargoStore((s) => s.selectedShipId);
-  const currentRun = useCargoStore((s) => s.currentRun);
-  const [drawer, setDrawer] = useState(false);
-  const [editing, setEditing] = useState<Contract | null>(null);
-  const [finishing, setFinishing] = useState(false);
-  const stats = operationStats(contracts);
-  const ship = ships.find((s) => s.id === shipId)!;
-  const over = stats.scu > ship.cargoCapacitySCU;
-  const groups = groupByDestination(contracts);
+  const contracts = useCargoStore((s) => s.contracts),
+    ships = useCargoStore((s) => s.ships),
+    shipId = useCargoStore((s) => s.selectedShipId),
+    run = useCargoStore((s) => s.currentRun),
+    view = useCargoStore((s) => s.preferences.dashboardView),
+    setPreferences = useCargoStore((s) => s.setPreferences);
+  const [adding, setAdding] = useState(false),
+    [finishing, setFinishing] = useState(false);
+  const active = useMemo(() => activeContracts(contracts), [contracts]),
+    stats = useMemo(() => operationStats(contracts), [contracts]),
+    required = useMemo(
+      () => active.reduce((n, c) => n + contractSCU(c), 0),
+      [active],
+    );
+  const ship = ships.find((s) => s.id === shipId),
+    capacity = ship?.cargoCapacitySCU ?? 0,
+    plan = planningCapacity(stats.scu, capacity);
   return (
     <>
       <PageHeader
-        eyebrow="OPERATIONS / DASHBOARD"
-        title="Dashboard"
-        description="Your cargo. Your contracts. One coordinated run."
+        eyebrow="FLEET OPERATIONS / OVERVIEW"
+        title="Cargo Operations"
+        description="Plan pickups and deliveries across your active contracts."
       >
         <button
           className="button"
-          disabled={!currentRun.contractIds.length}
+          disabled={!run.contractIds.length}
           onClick={() => setFinishing(true)}
         >
-          <Flag size={16} />
+          <Flag size={15} />
           Finish Run
         </button>
-        <button
-          className="button primary"
-          onClick={() => {
-            setEditing(null);
-            setDrawer(true);
-          }}
-        >
-          <Plus size={17} />
+        <button className="button primary" onClick={() => setAdding(true)}>
+          <Plus size={16} />
           Add Contract
         </button>
       </PageHeader>
-      <div className="stats-grid">
+      <div className="stats-grid operations-stats">
         <StatCard
-          label="Active Missions"
-          value={
-            <>
-              {number(stats.missions)}{" "}
-              <span className="stat-unit">contracts</span>
-            </>
-          }
-          detail={"Across " + stats.destinations + " delivery destinations"}
-          icon={<Layers3 size={19} />}
+          label="Active Contracts"
+          value={number(stats.missions)}
+          detail={stats.destinations + " delivery destinations"}
+          icon={<Layers3 size={18} />}
         />
         <StatCard
-          label="Cargo Capacity"
-          value={
-            <>
-              {number(stats.scu)}{" "}
-              <span className="stat-unit">
-                / {number(ship.cargoCapacitySCU)} SCU
-              </span>
-            </>
-          }
-          detail={
-            over
-              ? "Capacity exceeded by " +
-                number(stats.scu - ship.cargoCapacitySCU) +
-                " SCU"
-              : ship.name +
-                " · " +
-                Math.round((stats.scu / ship.cargoCapacitySCU) * 100) +
-                "% assigned"
-          }
-          icon={<Container size={19} />}
-        >
-          <div
-            className={"capacity-track " + (over ? "over" : "")}
-            role="progressbar"
-            aria-label="Cargo capacity"
-            aria-valuenow={stats.scu}
-            aria-valuemin={0}
-            aria-valuemax={Math.max(stats.scu, ship.cargoCapacitySCU)}
-            aria-valuetext={
-              number(stats.scu) +
-              " of " +
-              number(ship.cargoCapacitySCU) +
-              " SCU"
-            }
-          >
-            <span
-              style={{
-                width:
-                  Math.min(100, (stats.scu / ship.cargoCapacitySCU) * 100) +
-                  "%",
-              }}
-            />
-          </div>
-        </StatCard>
-        <StatCard
-          label="Potential Earnings"
+          label="Potential Rewards"
           value={
             <>
               {number(stats.potential)} <span className="stat-unit">aUEC</span>
             </>
           }
-          detail="Known payouts only · unknown amounts excluded"
-          icon={<Wallet size={19} />}
+          detail="Full payouts counted once · unknown rewards excluded"
+          icon={<Wallet size={18} />}
         />
-      </div>
-      {over && (
-        <div className="notice warning" role="status">
-          <TriangleAlert size={18} />
-          <p>
-            Assigned cargo exceeds {ship.name} capacity. Plan additional trips
-            or select a larger ship.
+        <StatCard
+          label="Planned Cargo"
+          value={
+            <>
+              {number(stats.scu)} <span className="stat-unit">SCU</span>
+            </>
+          }
+          detail={
+            number(required) +
+            " required · " +
+            number(required - stats.scu) +
+            " delivered"
+          }
+          icon={<Container size={18} />}
+        />
+        <StatCard
+          label="Ship Capacity"
+          value={
+            <>
+              {ship ? number(capacity) : "—"}{" "}
+              <span className="stat-unit">SCU</span>
+            </>
+          }
+          detail={ship?.name ?? "Saved ship unavailable"}
+          icon={<Rocket size={18} />}
+        >
+          <div
+            className={"capacity-track " + (plan.over ? "over" : "")}
+            role="progressbar"
+            aria-label="Planning utilization"
+            aria-valuemin={0}
+            aria-valuemax={Math.max(100, plan.utilization ?? 0)}
+            aria-valuenow={plan.utilization ?? 0}
+            aria-valuetext={
+              plan.utilization === null
+                ? "Capacity unavailable"
+                : Math.round(plan.utilization) + "% planned"
+            }
+          >
+            <span
+              style={{ width: Math.min(100, plan.utilization ?? 0) + "%" }}
+            />
+          </div>
+          <p className="capacity-detail">
+            {plan.utilization === null
+              ? "Capacity unknown"
+              : Math.round(plan.utilization) + "% planning utilization"}{" "}
+            · {number(plan.unallocated)} SCU unallocated
           </p>
+        </StatCard>
+      </div>
+      <p className="planning-note">
+        Planning assumes all remaining cargo is carried together. Planned cargo
+        is not physically loaded cargo; staged pickups and deliveries may use
+        capacity differently.
+      </p>
+      {plan.over && (
+        <div className="notice warning" role="status">
+          Planned cargo exceeds selected capacity by{" "}
+          {number(stats.scu - capacity)} SCU. Consider staged deliveries or
+          additional trips.
         </div>
       )}
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <h2>
-              Active contracts <Badge>{stats.missions}</Badge>
-            </h2>
-            <p>Grouped by delivery destination</p>
-          </div>
-          <span className="subtle-label">
-            <ArrowDownWideNarrow size={14} />
-            DESTINATION A–Z
-          </span>
+      <div className="view-toolbar">
+        <div
+          className="segmented-control"
+          role="group"
+          aria-label="Dashboard view"
+        >
+          <button
+            aria-pressed={view === "location"}
+            onClick={() => void setPreferences({ dashboardView: "location" })}
+          >
+            By Location
+          </button>
+          <button
+            aria-pressed={view === "contract"}
+            onClick={() => void setPreferences({ dashboardView: "contract" })}
+          >
+            By Contract
+          </button>
         </div>
-        <DestinationGroups
-          contracts={contracts}
-          onEdit={(contract) => {
-            setEditing(contract);
-            setDrawer(true);
-          }}
-        />
-        <div className="panel-footer">
-          <span>
-            <MapPin size={13} />
-            {stats.destinations} destinations in manifest
-          </span>
-          <span>
-            Destination potential is allocated by SCU; shared contracts count
-            once.
-          </span>
-        </div>
-      </section>
-      <section className="route-strip">
-        <div className="route-label">
-          <span className="eyebrow">DELIVERY OVERVIEW</span>
-          <strong>{groups.length} planned stops</strong>
-        </div>
-        <div className="route-stops">
-          {groups.length ? (
-            groups.map((g, i) => (
-              <div className="route-stop" key={g.destination}>
-                <span className="stop-number">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span>
-                  <strong>{g.destination}</strong>
-                  <small>
-                    {g.unknownCargo ? "Unknown SCU" : number(g.scu) + " SCU"} ·{" "}
-                    {g.unknownPayouts
-                      ? "Unknown payout"
-                      : money(g.allocatedPayout)}
-                  </small>
-                </span>
-              </div>
-            ))
-          ) : (
-            <span className="muted">Awaiting cargo assignments</span>
-          )}
-        </div>
-        <span className="route-note">
-          Alphabetical overview
-          <br />
-          Route distance unavailable
-        </span>
-      </section>
+        <span className="muted">Active operations</span>
+      </div>
+      {view === "location" ? (
+        <>
+          <LocationStops contracts={active} kind="pickup" />
+          <LocationStops contracts={active} kind="delivery" />
+        </>
+      ) : (
+        <ContractCards contracts={active} />
+      )}
       <ContractDrawer
-        open={drawer}
-        contract={editing}
-        onClose={() => setDrawer(false)}
+        open={adding}
+        contract={null}
+        onClose={() => setAdding(false)}
       />
       <FinishRunDialog open={finishing} onClose={() => setFinishing(false)} />
     </>

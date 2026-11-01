@@ -1,34 +1,32 @@
 import { useEffect, useState } from "react";
-import {
-  Menu,
-  Box,
-  Minus,
-  Square,
-  Copy,
-  X,
-  ChevronDown,
-  Rocket,
-} from "lucide-react";
+import { Menu, Box, Minus, Square, Copy, X } from "lucide-react";
 import { useCargoStore } from "../../stores/useCargoStore";
 import { useOcrStore } from "../../stores/useOcrStore";
+import { ShipSelector } from "../ships/ShipSelector";
 export function TopBar({ onMenu }: { onMenu(): void }) {
   const ocr = useOcrStore((s) => s.state);
   const setPage = useCargoStore((s) => s.setPage);
-  const shipId = useCargoStore((s) => s.selectedShipId);
-  const selectShip = useCargoStore((s) => s.selectShip);
-  const ships = useCargoStore((s) => s.ships);
   const tracking = useCargoStore((s) => s.tracking);
   const [maximized, setMaximized] = useState(false);
   useEffect(() => {
     void window.cargoRun?.isMaximized().then(setMaximized);
     return window.cargoRun?.onMaximized(setMaximized);
   }, []);
+  const [captureFresh, setCaptureFresh] = useState(false);
+  useEffect(() => {
+    const remaining = ocr?.lastCapture
+      ? Math.max(0, 5000 - (Date.now() - Date.parse(ocr.lastCapture.at)))
+      : 0;
+    setCaptureFresh(remaining > 0);
+    const timer = setTimeout(() => setCaptureFresh(false), remaining);
+    return () => clearTimeout(timer);
+  }, [ocr?.lastCapture?.at]);
   return (
     <header className="topbar">
       <div className="brand">
         <button
           aria-label="Open navigation"
-          className="icon-button"
+          className="icon-button navigation-toggle"
           onClick={onMenu}
         >
           <Menu size={20} />
@@ -42,39 +40,30 @@ export function TopBar({ onMenu }: { onMenu(): void }) {
         <button
           className={
             "capture-indicator " +
-            (ocr?.lastCapture?.success === false ? "capture-failed" : "")
+            (captureFresh && ocr?.lastCapture?.success === false
+              ? "capture-failed"
+              : captureFresh && ocr?.lastCapture?.success
+                ? "capture-success"
+                : "")
           }
           onClick={() => setPage("Scan Review")}
           title={ocr?.lastCapture?.message ?? "Open Scan History"}
         >
-          {ocr?.lastCapture?.success === false
+          {captureFresh && ocr?.lastCapture?.success === false
             ? "Capture failed"
             : ocr?.processing
               ? "OCR processing"
               : ocr?.queued
                 ? ocr.queued + " queued"
-                : ocr?.lastCapture?.success
+                : captureFresh && ocr?.lastCapture?.success
                   ? "Capture saved"
-                  : "Scan History"}
+                  : !ocr
+                    ? "OCR loading"
+                    : !ocr.engine.available
+                      ? "OCR unavailable"
+                      : "OCR ready"}
         </button>
-        <div className="ship-picker">
-          <Rocket size={16} />
-          <label className="sr-only" htmlFor="ship">
-            Selected ship
-          </label>
-          <select
-            id="ship"
-            value={shipId}
-            onChange={(e) => selectShip(e.target.value)}
-          >
-            {ships.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} — {s.cargoCapacitySCU} SCU
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={13} />
-        </div>
+        <ShipSelector />
         <span
           className={"connection " + tracking.status.toLowerCase()}
           title="ONLINE means the file is accessible and monitored; it does not mean Star Citizen is running."

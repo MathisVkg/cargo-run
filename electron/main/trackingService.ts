@@ -15,7 +15,12 @@ import { readLogChunk, type LogLine } from "./log/reader";
 import { parseLogLine } from "./log/parser";
 import { applyMissionEvent } from "./log/reconcile";
 import { createCargoStore } from "../../src/stores/cargoDomain";
-import { ships } from "../../src/data/ships";
+import { ships, mergeShips } from "../../src/data/ships";
+import {
+  defaultPreferences,
+  validatePreferences,
+  type UiPreferences,
+} from "../../src/types/preferences";
 import { sampleContracts } from "../../src/data/sample";
 import type {
   AppSnapshot,
@@ -78,6 +83,7 @@ export class TrackingService {
   readonly database: CargoDatabase;
   readonly store = createCargoStore([]);
   private savedShips = ships;
+  private preferences = defaultPreferences();
   private revision = 0;
   private status: MonitoringStatus = "OFFLINE";
   private error: string | null = null;
@@ -96,9 +102,31 @@ export class TrackingService {
     const saved = this.database.loadDomain();
     if (saved) {
       this.store.setState(saved);
-      this.savedShips = saved.ships.length ? saved.ships : ships;
+      this.savedShips = mergeShips(saved.ships);
+      this.database.transaction(() => this.database.saveShips(this.savedShips));
     } else
       this.database.transaction(() => this.database.saveDomain(this.domain()));
+    const prefs = this.database.getSetting<UiPreferences>("ui.preferences");
+    if (prefs) {
+      try {
+        const ids = new Set(this.savedShips.map((s) => s.id));
+        this.preferences = {
+          ...defaultPreferences(),
+          ...validatePreferences(
+            {
+              dashboardView: prefs.dashboardView,
+              favoriteShipIds: prefs.favoriteShipIds,
+            },
+            ids,
+          ),
+          recentShipIds: Array.isArray(prefs.recentShipIds)
+            ? prefs.recentShipIds.filter((id) => ids.has(id)).slice(0, 8)
+            : [],
+        };
+      } catch {
+        /* Invalid preferences do not affect contracts or ship selection. */
+      }
+    }
     this.config = this.database.getMonitorConfig();
   }
   domain(): DomainSnapshot {
@@ -116,6 +144,7 @@ export class TrackingService {
     return {
       ...this.domain(),
       contracts: this.domain().contracts.filter((c) => !c.supersededBy),
+      preferences: structuredClone(this.preferences),
       revision: this.revision,
       databasePath: this.database.path,
       tracking: {
@@ -353,7 +382,34 @@ export class TrackingService {
   selectShip(id: unknown): AppSnapshot {
     if (typeof id !== "string" || !this.savedShips.some((s) => s.id === id))
       throw new Error("Unknown ship.");
-    return this.mutate(() => this.store.setState({ selectedShipId: id }));
+    const next = {
+      ...this.preferences,
+      recentShipIds: [
+        id,
+        ...this.preferences.recentShipIds.filter((x) => x !== id),
+      ].slice(0, 8),
+    };
+    const previous = this.preferences;
+    try {
+      return this.mutate(() => {
+        this.store.setState({ selectedShipId: id });
+        this.database.setSetting("ui.preferences", next);
+        this.preferences = next;
+      });
+    } catch (error) {
+      this.preferences = previous;
+      throw error;
+    }
+  }
+  setPreferences(input: unknown): AppSnapshot {
+    const patch = validatePreferences(
+      input,
+      new Set(this.savedShips.map((s) => s.id)),
+    );
+    const next = { ...this.preferences, ...patch };
+    this.database.setSetting("ui.preferences", next);
+    this.preferences = next;
+    return this.publish();
   }
   abandonContract(id: unknown): AppSnapshot {
     if (

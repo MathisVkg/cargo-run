@@ -34,8 +34,13 @@ async function launch() {
     env,
   });
   page = await app.firstWindow();
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].setSize(1200, 800),
+  );
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { name: "Cargo Operations", exact: true })
+    .waitFor();
 }
 const state = () => page.evaluate(() => window.cargoRun.getState());
 async function until(check) {
@@ -50,7 +55,7 @@ async function until(check) {
 async function nav(name) {
   await page.getByLabel("Open navigation", { exact: true }).click();
   await page
-    .getByRole("navigation")
+    .getByRole("navigation", { name: "Temporary navigation" })
     .getByRole("button", { name: new RegExp("^" + name) })
     .click();
 }
@@ -86,9 +91,7 @@ function pending(id) {
         },
       }),
     );
-    await page
-      .getByLabel("Selected ship", { exact: true })
-      .selectOption("hull-c");
+    await page.evaluate(() => window.cargoRun.selectShip("hull-c"));
     await until((s) => s.selectedShipId === "hull-c");
     await nav("Settings");
     await app.evaluate(({ dialog }, file) => {

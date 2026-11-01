@@ -11,6 +11,9 @@ interface RendererState extends AppSnapshot {
   pending: number;
   setPage(page: Page): void;
   selectShip(id: string): Promise<void>;
+  setPreferences(
+    patch: import("../types/preferences").PreferencesPatch,
+  ): Promise<void>;
   saveContract(draft: ContractDraft, id?: string): Promise<void>;
   abandonContract(id: string): Promise<void>;
   finishRun(): Promise<void>;
@@ -23,6 +26,11 @@ interface RendererState extends AppSnapshot {
   dismissError(): void;
 }
 const initial: AppSnapshot = {
+  preferences: {
+    dashboardView: "location",
+    favoriteShipIds: [],
+    recentShipIds: [],
+  },
   revision: -1,
   databasePath: "",
   ships,
@@ -78,6 +86,7 @@ export const cargoStore = createStore<RendererState>(() => ({
   actionError: null,
   pending: 0,
   setPage: (page) => cargoStore.setState({ page }),
+  setPreferences: (patch) => quiet(() => window.cargoRun.setPreferences(patch)),
   selectShip: (id) => quiet(() => window.cargoRun.selectShip(id)),
   saveContract: (draft, id) =>
     call(() => window.cargoRun.saveContract({ draft, id })),

@@ -157,7 +157,7 @@ export default function History() {
                             ? "green"
                             : c.status === "Abandoned"
                               ? "red"
-                              : "amber"
+                              : "neutral"
                         }
                       >
                         {c.status}
@@ -229,7 +229,7 @@ export default function History() {
                     <Badge
                       tone={
                         c.status === "Active"
-                          ? "amber"
+                          ? "neutral"
                           : c.status === "Completed"
                             ? "green"
                             : "red"

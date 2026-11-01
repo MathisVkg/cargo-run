@@ -47,6 +47,7 @@ const bridge: DesktopBridge = {
   },
   getState: () => ipcRenderer.invoke("cargo:getState"),
   saveContract: (request) => ipcRenderer.invoke("cargo:saveContract", request),
+  setPreferences: (patch) => ipcRenderer.invoke("cargo:preferences", patch),
   selectShip: (id) => ipcRenderer.invoke("cargo:selectShip", id),
   abandonContract: (id) => ipcRenderer.invoke("cargo:abandonContract", id),
   finishRun: () => ipcRenderer.invoke("cargo:finishRun"),

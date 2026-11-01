@@ -1,141 +1,109 @@
-# Cargo Run v0.4.1 — Task 03B.1 handoff
+# Cargo Run v0.5.0 — Fleet Operations 2.0 handoff
 
-Work remains exclusively in `C:\Users\zeyros\Documents\repository\cargo-run`. The latest local Phase 3B work was inspected and preserved; no public branch was substituted. Existing changes were backed up before edits under ignored `work/task03b1-backup/`. No commit, PR, installer, dependency addition or live-profile migration was performed.
+Implemented Task 04 in `C:\Users\zeyros\Documents\repository\cargo-run`, continuing the clean local v0.4.1 repository. No public branch replacement, new dependency, commit, PR or installer. Reversible pre-edit copies are under ignored `work/task04-backup/`. All runtime tests use isolated profiles under `work/`; the user's live database and captures were not migrated or edited.
 
-## 1. Root causes of excessive review
+## Architecture and UI decisions
 
-The v0.4.0 workflow implemented the earlier requirement for explicit review on every save. It also:
+The existing Electron/React/TypeScript/Zustand/Tailwind/SQLite design remains. This is a presentation redesign with additive catalog/preferences support, not a reconciliation rewrite.
 
-- Marked every objective list potentially incomplete, even with a well-established complete panel.
-- Required Check Changes plus acceptance, incompleteness and association confirmations for ordinary valid scans.
-- Offered all ledger history in the main target list.
-- Rendered objective mapping, original evidence and a full editor in the default path.
-- Created incomplete active Game.log placeholders independently of OCR, forcing users to reconcile two representations.
-- Seeded the advanced linked-capture editor with all existing rows, which was unsuitable as a normal partial-update workflow.
+- One CSS system supplies the exact requested graphite/purple semantic tokens. Purple marks interactive selections, light purple provides readable links/focus, green success, warning gold warnings, muted red errors/destructive actions.
+- Sidebar is 212px with labels at viewport ≥1400, 62px with named icon/tooltips at 1100–1399. The menu opens an independent temporary overlay without continuously resizing content. Existing 1100 × 700 minimum remains; smaller-width CSS is prepared.
+- Native custom title-bar controls and no-drag buttons remain. The ship button shows name/capacity and opens the shared picker. OCR success is transient for five seconds; idle/loading/unavailable/processing/queue statuses are distinct.
+- Dashboard is Cargo Operations, with four statistics and a persisted By Location / By Contract mode. Pickup and delivery groups are alphabetical with quantities, commodities, related locations and unique associated-contract counts.
+- Full known payouts count once per unique active ContractId, never per destination. The allocated-payout selector, old route strip and old destination table component were removed.
+- Selectors deduplicate only repeated persistent IDs. Matching-looking rows with different IDs remain separate. No mission/objective identity algorithm changed. Superseded records are excluded. A deliberately bounded display alias covers the supplied NB Int. Spaceport example; raw evidence is unchanged and no broad fuzzy merge exists.
+- Manifest is an objective checklist projection, not a second Dashboard: collection/delivery rows retain contract/objective identity and existing delivered quantities. It does not claim pickup completion, loaded cargo or route distances.
+- Contracts is the active-record page with search and compact active filters. History retains its complete ledger, closed runs, status/search filters and confirmed-earnings totals.
+- Shared details expose Overview, Cargo Objectives and Evidence; technical IDs/raw OCR/provenance are Advanced. Edit, completion, abandonment, preview and unlink are preserved. Editing a detail refreshes from the current record.
+- The existing ContractDrawer implementation now uses a centered 680px native dialog. Dirty dismissal opens a discard warning; pristine Escape/outside dismiss safely. Native focus trapping and explicit restoration are verified. The scroll body and fixed footer work at minimum height. A synchronous ref prevents double submission while the main-process save runs.
+- Settings order: OCR, optional Game.log, Ships, Storage/Data, collapsed Advanced, App Information. No duplicate OCR configuration controls were added.
 
-The correction is an automatic eligibility path using the existing transactional review planner, with compact exceptions. The full editor remains available only by explicit Advanced action.
+## Quantities, progress and capacity
 
-## 2. Automatic OCR creation and enrichment
+Outstanding = sum(max(0, required − delivered)) over unique active objective IDs. Required totals remain visible separately. Potential rewards exclude unknowns and do not become earned income. Capacity utilization/unallocated SCU assume all outstanding cargo is carried together; excess warns that staged deliveries/additional trips may be needed. Actual onboard cargo is unknown.
 
-Recognition completion and Reprocess Saved OCR invoke `TrackingService.processScan`. `inspectScan` evaluates structural field validity, supported Accepted state, layout/quantity coverage, active identity candidates and unresolved conflicts. It does not use an arbitrary confidence percentage.
+Manifest uses Planned by default, Manual when the delivered field has manual provenance, supported log progress when the objective has a recorded log timestamp and delivered quantity, and otherwise Reported progress. Collection quantities remain requirements, not verified uncollected amounts. No nonfunctional checkbox, inventory reader, new progress model, route ordering or distance was added.
 
-Coverage now distinguishes Established and Partial. It can be supported by independent description totals or by a positioned objectives heading and complete delivery/collection pairs ending with clear space before the action bar. Scroll/clipping/truncation/provisional or ambiguous rows prevent layout completion. A verified known objective mapping may support a partial update to an existing ledger record while preserving unseen rows and the observation's incomplete flag. Matching a pending log row alone does not establish a complete list for new ledger creation. A changed quantity on an otherwise similar row becomes a conflict rather than an appended duplicate.
+## Ship source, coverage and license
 
-No candidates plus a valid established accepted scan creates an OCR-only contract with unknown acceptedAt. A unique active MissionId/title/objective match enriches/promotes that identity. A previously verified binding updates its contract. Material conflicts wait. Title-only log context, multiple candidates and repeated identical OCR-only instances receive compact choices.
+Chosen source: [Star Citizen Wiki Category:Ships](https://starcitizen.tools/Category:Ships), rendered Cargo (SCU) table, category revision 396448. Its resolved table values are used; raw templates alone omit inherited capacities.
 
-Offers never auto-import. Ambiguous acceptance needs confirmation. Missing required data, unproven coverage, invalid/rejected frames, sample mode and closed identity/lifecycle issues remain pending or failed. New recognition does not silently change manual corrections or reduce delivered progress.
+Snapshot: `wiki-ships-2026-11-01`. Of 250 rendered rows, 126 have positive finite supported Cargo SCU and valid names/manufacturers. 105 are flight ready after recognizing case/hyphen spelling variants; 21 other production states require an explicit picker option. 124 zero/unknown/unsupported rows are excluded. All roles qualify. Canonical source-page duplicates are removed; distinct source-named variants remain even when capacities coincide. Coverage is of this table, not every possible game entity.
 
-The existing planner commits domain/objectives, screenshot association, audit and capture outcome in one transaction. Audit authorization distinguishes Automatic, Issue resolved and Reviewed. Automatic links have an explicit AutomaticCreate/AutomaticUpdate association type. In-memory state is restored on failure; OCR evidence remains retryable.
+Each record includes capacity SCU, manufacturer, raw availability, source URL, snapshot version and available article revision/update timestamp. Some alternate variant pages have no revision in the category metadata export; their canonical page URL and snapshot date remain. There is no invented capacity, uniform game-patch guarantee, packing simulation or runtime scraping.
 
-## 3. Game.log responsibility and schema 5
+Wiki content reuse is [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) per its [copyright policy](https://starcitizen.tools/Star_Citizen_Wiki:Copyrights). `src/data/ships.LICENSE.md` attributes contributors and adaptations. Only the adapted data has that license; no Wiki images/prose or third-party API dataset were bundled. Application licensing/dependencies are unchanged.
 
-Schema 5 adds:
+`scripts/update-ships.cjs` is an explicit developer updater. It validates table headers rather than assuming column offsets, paginates article metadata and validates IDs/capacities. The current export was reproduced offline using `--from work/ship-research --date 2026-11-01`; a source-export SHA-256 is recorded. Future updates need source/coverage review and revised baseline assertions.
 
-```sql
-CREATE TABLE pending_log_missions (
-  mission_id TEXT PRIMARY KEY,
-  payload TEXT NOT NULL
-);
+## Persistence and migration
+
+Schema remains 5. Existing `ships` JSON payloads accept additive metadata. Main merges catalog entries with saved entries, preserving unknown/custom/retired IDs, selected ID and the original `c2`, `caterpillar`, `hull-c` identifiers. A ship-only transactional upsert refreshes catalog records at startup; no contract/objective/evidence/audit/run/checkpoint is rewritten by this refresh.
+
+The additive `ui.preferences` SQLite setting stores Dashboard view, unique favorite IDs and eight recent ship IDs. A fixed `cargo:preferences` IPC handler accepts only validated view/favorite patches for known ships. Main manages recents when selection commits. Trusted sender validation, context isolation, sandbox and disabled renderer Node integration remain.
+
+Contract saving/completion, sample removal, run finalization and OCR import retain existing transactional workflows. There is no separate frontend database or localStorage persistence.
+
+## Changed files
+
+| Area                       | Files                                                                                                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Shell/navigation/title bar | `src/App.tsx`, `components/navigation/Navigation.tsx`, `components/layout/TopBar.tsx`                                                                                                  |
+| Views                      | `pages/Dashboard/index.tsx`, `pages/Manifest/index.tsx`, new `pages/Contracts/index.tsx`, `pages/Settings/index.tsx`, History/ScanReview semantic badge corrections                    |
+| Reusable contract UI       | new `ContractCards.tsx`, `LocationStops.tsx`; updated `ContractDrawer.tsx`, `ContractDetails.tsx`, `ui/Overlay.tsx`; removed obsolete `DestinationGroups.tsx`                          |
+| Ships                      | new `components/ships/ShipSelector.tsx`, `data/ship-catalog.json`, `data/ships.LICENSE.md`, `scripts/update-ships.cjs`; updated `data/ships.ts`                                        |
+| State/types                | `stores/selectors.ts`, `stores/useCargoStore.ts`, `types/models.ts`, `types/tracking.ts`, new `types/preferences.ts`, `types/desktop.ts`                                               |
+| Main/preload               | `electron/main/trackingService.ts`, `storage/database.ts`, `electron/main/index.ts`, `electron/preload/index.ts`                                                                       |
+| Styling/version            | `src/styles/global.css`, package and lock root versions, native capture manifest                                                                                                       |
+| Tests                      | new `tests/fleet.test.ts`; updated selector assertions and desktop harnesses for current headings/navigation/picker; OCR preview fixtures no longer depend on deleted user screenshots |
+| Documentation              | README and this handoff                                                                                                                                                                |
+
+Production OCR parser, importer, reconciliation, capture/input backends, retention and automatic scanning algorithms were not modified. Their versioned evidence semantics remain v0.4.1 where appropriate; application version is v0.5.0.
+
+## Verification executed
+
+| Check                                     | Result                                                                                                                                                                                                                                                                                                        |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run typecheck`                       | Pass                                                                                                                                                                                                                                                                                                          |
+| `npm run lint`                            | Pass                                                                                                                                                                                                                                                                                                          |
+| `npm test`                                | 225 tests / 16 files pass; all 213 prior tests retained, obsolete allocation expectation replaced                                                                                                                                                                                                             |
+| `npm run build`                           | Pass: native helper and production main/preload/renderer                                                                                                                                                                                                                                                      |
+| `node tests/desktop.cjs`                  | Pass: real Windows Electron; 1100×700/1440×900, sidebar resize/active navigation/overlays; modal dirty warning/focus/validation/multiple rows/double-submit; ship search/favorites/selection/view restart; planning capacity; 20 contracts/40 objectives; edit/abandon/run/history; minimize/maximize/restore |
+| `node tests/tracking-desktop.cjs`         | Pass: pending-only acceptance, monitor/checkpoints/replay/import, partial restart, completion, diagnostics, rotation/error recovery, manual ledger/ship/runs                                                                                                                                                  |
+| `node tests/automatic-import-desktop.cjs` | Pass: v4→v5 additive migration; automatic OCR-only 34,500/8 import with monitoring off; compact duplicate/missing-pickup correction; unique multi-objective pending-log promotion; evidence; restart/later completion without invented earnings                                                               |
+| `node tests/ocr-review-desktop.cjs`       | Pass: real repository OCR, raw evidence and attempts unchanged, generated preview, recorder Save/Escape/no capture, automatic import; Raw Input reported Listening                                                                                                                                            |
+| `node tests/window-desktop.cjs`           | Pass: actual separate-process native window capture 3840×2084; overlap excluded, dimensions retained, no fallback/upscaling                                                                                                                                                                                   |
+| `node tests/automatic-desktop.cjs`        | Pass in isolation: live synthetic acceptance → delayed native display capture → offline OCR; duplicate-frame skip, unrelated-title non-association, stop cancellation, retention and settings restart                                                                                                         |
+
+The native display suite `node tests/ocr-desktop.cjs` also passes: three actual Electron shortcut callbacks via synthetic SendKeys while a separate WinForms surface is focused and Cargo Run is minimized; native screenshots, four OCR objectives, black-frame rejection, full-image protocol, reprocess, restart, disable and clear. The stale thumbnail-size assumption was corrected to check the small thumbnail and separately decode the full screenshot. Obsolete Capture source labels were updated to the existing Capture Method label. Initial overlapping/full-display attempts could receive an invalid frame; isolated sequential reruns passed. No production capture algorithm was changed.
+
+The Fleet harness also injects a test-only OCR status event through the existing event channel to verify the five-second success expiry; this is notification testing, not a claim that a capture succeeded. Core workflows use actual IPC/main/SQLite/React. Tracking's native file picker response is stubbed; log file reading and processing are real.
+
+Generated UI screenshots are under ignored `work/fleet-*.png`. Visually inspected Dashboard at both sizes, Manifest and centered modal at minimum size. Images reflect the system's 150% display scale (1100 CSS px produces 1650 physical px). Current tests use repository OCR exports and clearly labeled generated preview pixels, not historical user screenshots. Missing originals never block the suite or cause one contract's screenshot to substitute for another.
+
+## Remaining user-machine verification and limits
+
+No Star Citizen gameplay was run. Raw Input Listening or Electron shortcut registration confirms setup only, not actual physical callback delivery while the game has focus. Verify the explicitly selected backend's invocation count, a new CaptureId, screenshot/backend dimensions and recognition/import outcome in-game. Keep one production trigger backend; compare diagnostics do not compete as capture triggers.
+
+At both requested sizes, use accepted multi-objective contracts, switch views, change ship and restart. Confirm full rewards once, required/delivered/remaining values and no duplicated objective IDs after repeated OCR/log enrichment. Inspect an actual linked screenshot and retention behavior after completion. Then test physical shortcut delivery in the chosen graphics/window mode; automatic acceptance screenshots remain optional/off by default. Vulkan/exclusive fullscreen, real StarCitizen.exe identity and physical keys need live validation. Existing capture limitations are preserved.
+
+No trade planning, live inventory reading, route optimization, distance estimates, automatic ship switching, multi-ship allocation, OCR/input engine changes, cloud or authentication were added. The catalog is a dated community reference; availability/capacity can change. There is no actual pickup/onboard progress model, so checklist interaction is intentionally deferred.
+
+## Launch commands and next task
+
+```powershell
+cd C:\Users\zeyros\Documents\repository\cargo-run
+npm run dev
 ```
 
-Migration reconstructs this secondary projection from immutable mission events, applying accepted identities before earlier objective/completion events. Existing active/incomplete/closed ledger rows, run snapshots, captures, links, corrections and checkpoints are not deleted, moved or bulk-converted.
+Production:
 
-A new log acceptance records its MissionId/title/known timestamp in pending storage. Objective and completion events update that projection. No Dashboard contract or current-run membership is created just from acceptance. A supported OCR association materializes/enriches the canonical ledger record. Existing saved MissionId-bound contracts continue receiving their objective/completion events.
+```powershell
+cd C:\Users\zeyros\Documents\repository\cargo-run
+npm run build
+npm start
+```
 
-Acceptance without a supported timestamp retains null; receipt time remains in the immutable event and capture time stays separate. First-start checkpoint behavior, partial lines, import deduplication, rotation/error recovery and post-commit optional capture triggers remain.
+Use `npm ci` only if dependencies need installation. In a shell that inherited Electron's Node-mode environment variable, first run `Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue`. No installer was produced.
 
-Schema 4 evidence/audit relationships are unchanged. Coverage and import outcomes are additive JSON metadata. Older binaries refuse schema 5 without erasing it; rollback uses a closed-app pre-upgrade backup.
-
-## 4. Matching, partial captures and duplicates
-
-Routine candidates are active, non-sample and non-superseded records. Closed/abandoned history is available only through Advanced recovery; it is not an endless default list. The normal UI uses titles, cargo and time/source context instead of UUIDs.
-
-Verified MissionId is definitive. Unambiguous objective agreement plus title supports a unique active log match. A capture trigger is never sufficient proof. Different MissionIds cannot be merged. Multiple identical OCR-only instances wait for an existing/separate decision.
-
-Visible rows are mapped to unique known rows using stable IDs or supporting tuples. Unseen stored rows remain untouched; they are not inserted into the correction form and need no unrelated field repair. Distinct identical rows are not merged or appended by default. Ambiguous objective identity is deferred to explicit editing.
-
-CaptureId bindings and audit submission hashes preserve idempotency. Reprocessing the same observation cannot create another contract. Additional verified screenshots enrich the same identity and preserve evidence. Changed OCR/target versions reject stale issue resolutions.
-
-If later log evidence makes an OCR-only association ambiguous, the original capture receives a compact identity choice. Choosing the matching log record redirects current cargo/evidence to that identity, retains the source record as superseded and preserves historical snapshots. A source containing manual corrections requires explicit Advanced consolidation. Unrelated events do not reopen an already-resolved choice.
-
-A pending completion before identity verification is retained rather than guessed onto an unrelated OCR-only contract. A closed matching case is explicit recovery. After verified association, completion updates only that MissionId and does not fabricate earnings.
-
-## 5. Scan History & Issues
-
-Normal entries show recognized title, SCU, reward, capture time, preview, Imported/Updated outcome and a clear Dashboard/Manifest update message. Filters are All, Imported, Updated, Issues and Failed.
-
-Resolve Issue shows only missing/ambiguous fields, material conflict choices, acceptance or coverage confirmation when needed, and relevant active candidate/separate actions. Correct rows remain intact. The pickup regression uses one editable pickup field. Inputs remain visible during typing and successful resolution removes the old issue panel. Processing/capture/import states and retry OCR versus retry capture remain distinct.
-
-Edit details / Advanced opens the preserved full editor and raw diagnostics. ObjectiveIds, UUIDs, historical targets and detailed evidence are hidden from normal gameplay. The existing protected preview/evidence/unlink/retention flows remain.
-
-Settings wording and navigation now reflect automatic imports and optional secondary log monitoring. Capture Method/preferences, recorder, sounds, automatic screenshot experiment and all input backends remain unchanged.
-
-## 6. Changed files
-
-New:
-
-- `electron/main/ocr/coverage.ts` — objective coverage from structural/layout/quantity evidence.
-- `electron/main/ocr/importer.ts` — active candidate selection, automatic eligibility and compact resolution planning.
-- `src/pages/ScanReview/ScanIssueCard.tsx` — issue-only controls.
-- `tests/automatic-import.test.ts` — 30 automatic workflow regressions.
-- `tests/automatic-import-desktop.cjs` — real Windows automatic/compact/persistence workflow.
-- Two genuine `tests/fixtures/mobiglas/*.json` exports from the user-supplied captures folder.
-
-Updated:
-
-- `storage/database.ts`, `log/reconcile.ts`, `trackingService.ts` — additive pending projection, secondary event routing, unknown acceptance and transactional importing.
-- `ocr/parser.ts`, `queue.ts`, `review.ts` — coverage metadata, post-recognition callback, active routine targets, internal automatic authorization, virtual pending targets, source consolidation and preserved manual provenance.
-- Main IPC/preload/desktop types — fixed validated `scanIssue` and `resolveScan` actions.
-- Review/OCR/tracking types — scan outcome, issue/resolution and coverage metadata, pending mission count.
-- Scan Review page — compact history replaces mandatory full editor; advanced component remains.
-- App/navigation/TopBar/Settings/styles — v0.4.1 labels and existing-theme compact layout.
-- Package/lock/native manifest — 0.4.1; no dependencies changed.
-- Existing unit/desktop tests — schema/parser expectations, pending event assertions, explicit legacy-ledger fixtures and new history selectors. The old OCR contracts desktop entry delegates to the current automatic workflow.
-- README and this handoff — current workflow, migration, limits and game-test steps.
-
-## 7. Fixtures and data preservation
-
-The supplied folder contained the requested 34,500 image. It was recognized locally with the existing offline Tesseract provider without modifying the original image or live database. The exported contract-pane lines retain genuine coordinates/confidences; source SHA-256/dimensions are recorded. HUD/left navigation are excluded.
-
-Verified genuine case:
-
-- Rookie Rank - Direct Small Cargo Haul.
-- 34,500 aUEC, 8 SCU Agricultural Supplies.
-- NB Int. Spaceport → Port Tressler above microTech.
-- Accepted action evidence; complete positioned delivery/collection pair.
-
-The existing 65,250 genuine fixture remains 7+6+7+5 = 25 SCU across four rows. A second newly exported 61,500 image actually reads 4+3 = 7 SCU. It is kept separate from the earlier representative 8-SCU report. No actual value was rewritten to match older expectations.
-
-Migration/restart tests preserve a v4 ledger, immutable runs, captures and evidence. Desktop tests use isolated profiles. The first 34,500 screenshot preview uses its correct original image. Missing originals for older exports are marked unavailable; a different contract image is never substituted. A derived missing-pickup fixture deliberately removes those OCR lines to test correction.
-
-## 8. Verification executed
-
-| Check                                     | Result                                                                                                                                                                                                                                                                                         |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm run typecheck`                       | Passed                                                                                                                                                                                                                                                                                         |
-| `npm run lint`                            | Passed                                                                                                                                                                                                                                                                                         |
-| `npm test`                                | 213 tests in 15 files passed                                                                                                                                                                                                                                                                   |
-| `npm run build`                           | Native helper plus production Electron/React build passed                                                                                                                                                                                                                                      |
-| `node tests/desktop.cjs`                  | Passed: Windows security/navigation/ships/manual editing/abandonment/capacity/Manifest/History/runs/window controls                                                                                                                                                                            |
-| `node tests/tracking-desktop.cjs`         | Passed: pending-only acceptance, partial objective restart, event/import replay, pre-OCR completion, diagnostics, rotation/error recovery, persisted manual ledger/ship/runs                                                                                                                   |
-| `node tests/automatic-import-desktop.cjs` | Passed: v4 migration, actual 34500/8 automatic OCR-only import, no Check Changes, correct image preview, same-ID replay, compact duplicate choice, pending log then unique four-objective promotion, one pickup correction, evidence, Dashboard/Manifest/History, restart and later completion |
-| `node tests/ocr-review-desktop.cjs`       | Passed: saved real OCR reprocess/import, unchanged raw evidence/attempts, recorder Save/Escape and existing prototype status                                                                                                                                                                   |
-| `node tests/window-desktop.cjs`           | Passed: separate Electron window, overlap excluded, actual 3840×2084 pixels, no upscaling/fallback                                                                                                                                                                                             |
-| `node tests/ocr-desktop.cjs`              | Attempted; compiled WinForms fixture launch stopped with `spawn UNKNOWN`                                                                                                                                                                                                                       |
-| `node tests/automatic-desktop.cjs`        | Attempted; compiled WinForms fixture launch stopped with `spawn UNKNOWN`                                                                                                                                                                                                                       |
-
-No security policy was modified to force fixture execution. Raw Input Listening is not evidence of physical key/game delivery. No live Star Citizen session or graphics/input compatibility was established by these tests. The native dialog response is stubbed in isolated tracking tests; file reading, SQLite, reconciliation, IPC and React are real.
-
-The compact success layout was visually inspected from `work/scan-history-v041.png`; stale issue controls were removed after successful resolution.
-
-## 9. Exact in-game test and limits
-
-Use README's 12-step matrix. Start with monitoring off and an accepted 34500/8 screen: capture once and verify immediate Dashboard/Manifest import without review. Reprocess the same CaptureId, then recapture and use the compact existing/separate choice. Test Offers, ambiguous acceptance, one missing pickup, partial scrolling and manual-correction conflicts.
-
-Next start optional monitoring: acceptance alone must stay off the active ledger; capture must promote/enrich the unique matching mission. Verify repeated captures, distinct MissionIds, later completion, late identity choices, evidence and restart. Only then enable optional delayed acceptance screenshots.
-
-Physical shortcut delivery, real StarCitizen.exe identity, Vulkan/exclusive-fullscreen behavior and live mission reconciliation remain user-machine tests. Registration/Listening only confirms registration; inspect actual Invocation and capture diagnostics.
-
-Coverage is inferred from text/layout and independent known quantities, not a perfect scrollbar detector. Ambiguous/unsupported screens remain issues. Identity cannot be inferred from identical details alone. Complex corrected or closed consolidation uses Advanced. Automatic image deduplication, capture limits and retention retain their existing behavior.
-
-No continuous OCR scanning, automatic game navigation, cloud services, extra input backends, game memory access, injection or anti-cheat bypass was introduced.
+Recommended next task: complete the live in-game matrix, then separately design audited manual collection/onboard progress and reversal before enabling interactive cargo checkboxes. Keep that new state distinct from delivered quantities and OCR recognition.

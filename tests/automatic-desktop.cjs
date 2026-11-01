@@ -62,8 +62,11 @@ function accept(n) {
       env,
     });
     page = await app.firstWindow();
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].setSize(1200, 800),
+    );
     await page
-      .getByRole("heading", { name: "Dashboard", exact: true })
+      .getByRole("heading", { name: "Cargo Operations", exact: true })
       .waitFor();
     await until(async () => !!(await state()).displays.length, 10000);
     let s = await state();
@@ -167,7 +170,7 @@ function accept(n) {
     });
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation")
+      .getByRole("navigation", { name: "Temporary navigation" })
       .getByRole("button", { name: /^Scan History/ })
       .click();
     const observed = page
@@ -225,8 +228,11 @@ function accept(n) {
       env,
     });
     page = await app.firstWindow();
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].setSize(1200, 800),
+    );
     await page
-      .getByRole("heading", { name: "Dashboard", exact: true })
+      .getByRole("heading", { name: "Cargo Operations", exact: true })
       .waitFor();
     const restarted = await state();
     assert.equal(restarted.policy.source, "Automatic");
@@ -240,15 +246,15 @@ function accept(n) {
     );
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation")
+      .getByRole("navigation", { name: "Temporary navigation" })
       .getByRole("button", { name: /^Settings/ })
       .click();
     assert.equal(
-      await page.getByLabel("Capture source", { exact: true }).inputValue(),
+      await page.getByLabel("Capture Method", { exact: true }).inputValue(),
       "Automatic",
     );
     await page
-      .getByLabel("Capture source", { exact: true })
+      .getByLabel("Capture Method", { exact: true })
       .scrollIntoViewIfNeeded();
     await page.screenshot({
       path: "work/capture-settings-v033.png",

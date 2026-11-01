@@ -186,6 +186,7 @@ else
       register("cargo:getState", () => service.snapshot());
       register("cargo:saveContract", (input) => service.saveContract(input));
       register("cargo:selectShip", (id) => service.selectShip(id));
+      register("cargo:preferences", (patch) => service.setPreferences(patch));
       register("cargo:abandonContract", (id) => service.abandonContract(id));
       register("cargo:finishRun", () => service.finishRun());
       register("cargo:removeSamples", () => service.removeSamples());

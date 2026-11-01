@@ -1,4 +1,4 @@
-// Isolated real Electron workflow with genuine offline OCR exports and original screenshot previews.
+// Isolated Electron workflow with repository OCR exports and a generated test image. No historical capture dependency.
 const { _electron } = require("playwright"),
   fs = require("node:fs"),
   path = require("node:path"),
@@ -33,8 +33,13 @@ async function launch() {
     env,
   });
   page = await app.firstWindow();
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].setSize(1200, 800),
+  );
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
+  await page
+    .getByRole("heading", { name: "Cargo Operations", exact: true })
+    .waitFor();
   await page.waitForFunction(
     () => !document.body.textContent.includes("Loading saved operations"),
   );
@@ -42,7 +47,7 @@ async function launch() {
 async function nav(name) {
   await page.getByLabel("Open navigation", { exact: true }).click();
   await page
-    .getByRole("navigation")
+    .getByRole("navigation", { name: "Temporary navigation" })
     .getByRole("button", { name: new RegExp("^" + name) })
     .click();
 }
@@ -92,17 +97,17 @@ function note(text, mission, obj) {
     const fixtures = [agricultural, agricultural, multi, missing];
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i],
-        f = fixtures[i],
-        source = path.join(
-          process.env.APPDATA,
-          "Cargo Run",
-          "captures",
-          f.source.filename,
+        f = fixtures[i];
+      const hasImage = true;
+      fs.mkdirSync(path.join(folder, "captures"), { recursive: true });
+      for (const suffix of [".png", ".thumb.png"])
+        fs.writeFileSync(
+          path.join(folder, "captures", id + suffix),
+          Buffer.from(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZuUAAAAASUVORK5CYII=",
+            "base64",
+          ),
         );
-      const hasImage = fs.existsSync(source);
-      if (hasImage)
-        for (const suffix of [".png", ".thumb.png"])
-          fs.copyFileSync(source, path.join(folder, "captures", id + suffix));
       db.prepare("INSERT INTO ocr_captures(id,payload) VALUES(?,?)").run(
         id,
         JSON.stringify({
@@ -112,7 +117,7 @@ function note(text, mission, obj) {
           status: "Processed",
           displayId: "fixture",
           displayLabel: hasImage
-            ? "Genuine saved game image"
+            ? "Generated preview fixture; genuine repository OCR export"
             : "Original image unavailable; genuine OCR export",
           screenshot: hasImage ? id + ".png" : null,
           width: f.result.width,
@@ -325,7 +330,7 @@ function note(text, mission, obj) {
     );
     assert.deepEqual(errors, []);
     console.log(
-      "PASS v0.4.1 Windows: additive v4 migration preserving ledger/runs; genuine 34500/8 SCU automatic OCR-only import with monitoring off; visible import success without Check Changes; screenshot preview; repeated-id idempotence; compact duplicate choice; log acceptance pending-only; unique multi-objective promotion; single-field pickup correction; Dashboard/Manifest/History/evidence; restart; later live completion with zero invented earnings.",
+      "PASS v0.4.1 Windows: additive v4 migration preserving ledger/runs; genuine 34500/8 SCU automatic OCR-only import with monitoring off; visible import success without Check Changes; generated-image screenshot preview; repeated-id idempotence; compact duplicate choice; log acceptance pending-only; unique multi-objective promotion; single-field pickup correction; Dashboard/Manifest/History/evidence; restart; later live completion with zero invented earnings.",
     );
   } catch (e) {
     console.error(e);

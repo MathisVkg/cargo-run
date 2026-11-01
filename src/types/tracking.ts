@@ -40,6 +40,7 @@ export interface TrackingInfo {
   events: DiagnosticEvent[];
 }
 export interface AppSnapshot extends DomainSnapshot {
+  preferences: import("./preferences").UiPreferences;
   revision: number;
   databasePath: string;
   tracking: TrackingInfo;

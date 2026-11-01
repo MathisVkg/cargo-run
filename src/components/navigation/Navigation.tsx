@@ -4,19 +4,57 @@ import {
   History,
   Settings,
   ScanLine,
-  ArrowUpRight,
-  Box,
+  Files,
 } from "lucide-react";
 import { Overlay } from "../ui/Overlay";
 import { useCargoStore } from "../../stores/useCargoStore";
-import type { Page } from "../../types/models";
 const entries = [
-  { page: "Dashboard", icon: LayoutDashboard, detail: "Current operations" },
-  { page: "Manifest", icon: List, detail: "Cargo & delivery stops" },
-  { page: "History", icon: History, detail: "Contracts & closed runs" },
-  { page: "Scan Review", icon: ScanLine, detail: "Imports & corrections" },
-  { page: "Settings", icon: Settings, detail: "Application configuration" },
+  { page: "Dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { page: "Manifest", icon: List, label: "Manifest" },
+  { page: "Contracts", icon: Files, label: "Contracts" },
+  { page: "History", icon: History, label: "History" },
+  { page: "Scan Review", icon: ScanLine, label: "Scan History" },
+  { page: "Settings", icon: Settings, label: "Settings" },
 ] as const;
+function Items({ onClose }: { onClose(): void }) {
+  const page = useCargoStore((s) => s.page),
+    setPage = useCargoStore((s) => s.setPage);
+  return (
+    <>
+      {entries.map(({ page: target, icon: Icon, label }) => (
+        <button
+          key={target}
+          title={label}
+          aria-label={label}
+          aria-current={page === target ? "page" : undefined}
+          className={"nav-item " + (page === target ? "selected" : "")}
+          onClick={() => {
+            setPage(target);
+            onClose();
+          }}
+        >
+          <Icon size={19} />
+          <span>{label}</span>
+        </button>
+      ))}
+    </>
+  );
+}
+export function Sidebar() {
+  return (
+    <aside className="sidebar">
+      <p className="sidebar-label">OPERATIONS</p>
+      <nav aria-label="Main navigation">
+        <Items onClose={() => {}} />
+      </nav>
+      <p className="sidebar-foot">
+        LOCAL COMPANION
+        <br />
+        Fleet Operations 2.0
+      </p>
+    </aside>
+  );
+}
 export function Navigation({
   open,
   onClose,
@@ -24,46 +62,18 @@ export function Navigation({
   open: boolean;
   onClose(): void;
 }) {
-  const page = useCargoStore((s) => s.page);
-  const setPage = useCargoStore((s) => s.setPage);
-  const navigate = (target: Page) => {
-    setPage(target);
-    onClose();
-  };
   return (
     <Overlay
       open={open}
       onClose={onClose}
       title="Cargo Run"
-      subtitle="FLEET OPERATIONS"
+      subtitle="FLEET OPERATIONS 2.0"
       side="left"
     >
-      <nav aria-label="Main navigation">
-        {entries.map(({ page: item, icon: Icon, detail }) => (
-          <button
-            key={item}
-            className={"nav-item " + (item === page ? "selected" : "")}
-            aria-current={item === page ? "page" : undefined}
-            onClick={() => navigate(item)}
-          >
-            <Icon size={20} />
-            <span>
-              <strong>
-                {item === "Scan Review" ? "Scan History & Issues" : item}
-              </strong>
-              <small>{detail}</small>
-            </span>
-            <ArrowUpRight size={15} />
-          </button>
-        ))}
+      <nav aria-label="Temporary navigation">
+        <Items onClose={onClose} />
       </nav>
-      <div className="nav-footer">
-        <Box size={19} />
-        <span>
-          Cargo Run <span className="muted">/ 0.4.1</span>
-          <small>Local desktop companion</small>
-        </span>
-      </div>
+      <div className="nav-footer">Cargo Run / 0.5.0</div>
     </Overlay>
   );
 }

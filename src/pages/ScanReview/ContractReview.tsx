@@ -160,7 +160,7 @@ export function ContractReview({ capture }: { capture: CaptureRecord }) {
         ? "Unknown"
         : String(recognized)}{" "}
       {JSON.stringify(value) !== JSON.stringify(recognized) && (
-        <Badge tone="amber">Manual correction</Badge>
+        <Badge>Manual correction</Badge>
       )}
     </small>
   );

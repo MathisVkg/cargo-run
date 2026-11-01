@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Box, HardDrive, CircleHelp } from "lucide-react";
+import { HardDrive, CircleHelp } from "lucide-react";
 import { TopBar } from "./components/layout/TopBar";
-import { Navigation } from "./components/navigation/Navigation";
+import { Navigation, Sidebar } from "./components/navigation/Navigation";
 import { useCargoStore, initializeCargoStore } from "./stores/useCargoStore";
 import Dashboard from "./pages/Dashboard";
 import Manifest from "./pages/Manifest";
+import Contracts from "./pages/Contracts";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
 import ScanReview from "./pages/ScanReview";
@@ -29,15 +30,10 @@ export default function App() {
     <div className="app-shell">
       <TopBar onMenu={() => setNav(true)} />
       <div className="workspace">
-        <aside className="workspace-rail" aria-hidden="true">
-          <Box size={20} />
-          <span />
-          <div>CR / OPERATIONS</div>
-          <span />
-        </aside>
+        <Sidebar />
         <main key={page} className="page-content">
           {error && (
-            <div className="notice warning" role="alert">
+            <div className="notice error" role="alert">
               <span>{error}</span>
               <button className="button" onClick={dismissError}>
                 Dismiss
@@ -65,6 +61,8 @@ export default function App() {
             <Dashboard />
           ) : page === "Manifest" ? (
             <Manifest />
+          ) : page === "Contracts" ? (
+            <Contracts />
           ) : page === "History" ? (
             <History />
           ) : page === "Scan Review" ? (
@@ -89,7 +87,7 @@ export default function App() {
           >
             <CircleHelp size={13} />
           </button>
-          <span className="status-divider">/</span>v0.4.1
+          <span className="status-divider">/</span>v0.5.0
         </span>
       </footer>
       <Navigation open={nav} onClose={() => setNav(false)} />

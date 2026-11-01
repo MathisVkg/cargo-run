@@ -2,12 +2,22 @@ export type ContractStatus = "Active" | "Completed" | "Abandoned";
 export type ContractSource = "Log" | "OCR" | "Manual";
 export type DataOrigin = "Sample" | "Manual" | "Log" | "OCR";
 export type Page =
-  "Dashboard" | "Manifest" | "History" | "Settings" | "Scan Review";
+  | "Dashboard"
+  | "Manifest"
+  | "Contracts"
+  | "History"
+  | "Settings"
+  | "Scan Review";
 export interface Ship {
   id: string;
   name: string;
   manufacturer: string;
   cargoCapacitySCU: number;
+  availability?: string;
+  source?: string;
+  sourceRevision?: number;
+  updatedAt?: string;
+  catalogVersion?: string;
 }
 export interface CargoObjective {
   id: string;

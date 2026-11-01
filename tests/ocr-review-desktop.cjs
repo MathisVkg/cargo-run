@@ -24,9 +24,12 @@ let app;
     });
     const page = await app.firstWindow(),
       errors = [];
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].setSize(1200, 800),
+    );
     page.on("pageerror", (e) => errors.push(e.message));
     await page
-      .getByRole("heading", { name: "Dashboard", exact: true })
+      .getByRole("heading", { name: "Cargo Operations", exact: true })
       .waitFor();
     const id = randomUUID(),
       fixture = JSON.parse(
@@ -41,7 +44,7 @@ let app;
       source: "Manual",
       status: "Processed",
       displayId: "fixture",
-      displayLabel: "Actual saved 4K game screenshot",
+      displayLabel: "Generated preview; saved 4K OCR export",
       screenshot: id + ".png",
       width: 3840,
       height: 2160,
@@ -51,22 +54,15 @@ let app;
       result: fixture.result,
       observation: null,
     };
-    const source = path.join(
-      process.env.APPDATA,
-      "Cargo Run",
-      "captures",
-      fixture.source.filename,
+    // Preview transport is verified using a generated image; OCR coordinates remain from the repository export.
+    fs.mkdirSync(path.join(folder, "captures"), { recursive: true });
+    const png = Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZuUAAAAASUVORK5CYII=",
+      "base64",
     );
-    if (fs.existsSync(source)) {
-      fs.copyFileSync(source, path.join(folder, "captures", id + ".png"));
-      record.bytes = fs.statSync(source).size;
-      const thumb = source.replace(/\.png$/, ".thumb.png");
-      if (fs.existsSync(thumb))
-        fs.copyFileSync(
-          thumb,
-          path.join(folder, "captures", id + ".thumb.png"),
-        );
-    } else record.screenshot = null;
+    for (const suffix of [".png", ".thumb.png"])
+      fs.writeFileSync(path.join(folder, "captures", id + suffix), png);
+    record.bytes = png.length;
     const { DatabaseSync } = require("node:sqlite");
     const db = new DatabaseSync(path.join(folder, "cargo-run.sqlite"));
     db.prepare("INSERT INTO ocr_captures(id,payload) VALUES(?,?)").run(
@@ -84,7 +80,7 @@ let app;
     assert.equal(state.captures[0].attempts, 7);
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation")
+      .getByRole("navigation", { name: "Temporary navigation" })
       .getByRole("button", { name: /^Scan History/ })
       .click();
     await page
@@ -106,7 +102,7 @@ let app;
     });
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation")
+      .getByRole("navigation", { name: "Temporary navigation" })
       .getByRole("button", { name: /^Settings/ })
       .click();
     await page
@@ -192,7 +188,7 @@ let app;
       ),
     );
     console.log(
-      "PASS saved actual 4K OCR Reprocess, raw evidence/attempts preserved, protected screenshot preview, recorder F8 save/Escape cancellation/no capture, prototype status visible, automatic contract creation. Raw Input status: " +
+      "PASS saved actual 4K OCR Reprocess, raw evidence/attempts preserved, generated-image screenshot preview, recorder F8 save/Escape cancellation/no capture, prototype status visible, automatic contract creation. Raw Input status: " +
         state.inputPrototype.status +
         ".",
     );
