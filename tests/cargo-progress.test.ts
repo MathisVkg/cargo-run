@@ -262,7 +262,7 @@ describe("Physical cargo operations", () => {
     expect(s.database.getSetting("custom")).toEqual({ keep: true });
     expect(
       s.database.db.prepare("PRAGMA user_version").get()!.user_version,
-    ).toBe(6);
+    ).toBe(7);
   });
   it("reconciles supported cumulative log delivery without fabricating loading and ignores old events", () => {
     const s = setup();
@@ -432,16 +432,14 @@ describe("Cargo reconciliation and history integrity", () => {
       mission = randomUUID(),
       objective = randomUUID();
     s.store.setState({
-      contracts: s
-        .domain()
-        .contracts.map((c) => ({
-          ...c,
-          missionId: mission,
-          cargoObjectives: c.cargoObjectives.map((o) => ({
-            ...o,
-            externalObjectiveId: objective,
-          })),
+      contracts: s.domain().contracts.map((c) => ({
+        ...c,
+        missionId: mission,
+        cargoObjectives: c.cargoObjectives.map((o) => ({
+          ...o,
+          externalObjectiveId: objective,
         })),
+      })),
     });
     apply(s, "Load", 5);
     feed(
@@ -471,16 +469,14 @@ describe("Cargo reconciliation and history integrity", () => {
       mission = randomUUID(),
       objective = randomUUID();
     s.store.setState({
-      contracts: s
-        .domain()
-        .contracts.map((c) => ({
-          ...c,
-          missionId: mission,
-          cargoObjectives: c.cargoObjectives.map((o) => ({
-            ...o,
-            externalObjectiveId: objective,
-          })),
+      contracts: s.domain().contracts.map((c) => ({
+        ...c,
+        missionId: mission,
+        cargoObjectives: c.cargoObjectives.map((o) => ({
+          ...o,
+          externalObjectiveId: objective,
         })),
+      })),
     });
     apply(s, "Load", 5);
     const manual = s.cargoActivity(s.domain().contracts[0].id)[0];
@@ -498,17 +494,15 @@ describe("Cargo reconciliation and history integrity", () => {
     expect(() => s.cargoProgress(r)).toThrow(/latest/);
     const ship = s.domain().selectedShipId;
     s.store.setState({
-      contracts: s
-        .domain()
-        .contracts.map((c) => ({
-          ...c,
-          cargoObjectives: c.cargoObjectives.map((o) => ({
-            ...o,
-            loadedSCU: 1000,
-            quantitySCU: 1100,
-            loadedShipId: ship,
-          })),
+      contracts: s.domain().contracts.map((c) => ({
+        ...c,
+        cargoObjectives: c.cargoObjectives.map((o) => ({
+          ...o,
+          loadedSCU: 1000,
+          quantitySCU: 1100,
+          loadedShipId: ship,
         })),
+      })),
     });
     apply(s, "Unload", 1);
     expect(row(s).loadedSCU).toBe(999);

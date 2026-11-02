@@ -1,3 +1,4 @@
+import { lifecycleLine } from "./lifecycleParser";
 import { createHash } from "node:crypto";
 import type { MissionEvent, ParseResult } from "../../../src/types/tracking";
 const hash = (value: string): string =>
@@ -8,8 +9,12 @@ export function parseLogLine(
   line: string,
   receivedAt = new Date().toISOString(),
 ): ParseResult {
+  const lifecycle = lifecycleLine(line, receivedAt);
+  if (lifecycle) return lifecycle;
   const kindMatch =
-    /Contract Accepted:|New Objective:|Contract Complete:/i.exec(line);
+    /Contract Accepted:|New Objective:|Contract Complete:|Contract Abandoned:/i.exec(
+      line,
+    );
   if (!kindMatch) return { type: "ignore" };
   // Display-only duplicates often have no association metadata. They cannot create missions.
   const mission = missionPattern.exec(line);
@@ -54,11 +59,13 @@ export function parseLogLine(
     if (!title)
       return { type: "error", error: "Accepted contract has an empty title." };
     event = { ...base, kind: "Accepted", title };
-  } else if (/^Contract Complete:/i.test(message)) {
+  } else if (/^Contract (?:Complete|Abandoned):/i.test(message)) {
     event = {
       ...base,
-      kind: "Completed",
-      title: message.replace(/^Contract Complete:\s*/i, "").trim(),
+      kind: /^Contract Complete:/i.test(message) ? "Completed" : "Abandoned",
+      title: message
+        .replace(/^Contract (?:Complete|Abandoned):\s*/i, "")
+        .trim(),
     };
   } else {
     const objective =

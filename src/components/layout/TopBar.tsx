@@ -7,11 +7,9 @@ import type { NavigationMode } from "../../utils/navigation";
 export function TopBar({
   onMenu,
   navigationMode,
-  drawerOpen,
 }: {
   onMenu(): void;
   navigationMode: NavigationMode;
-  drawerOpen: boolean;
 }) {
   const ocr = useOcrStore((s) => s.state);
   const setPage = useCargoStore((s) => s.setPage);
@@ -35,20 +33,12 @@ export function TopBar({
       <div className="brand">
         <button
           aria-label={
-            navigationMode === "expanded"
-              ? "Collapse navigation"
-              : navigationMode === "compact"
-                ? "Hide navigation"
-                : "Open navigation"
+            navigationMode === "hidden" ? "Open navigation" : "Hide navigation"
           }
           title={
-            navigationMode === "expanded"
-              ? "Collapse navigation"
-              : navigationMode === "compact"
-                ? "Hide navigation"
-                : "Open navigation"
+            navigationMode === "hidden" ? "Open navigation" : "Hide navigation"
           }
-          aria-expanded={navigationMode === "expanded" || drawerOpen}
+          aria-expanded={navigationMode !== "hidden"}
           className="icon-button navigation-toggle"
           onClick={onMenu}
         >

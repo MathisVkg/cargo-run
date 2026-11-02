@@ -1,4 +1,13 @@
 import {
+  retainReward,
+  retainLifecycleEvidence,
+  lifecycleIssues,
+  lifecycleHistory,
+  recordLifecycleTransition,
+  reconcileTerminalIdentities,
+  resolveLifecycle,
+} from "./lifecycle";
+import {
   prepareReview,
   planReview,
   persistReview,
@@ -130,6 +139,14 @@ export class TrackingService {
       }
     }
     this.config = this.database.getMonitorConfig();
+    this.database.transaction(() => {
+      const current = this.domain().contracts,
+        next = reconcileTerminalIdentities(this.database, current);
+      if (versionOf(current) !== versionOf(next)) {
+        this.store.setState({ contracts: next });
+        this.database.saveDomain(this.domain());
+      }
+    });
   }
   domain(): DomainSnapshot {
     const s = this.store.getState();
@@ -146,6 +163,7 @@ export class TrackingService {
     return {
       ...this.domain(),
       contracts: this.domain().contracts.filter((c) => !c.supersededBy),
+      lifecycleIssues: lifecycleIssues(this.database, this.domain().contracts),
       preferences: structuredClone(this.preferences),
       revision: this.revision,
       databasePath: this.database.path,
@@ -253,6 +271,25 @@ export class TrackingService {
         .saveContract(input.draft as ContractDraft, input.id);
     });
   }
+  resolveLifecycle(input: unknown): AppSnapshot {
+    return this.mutate(() =>
+      this.store.setState({
+        contracts: resolveLifecycle(
+          this.database,
+          this.domain().contracts,
+          input,
+        ),
+      }),
+    );
+  }
+  lifecycleHistory(id: unknown) {
+    if (
+      typeof id !== "string" ||
+      !this.domain().contracts.some((c) => c.id === id)
+    )
+      throw Error("Contract not found.");
+    return lifecycleHistory(this.database, id);
+  }
   cargoProgress(input: unknown): AppSnapshot {
     return this.mutate(() => {
       const d = this.domain();
@@ -296,6 +333,13 @@ export class TrackingService {
           });
           this.database.saveDomain(this.domain());
           persistReview(this.database, next);
+          this.store.setState({
+            contracts: reconcileTerminalIdentities(
+              this.database,
+              this.domain().contracts,
+            ),
+          });
+          this.database.saveDomain(this.domain());
         }
         const captures = new CaptureRepository(this.database),
           c = captures.get(next.link.captureId);
@@ -686,7 +730,29 @@ export class TrackingService {
             changed = true;
             continue;
           }
+          if (parsed.type === "reward") {
+            if (retainReward(this.database, parsed, line.text, context)) {
+              this.database.diagnostic(
+                "Unattributed reward",
+                "Award retained as evidence only; amount/timing do not verify mission attribution or earnings.",
+                line.text,
+                context,
+              );
+              changed = true;
+            }
+            continue;
+          }
           const event = parsed.event;
+          if (event.kind === "Completed" || event.kind === "Abandoned")
+            changed =
+              retainLifecycleEvidence(
+                this.database,
+                event.id,
+                event.kind,
+                line.text,
+                context,
+                event,
+              ) || changed;
           if (
             (
               this.database.getSetting<string[]>("tracking.archivedMissions") ??
@@ -730,6 +796,12 @@ export class TrackingService {
               pending,
             );
             if (inLedger) {
+              recordLifecycleTransition(
+                this.database,
+                this.store.getState().contracts,
+                result.contracts,
+                pending,
+              );
               reconcileLogProgress(
                 this.database,
                 this.store.getState().contracts,
@@ -785,7 +857,15 @@ export class TrackingService {
             event,
           );
         }
-        if (changed) this.database.saveDomain(this.domain());
+        if (changed) {
+          this.store.setState({
+            contracts: reconcileTerminalIdentities(
+              this.database,
+              this.domain().contracts,
+            ),
+          });
+          this.database.saveDomain(this.domain());
+        }
         if (checkpoint) this.database.saveCheckpoint(source.path, checkpoint);
       });
     } catch (e) {

@@ -87,7 +87,7 @@ let app;
       await page.getByLabel("Hide navigation", { exact: true }).first().click();
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation", { name: "Temporary navigation" })
+      .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name: /^Scan History/ })
       .click();
     await page
@@ -116,7 +116,7 @@ let app;
       await page.getByLabel("Hide navigation", { exact: true }).first().click();
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation", { name: "Temporary navigation" })
+      .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name: /^Settings/ })
       .click();
     await page

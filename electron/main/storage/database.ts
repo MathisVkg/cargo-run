@@ -25,7 +25,7 @@ export class CargoDatabase {
     const version = Number(
       (this.db.prepare("PRAGMA user_version").get() as Row).user_version,
     );
-    if (version > 6) {
+    if (version > 7) {
       this.db.close();
       throw new Error(
         "This database was created by a newer Cargo Run version. No data was changed.",
@@ -88,6 +88,12 @@ export class CargoDatabase {
         for (const c of projection) this.savePendingMission(c);
       });
     if (version < 6) this.migrateProgress();
+    if (version < 7)
+      this.transaction(() =>
+        this.db.exec(
+          "CREATE TABLE IF NOT EXISTS lifecycle_evidence(id TEXT PRIMARY KEY,mission_id TEXT,kind TEXT NOT NULL,payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS unattributed_rewards(id TEXT PRIMARY KEY,payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS lifecycle_activity(id TEXT PRIMARY KEY,contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,payload TEXT NOT NULL); PRAGMA user_version=7;",
+        ),
+      );
   }
   private migrateProgress() {
     this.transaction(() => {
@@ -259,6 +265,31 @@ export class CargoDatabase {
       .run(path, JSON.stringify(point));
   }
   recordEvent(event: MissionEvent, source: LogSource): boolean {
+    if (event.kind === "Completed" || event.kind === "Abandoned") {
+      const row = this.db
+        .prepare("SELECT payload FROM mission_events WHERE id=?")
+        .get(event.id);
+      if (row) {
+        const old = JSON.parse(String(row.payload)) as MissionEvent;
+        if (
+          (!old.title && event.title) ||
+          (!old.timestamp && event.timestamp)
+        ) {
+          Object.assign(event, {
+            ...old,
+            title: old.title ?? event.title,
+            timestamp: old.timestamp ?? event.timestamp,
+          });
+          this.db
+            .prepare(
+              "UPDATE mission_events SET event_at=?,payload=? WHERE id=?",
+            )
+            .run(event.timestamp, JSON.stringify(event), event.id);
+          return true;
+        }
+        return false;
+      }
+    }
     if (event.kind === "Objective") {
       const equivalent = (
         this.db

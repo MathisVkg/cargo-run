@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { HardDrive, CircleHelp } from "lucide-react";
 import { TopBar } from "./components/layout/TopBar";
-import { Navigation, Sidebar } from "./components/navigation/Navigation";
+import { Sidebar } from "./components/navigation/Navigation";
 import { useCargoStore, initializeCargoStore } from "./stores/useCargoStore";
 import Dashboard from "./pages/Dashboard";
 import Manifest from "./pages/Manifest";
@@ -19,17 +19,20 @@ export default function App() {
   const width = useSyncExternalStore(subscribeWidth, () => window.innerWidth);
   const preferred = useCargoStore((s) => s.preferences.navigationMode);
   const setPreferences = useCargoStore((s) => s.setPreferences);
-  const navigationMode = navigationModeForWidth(width, preferred);
+  const [narrowOpen, setNarrowOpen] = useState(false);
+  const narrow = width < 1200;
+  const navigationMode = navigationModeForWidth(width, preferred, narrowOpen);
   const page = useCargoStore((s) => s.page);
   const setPage = useCargoStore((s) => s.setPage);
   const sampleMode = useCargoStore((s) => s.sampleMode);
-  const [nav, setNav] = useState(false);
-  useEffect(() => setNav(false), [width, navigationMode]);
+  useEffect(() => setNarrowOpen(false), [narrow]);
   const toggleNavigation = () => {
-    if (navigationMode === "hidden") setNav((v) => !v);
-    else
+    if (narrow) {
+      setNarrowOpen((v) => !v);
+      return;
+    } else
       void setPreferences({
-        navigationMode: navigationMode === "expanded" ? "compact" : "hidden",
+        navigationMode: navigationMode === "hidden" ? "compact" : "hidden",
       });
   };
   const ready = useCargoStore((s) => s.ready);
@@ -45,13 +48,9 @@ export default function App() {
   }, []);
   return (
     <div className="app-shell">
-      <TopBar
-        onMenu={toggleNavigation}
-        navigationMode={navigationMode}
-        drawerOpen={nav}
-      />
+      <TopBar onMenu={toggleNavigation} navigationMode={navigationMode} />
       <div className="workspace">
-        <Sidebar mode={nav ? "hidden" : navigationMode} width={width} />
+        <Sidebar mode={navigationMode} width={width} />
         <main key={page} className="page-content">
           {error && (
             <div className="notice error" role="alert">
@@ -108,14 +107,9 @@ export default function App() {
           >
             <CircleHelp size={13} />
           </button>
-          <span className="status-divider">/</span>v0.6.0
+          <span className="status-divider">/</span>v0.6.1
         </span>
       </footer>
-      <Navigation
-        open={nav && navigationMode === "hidden"}
-        onClose={() => setNav(false)}
-        width={width}
-      />
     </div>
   );
 }

@@ -53,38 +53,32 @@ async function sidebar(mode) {
         y: r.y,
         width: r.width,
         height: r.height,
-        right: r.right,
         bottom: r.bottom,
-        cy: r.y + r.height / 2,
         cx: r.x + r.width / 2,
+        cy: r.y + r.height / 2,
       };
     };
-    const nav = el.querySelector("nav"),
-      first = nav.querySelector("button"),
+    const first = el.querySelector(".sidebar-primary button"),
+      settings = el.querySelector(".sidebar-secondary > button"),
       control = el.querySelector(".sidebar-controls button");
     return {
-      gap: rect(control).y - rect(nav).bottom,
-      rowGap: parseFloat(getComputedStyle(nav).rowGap),
+      first: rect(first),
+      settings: rect(settings),
       control: rect(control),
-      item: rect(first),
-      controlIcon: rect(control.querySelector("svg")),
-      itemIcon: rect(first.querySelector("svg")),
-      footerVisible:
-        getComputedStyle(el.querySelector(".sidebar-foot")).display !== "none",
-      footerGap:
-        rect(el).bottom - rect(el.querySelector(".sidebar-foot")).bottom,
+      icon: rect(control.querySelector("svg")),
+      bottomGap: rect(el).bottom - rect(control).bottom,
+      text: control.textContent.trim(),
     };
   });
-  assert.equal(data.gap, data.rowGap);
-  assert.equal(data.control.height, 40);
-  assert.equal(data.item.height, 40);
-  assert.equal(data.controlIcon.width, 19);
-  assert.equal(data.controlIcon.height, 19);
-  assert(Math.abs(data.controlIcon.cx - data.itemIcon.cx) < 1);
-  if (mode === "expanded") {
-    assert(data.footerVisible);
-    assert(data.footerGap <= 24);
-  }
+  assert.equal(data.first.height, 40);
+  assert.equal(data.control.height, 32);
+  assert.equal(data.icon.width, 19);
+  assert.equal(data.text, "");
+  assert(data.settings.y > data.first.bottom + 100);
+  assert(data.bottomGap <= 28);
+  if (mode === "expanded")
+    assert(Math.abs(data.settings.cy - data.control.cy) < 1);
+  else assert(Math.abs(data.first.cx - data.control.cx) < 1);
   metrics.push({ navigation: mode, ...data });
 }
 async function footers(context, wrapped = false) {
@@ -277,6 +271,8 @@ async function footers(context, wrapped = false) {
     await nav("Dashboard");
     await footers("1440 compact Dashboard");
     await resize(1100, 700);
+    await page.locator(".sidebar").waitFor({ state: "hidden" });
+    await page.getByLabel("Open navigation", { exact: true }).click();
     await sidebar("compact");
     await footers("1100 compact Dashboard");
     await page.screenshot({
@@ -390,7 +386,7 @@ async function footers(context, wrapped = false) {
       JSON.stringify(metrics, null, 2),
     );
     console.log(
-      "PASS v0.5.2 Windows: 1440 expanded/compact and 1100 compact; sidebar controls directly below navigation with matched 40px buttons/19px icons; shared Dashboard/Contracts footers; actual OCR/Evidence/Details text and Edit/Abandon SVG centerlines within 1 CSS px; 32px actions; source variants, long titles, bottom alignment, constrained wrapping, hover/focus; Details/Edit/Abandon cancellation, Log permissions; preferences restart and historical titles/SQL payloads unchanged.",
+      "PASS v0.5.2 Windows: 1440 expanded/compact and 1100 compact; bottom Settings and a centered icon-only toggle; 40px navigation rows/19px icons; shared Dashboard/Contracts footers; actual OCR/Evidence/Details text and Edit/Abandon SVG centerlines within 1 CSS px; 32px actions; source variants, long titles, bottom alignment, constrained wrapping, hover/focus; Details/Edit/Abandon cancellation, Log permissions; preferences restart and historical titles/SQL payloads unchanged.",
     );
   } catch (e) {
     if (page)

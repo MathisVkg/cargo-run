@@ -3002,3 +3002,78 @@ h3 {
   padding: 16px;
   margin: 10px 0;
 }
+
+.lifecycle-issues {
+  padding: 18px;
+  margin-bottom: 18px;
+}
+.lifecycle-issues > details {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+}
+.lifecycle-issues summary {
+  cursor: pointer;
+  color: var(--accent-light);
+}
+.lifecycle-issues select {
+  max-width: 100%;
+  display: block;
+  margin: 8px 0;
+}
+.lifecycle-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+/* v0.6.1: one persistent sidebar; visibility belongs to the hamburger. */
+.sidebar .sidebar-main-navigation {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
+}
+.sidebar-primary {
+  display: grid;
+  gap: 5px;
+}
+.sidebar-secondary {
+  margin-top: auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding-top: 16px;
+}
+.sidebar-secondary > .nav-item {
+  flex: 1;
+  min-width: 0;
+}
+.sidebar-secondary .sidebar-controls {
+  margin: 0;
+  display: block;
+  flex: none;
+}
+.sidebar-mode-toggle {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+.sidebar.compact {
+  display: flex;
+}
+.sidebar.compact .sidebar-secondary {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+.sidebar.compact .sidebar-mode-toggle {
+  margin: 0 auto;
+}
+.sidebar-mode-toggle:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

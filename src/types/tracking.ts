@@ -40,6 +40,7 @@ export interface TrackingInfo {
   events: DiagnosticEvent[];
 }
 export interface AppSnapshot extends DomainSnapshot {
+  lifecycleIssues?: import("./lifecycle").LifecycleIssue[];
   preferences: import("./preferences").UiPreferences;
   revision: number;
   databasePath: string;
@@ -65,7 +66,7 @@ export interface LogSource {
 }
 export interface MissionEvent {
   id: string;
-  kind: "Accepted" | "Objective" | "Completed";
+  kind: "Accepted" | "Objective" | "Completed" | "Abandoned";
   missionId: string;
   objectiveId: string | null;
   timestamp: string | null;
@@ -77,6 +78,13 @@ export interface MissionEvent {
   deliveredSCU?: number;
 }
 export type ParseResult =
+  | {
+      type: "reward";
+      id: string;
+      timestamp: string | null;
+      receivedAt: string;
+      amount: number;
+    }
   | { type: "event"; event: MissionEvent }
   | { type: "error"; error: string }
   | { type: "ignore" };

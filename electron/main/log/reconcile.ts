@@ -8,7 +8,7 @@ export function applyMissionEvent(
   const existing = contracts.find(
     (c) => c.missionId === event.missionId && !c.supersededBy,
   );
-  const time = event.timestamp ?? event.receivedAt;
+
   if (event.kind === "Accepted") {
     if (existing) return { contracts, resolved: true };
     const id = "log-" + event.missionId;
@@ -31,7 +31,16 @@ export function applyMissionEvent(
     };
   }
   if (!existing) return { contracts, resolved: false };
-  if (event.kind === "Completed")
+  if (
+    (event.kind === "Completed" || event.kind === "Abandoned") &&
+    existing.status !== "Active" &&
+    !(
+      existing.status === event.kind &&
+      (!existing.lifecycle || (!existing.lifecycle.eventAt && event.timestamp))
+    )
+  )
+    return { contracts, resolved: true };
+  if (event.kind === "Completed" || event.kind === "Abandoned")
     return {
       resolved: true,
       contracts: contracts.map((c) =>
@@ -39,8 +48,15 @@ export function applyMissionEvent(
           ? c
           : {
               ...c,
-              status: "Completed",
-              completedAt: time,
+              status: event.kind as "Completed" | "Abandoned",
+              completedAt: event.timestamp ?? undefined,
+              lifecycle: {
+                missionId: event.missionId,
+                eventId: event.id,
+                kind: event.kind as "Completed" | "Abandoned",
+                eventAt: event.timestamp,
+                receivedAt: event.receivedAt,
+              },
               confirmedEarnings: c.confirmedEarnings,
             },
       ),

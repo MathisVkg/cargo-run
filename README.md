@@ -1,6 +1,20 @@
-# Cargo Run 0.6.0 — Fleet Operations 2.0
+# Cargo Run 0.6.1 — Fleet Operations 2.0
 
 Cargo Run is a local Windows companion for Star Citizen hauling. The graphite and royal-purple workspace organizes accepted contracts, planned cargo, pickups and deliveries. OCR remains the primary contract source; Game.log is optional secondary evidence. SQLite, offline recognition, capture backends, identity matching and screenshot retention remain in place.
+
+## Completion reliability and navigation (v0.6.1)
+
+Supported Game.log completion/abandonment closes contracts with verified MissionIds and records the actual event timestamp when present. The parser now handles explicit MissionEnded / EndMission terminal records alongside Contract Complete notifications. Different representations and replay normalize to one semantic transition. Saved verified terminal evidence is also reconciled at startup without an OCR rescan.
+
+OCR-created contracts may intentionally have no MissionId. Title, payout and nearest time never establish identity. Automatic late association requires unique matching non-fallback objective identifiers and complete cargo agreement. Otherwise Dashboard offers a short **mission lifecycle association** issue: choose the correct active contract, confirm it is the same in-game mission, and apply completion/abandonment. Genuine ambiguity remains a user decision. Unmatched evidence is retained without creating placeholder contracts.
+
+Closure preserves physical inventory and manual progress. A completed/abandoned contract with 3 SCU onboard still uses its original ship's capacity and appears in Manifest → Retained onboard inventory for explicit unload/correction. Unknown cargo remains unconfirmed. No loading or delivery is fabricated.
+
+Awarded aUEC notifications are retained as **Unattributed reward** evidence. An empty MissionId, matching amount or nearby completion does not confirm earnings. Reward confirmation remains unsupported.
+
+Schema **7** adds bounded terminal/reward evidence and contract-owned lifecycle audit, preserving existing data and the v0.6.0 cargo model. Backups/reset include the new tables. Contract Details → Mission Lifecycle shows the audit with technical identity collapsed.
+
+The reported November 2 log was not attached, and the read-only inspected local profile contained no matching mission/configured log. These changes fix code-reproduced gaps; the precise cause and raw format in that gameplay session still require verification. See the handoff for supported syntax and exact Star Citizen test steps.
 
 ## Cargo loading and delivery (v0.6.0)
 
@@ -30,13 +44,13 @@ SQLite migration **6** preserves existing required/delivered values and all othe
 - **Add/Edit Contract:** centered 680px native-dialog modal, scrollable body, visible Save/Cancel footer, multiple objectives, total SCU, validation, duplicate-submit protection and an unsaved-changes warning.
 - **History / Scan History / Settings:** existing workflows share the new semantic palette. Settings order is OCR & Capture, optional Game.log, Ships, Storage & Data, Local Data Management, collapsed Advanced & Diagnostics, Application Information.
 
-The sidebar follows actual viewport width and a saved expanded / compact / hidden preference. Wide windows (1400px+) default to 212px expanded; 1100–1399px constrain it to 62px compact while retaining the wide preference. Below 1100px the effective mode is hidden, but the Windows minimum intentionally remains 1100 × 700. The hamburger beside Cargo Run collapses expanded, hides compact, and opens a temporary drawer from hidden. Compact mode can expand when width permits; the drawer can pin expanded/compact navigation. Selecting a page or pressing Escape closes the temporary drawer; outside clicks close only navigation. Persistent and temporary navigation never overlap, and width transitions do not animate. The title bar retains native controls and transient OCR success.
+The sidebar groups Dashboard, Manifest, Contracts, History and Scan History at the top, with Settings and an icon-only compact/expanded toggle anchored to the bottom. The hamburger hides either visible mode completely and reopens compact mode; there is no temporary drawer or duplicate hide/pin control. At 1400px+ choose expanded (212px) or compact (62px). At 1200–1399px constrain to compact. Below 1200px hide automatically without overwriting the saved wide preference; explicitly reopening remains compact, and the hamburger hides it again. Narrow reopening is temporary; returning wide restores the saved preference. Expansion is disabled below 1400px. Page selection, Escape and outside clicks leave the persistent sidebar in place. Width changes do not animate; window controls and drag regions remain intact.
 
 Centered Add/Edit, Details, Finish Run and Ship Selector dialogs **do not close on outside clicks**. Escape closes read-only dialogs, protects unsaved edits with a discard warning, and cancels confirmations without executing them. Shared native dialogs are portaled outside the draggable title bar, with no slide/scale/discrete exit transition and with focus trapping/restoration. Ship search and the concept checkbox now accept mouse and keyboard interaction; a status line explains extra concept matches or no additional matches.
 
 Location cards link directly to one contract or expand a list of associated contracts, each with the relevant remaining SCU. Commodity quantities explicitly say “SCU remaining”; a secondary line labels delivered / required. Contract actions stay in the linked details. Contracts search, filter, count and Add share an aligned, wrapping toolbar.
 
-Sidebar collapse/hide controls sit directly below the main items, using the same row height and icon alignment; application information remains at the bottom. Shared Contract Cards in Dashboard → By Contract and Contracts center source/evidence and Details/Edit/Abandon on the same axis. Actions stay 32px high, long-title cards keep bottom-aligned footers, and metadata/actions wrap into clean rows when space requires.
+Sidebar icons retain accessible labels/tooltips. Settings and the small icon-only mode toggle stay anchored at the bottom; application information remains in the status bar. Shared Contract Cards in Dashboard → By Contract and Contracts center source/evidence and Details/Edit/Abandon on the same axis. Actions stay 32px high, long-title cards keep bottom-aligned footers, and metadata/actions wrap into clean rows when space requires.
 
 The shared tokens in `src/styles/global.css` are background #181A1D, secondary #23272B, panel #333B42, accent #613DC1, hover #7956D8, light accent #A994F0, text #F2F1E9, secondary text #A2B1BD, success #8BB79B, error #D57B84, warning #D8AD6F and border #424A52. Inter uses the installed system font when available, with Segoe UI fallback; numerical statistics use a restrained monospace stack. There are no downloaded fonts, gradients or added UI libraries.
 
@@ -66,7 +80,7 @@ The updater validates source column definitions, paginates article metadata, che
 
 ### Local migration
 
-SQLite schema is **6**. Catalog refresh transactionally upserts only the ships table. The separate schema-6 migration initializes physical-load metadata without changing existing required/delivered amounts, evidence, audits, checkpoints or run history. Existing selected IDs are preserved. The additive `ui.preferences` setting stores navigation mode, view, favorites and recent IDs. Existing records default to expanded navigation without resetting other settings. A fixed, validated, trusted-sender IPC endpoint accepts only navigation mode, Dashboard view and known unique favorite IDs; the main process manages recents. Database access stays in main, context isolation/sandbox remain enabled and renderer Node integration remains disabled.
+SQLite schema is **7**. Catalog refresh transactionally upserts only the ships table. The separate schema-6 migration initializes physical-load metadata without changing existing required/delivered amounts, evidence, audits, checkpoints or run history. Existing selected IDs are preserved. The additive `ui.preferences` setting stores navigation mode, view, favorites and recent IDs. Existing records default to expanded navigation without resetting other settings. A fixed, validated, trusted-sender IPC endpoint accepts only navigation mode, Dashboard view and known unique favorite IDs; the main process manages recents. Database access stays in main, context isolation/sandbox remain enabled and renderer Node integration remains disabled.
 
 ## Run and verify
 
@@ -171,11 +185,11 @@ Use **Details / evidence** from Dashboard, Manifest or History for screenshots, 
 
 SQLite, WAL, foreign keys, full synchronous commits, the serial OCR queue, 12-pending/50-capture/512-MiB limits, protected UUID image protocol and local English Tesseract remain. Settings shows actual data paths. When protected evidence fills storage, explicit cleanup/unlink/clear is still needed.
 
-Back up the database and captures folder with Cargo Run closed before upgrading. Older binaries intentionally refuse schema 6. Restore a pre-upgrade backup for rollback; do not lower PRAGMA user_version manually.
+Back up the database and captures folder with Cargo Run closed before upgrading. Older binaries intentionally refuse schema 7. Restore a pre-upgrade backup for rollback; do not lower PRAGMA user_version manually.
 
 ## Exact in-game test
 
-1. Back up local data with Cargo Run closed, launch v0.6.0, and leave Game.log monitoring and automatic screenshot capture off.
+1. Back up local data with Cargo Run closed, launch v0.6.1, and leave Game.log monitoring and automatic screenshot capture off.
 2. Show the accepted **Rookie Rank - Direct Small Cargo Haul**, 34,500 aUEC, 8 SCU Agricultural Supplies, NB Int. Spaceport → Port Tressler above microTech. Capture once. Without opening review, verify one active contract, correct route/SCU/reward and an Imported entry.
 3. Inspect the saved screenshot. Reprocess the same CaptureId: contract count must not increase. Capture the same OCR-only instance again: choose the existing contract from the compact issue; no row reconstruction should be required.
 4. With two genuinely separate identical accepted instances, choose **Create a separate contract**. Keep different MissionIds separate.
@@ -220,14 +234,14 @@ For a fresh v0.6.0 test, use Reset, record its backup path, verify empty pages a
 
 ## Verification and known limits
 
-Task 05: TypeScript, lint, **272 tests across 21 files**, and production build pass (253 existing tests plus 19 focused cargo regressions). All prior behavior tests remain, with schema-version assertions updated to 6 and the old delivered-value edit test using supported load/deliver operations.
+Task 06.1: TypeScript, lint, **293 tests across 22 files**, and production build pass (272 prior tests plus 21 lifecycle regressions). Schema expectations now target 7; navigation regressions test the requested persistent sidebar.
 
-Actual Windows Electron tests pass for partial/full loading, partial delivery/undo, corrections, identical allocations, ship switching, retained closed inventory, run finalization, activity/restart and foreign keys. Existing alignment, polish, Fleet/manual, Game.log, automatic import/evidence, OCR review and data-management suites also pass using isolated profiles. The user's actual local data and Game.log were untouched.
+The new Windows lifecycle suite uses an isolated profile and synthetic owned Game.log to exercise real monitoring/polling, OCR-created contracts, explicit unbound association without a rescan, verified automatic completion/abandonment, retained cargo, timestamps/audit, reward isolation, duplicates, restart and foreign keys. It checks 1440 × 900, 1100 × 700 and maximized navigation geometry/preferences. Existing alignment, polish, Fleet/manual, tracking, automatic import, OCR review, cargo progress and data-management Windows suites pass. Native automatic screenshot capture/offline OCR also passes against a synthetic fixture application.
 
-Cargo progress is manually reported or supported notification evidence, not a verified inventory API. One objective can allocate cargo to one ship at a time; explicit unload/reload is required to move it. Loaded-source identity consolidation and history cleanup are blocked until physical allocations are explicitly resolved. Cleanup backups require manual whole-snapshot restoration; filesystem rollback is not guaranteed.
+No user's production database or game log was changed by verification. The standard local profile was inspected read-only for diagnosis, but the reported November 2 mission/log was not available there. No v0.6.1 live Star Citizen, physical in-game shortcut or Vulkan/fullscreen capture pass is claimed.
 
-No live Star Citizen session, fresh screenshot OCR accuracy, physical in-game shortcut, Vulkan/exclusive fullscreen or native full-display capture was revalidated. Electron and optional Raw Input backends remain unchanged; Listening/registration does not prove callback delivery. Genuine identity ambiguity still requires a choice.
+Generic failure/cancel formats remain unsupported until backed by exact evidence. Lifecycle issues display up to 20 missions/10 candidates from the latest 200 terminal events; raw terminal/reward evidence and diagnostics are bounded at 200. Canonical mission events and unattributed award records remain stored. Genuine ambiguous or unverified identity needs explicit review; title/reward/recency alone cannot close a contract. Reward confirmation remains unsupported.
 
-The genuine 61,500 fixture reads 7 SCU and the genuine 65,250 fixture reads 25 SCU; representative regression quantities are separate synthetic variants. Production quantities are never changed to fit an example.
+Cargo progress remains manual reports or supported log evidence. One objective allocates cargo to one ship at a time; transfers require explicit unload/reload. History cleanup blocks closed onboard inventory until resolved, and backup restoration remains manual.
 
-See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for the complete file list, migration/audit design, limitations and detailed real-game testing instructions.
+See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for the full file list, root-cause findings, schema/association rules, verification boundaries and detailed real-game tests.

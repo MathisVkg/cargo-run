@@ -227,6 +227,12 @@ else
       register("ocr:clear", () => ocr.clear());
       register("ocr:displays", () => ocr.refreshDisplays());
       register("cargo:getState", () => service.snapshot());
+      register(
+        "lifecycle:resolve",
+        (input) => service.resolveLifecycle(input),
+        true,
+      );
+      register("lifecycle:history", (id) => service.lifecycleHistory(id));
       register("cargo:progress", (input) => service.cargoProgress(input), true);
       register("cargo:activity", (id) => service.cargoActivity(id));
       register("cargo:saveContract", (input) => service.saveContract(input));

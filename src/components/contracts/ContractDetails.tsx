@@ -1,3 +1,4 @@
+import { LifecycleHistory } from "./LifecycleHistory";
 import { ProgressControls } from "../cargo/ProgressControls";
 import { CargoActivityPanel } from "../cargo/CargoActivity";
 import { loaded, awaitingPickup } from "../../types/progress";
@@ -125,6 +126,7 @@ export function ContractDetails({
                   </div>
                 </dl>
               </section>
+              <LifecycleHistory contract={contract} />
               <CargoActivityPanel contract={contract} />
               <section aria-label="Cargo objectives">
                 <h2>Cargo Objectives</h2>

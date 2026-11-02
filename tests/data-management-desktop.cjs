@@ -49,7 +49,7 @@ async function nav(name) {
   else {
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation", { name: "Temporary navigation" })
+      .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name, exact: true })
       .click();
   }

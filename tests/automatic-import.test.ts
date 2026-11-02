@@ -456,7 +456,7 @@ describe("operational automatic OCR importing", () => {
     expect(new CaptureRepository(restored.database).get(c.id)).not.toBeNull();
     expect(
       restored.database.db.prepare("PRAGMA user_version").get()?.user_version,
-    ).toBe(6);
+    ).toBe(7);
   });
 });
 describe("late identity and unknown timing", () => {

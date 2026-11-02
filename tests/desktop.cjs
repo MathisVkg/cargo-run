@@ -35,7 +35,7 @@ async function nav(name) {
   if (!(await main.isVisible())) {
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation", { name: "Temporary navigation" })
+      .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name, exact: true })
       .click();
     return;
@@ -104,7 +104,7 @@ async function choose(query, name) {
         .getByRole("navigation", { name: "Main navigation", exact: true })
         .getByRole("button")
         .count(),
-      6,
+      7,
     );
     await nav("Contracts");
     assert.equal(
@@ -116,39 +116,19 @@ async function choose(query, name) {
     );
     await nav("Dashboard");
     await resize(1100, 700);
+    await page.locator(".sidebar").waitFor({ state: "hidden" });
+    await page.getByLabel("Open navigation", { exact: true }).click();
+    await page.locator(".sidebar.compact").waitFor();
     assert.equal(
       await page
         .locator(".sidebar")
-        .evaluate((el) => el.getBoundingClientRect().width),
+        .evaluate((e) => e.getBoundingClientRect().width),
       62,
     );
-    if (
-      await page
-        .getByLabel("Hide navigation", { exact: true })
-        .first()
-        .isVisible()
-    )
-      await page.getByLabel("Hide navigation", { exact: true }).first().click();
-    await page.getByLabel("Open navigation", { exact: true }).click();
-    await page
-      .getByRole("navigation", { name: "Temporary navigation" })
-      .waitFor();
     await page.keyboard.press("Escape");
-    await page
-      .getByRole("navigation", { name: "Temporary navigation" })
-      .waitFor({ state: "hidden" });
-    if (
-      await page
-        .getByLabel("Hide navigation", { exact: true })
-        .first()
-        .isVisible()
-    )
-      await page.getByLabel("Hide navigation", { exact: true }).first().click();
-    await page.getByLabel("Open navigation", { exact: true }).click();
-    await page.mouse.click(900, 300);
-    await page
-      .getByRole("navigation", { name: "Temporary navigation" })
-      .waitFor({ state: "hidden" });
+    assert.equal(await page.locator(".sidebar.compact").count(), 1);
+    await page.getByLabel("Hide navigation", { exact: true }).click();
+    await page.locator(".sidebar").waitFor({ state: "hidden" });
     await page
       .getByRole("button", { name: "Add Contract", exact: true })
       .click();

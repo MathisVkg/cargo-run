@@ -37,7 +37,7 @@ async function nav(name) {
   else {
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation", { name: "Temporary navigation" })
+      .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name, exact: true })
       .click();
   }
@@ -243,7 +243,7 @@ async function record(control, action, quantity) {
     const db = new DatabaseSync(path.join(folder, "cargo-run.sqlite"), {
       readOnly: true,
     });
-    assert.equal(db.prepare("PRAGMA user_version").get().user_version, 6);
+    assert.equal(db.prepare("PRAGMA user_version").get().user_version, 7);
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
     db.close();
     assert.deepEqual(errors, []);

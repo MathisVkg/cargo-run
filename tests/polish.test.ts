@@ -13,7 +13,9 @@ describe("Adaptive navigation preferences", () => {
   it("constrains the effective layout without changing the wide preference", () => {
     for (const preference of ["expanded", "compact", "hidden"] as const) {
       expect(navigationModeForWidth(1099, preference)).toBe("hidden");
-      expect(navigationModeForWidth(1100, preference)).toBe(
+      expect(navigationModeForWidth(1100, preference)).toBe("hidden");
+      expect(navigationModeForWidth(1100, preference, true)).toBe("compact");
+      expect(navigationModeForWidth(1200, preference)).toBe(
         preference === "hidden" ? "hidden" : "compact",
       );
       expect(navigationModeForWidth(1399, preference)).toBe(
@@ -63,7 +65,7 @@ describe("Adaptive navigation preferences", () => {
     service.database.close();
     const db = new CargoDatabase(file);
     expect(db.db.prepare("PRAGMA user_version").get()).toMatchObject({
-      user_version: 6,
+      user_version: 7,
     });
     db.close();
   });

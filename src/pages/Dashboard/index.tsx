@@ -1,3 +1,4 @@
+import { LifecycleIssues } from "../../components/contracts/LifecycleIssues";
 import { useMemo, useState } from "react";
 import { Plus, Flag, Layers3, Container, Wallet, Rocket } from "lucide-react";
 import { useCargoStore } from "../../stores/useCargoStore";
@@ -53,6 +54,7 @@ export default function Dashboard() {
           Add Contract
         </button>
       </PageHeader>
+      <LifecycleIssues />
       <div className="stats-grid operations-stats">
         <StatCard
           label="Active Contracts"

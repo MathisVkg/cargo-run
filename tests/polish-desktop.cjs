@@ -47,7 +47,7 @@ async function nav(name) {
   else {
     await page.getByLabel("Open navigation", { exact: true }).click();
     await page
-      .getByRole("navigation", { name: "Temporary navigation" })
+      .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name, exact: true })
       .click();
   }
@@ -105,66 +105,38 @@ async function close(name) {
       isolation: true,
     });
     await page.locator(".sidebar.expanded").waitFor();
-    await page
-      .getByLabel("Collapse navigation", { exact: true })
-      .first()
-      .click();
+    await page.getByLabel("Collapse navigation", { exact: true }).click();
     await page.locator(".sidebar.compact").waitFor();
     await resize(1100, 700);
-    assert.equal(
-      await page
-        .locator(".sidebar")
-        .evaluate((e) => e.getBoundingClientRect().width),
-      62,
-    );
+    await page.locator(".sidebar").waitFor({ state: "hidden" });
+    await page.getByLabel("Open navigation", { exact: true }).click();
+    await page.locator(".sidebar.compact").waitFor();
     await resize(1440, 900);
     await page.locator(".sidebar.compact").waitFor();
     await page.getByLabel("Expand navigation", { exact: true }).click();
     await page.locator(".sidebar.expanded").waitFor();
     await resize(1100, 700);
-    await page.locator(".sidebar.compact").waitFor();
+    await page.locator(".sidebar").waitFor({ state: "hidden" });
     assert.equal((await state()).preferences.navigationMode, "expanded");
     await resize(1440, 900);
     await page.locator(".sidebar.expanded").waitFor();
-    await page
-      .getByLabel("Collapse navigation", { exact: true })
-      .first()
-      .click();
-    await page.locator(".sidebar.compact").waitFor();
-    await page.getByLabel("Hide navigation", { exact: true }).first().click();
+    await page.getByLabel("Hide navigation", { exact: true }).click();
     await page.locator(".sidebar").waitFor({ state: "hidden" });
     assert.equal((await state()).preferences.navigationMode, "hidden");
     await page.getByLabel("Open navigation", { exact: true }).click();
+    await page.locator(".sidebar.compact").waitFor();
     await page
-      .getByRole("navigation", { name: "Temporary navigation" })
-      .waitFor();
-    assert.equal(await page.locator(".sidebar").count(), 0);
-    await page
-      .getByRole("navigation", { name: "Temporary navigation" })
+      .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name: "Manifest", exact: true })
       .focus();
     await page.keyboard.press("Enter");
     await page
       .getByRole("heading", { name: "Cargo Manifest", exact: true })
       .waitFor();
-    await page
-      .getByRole("navigation", { name: "Temporary navigation" })
-      .waitFor({ state: "hidden" });
-    await page.getByLabel("Open navigation", { exact: true }).click();
     await page.keyboard.press("Escape");
-    await page
-      .getByRole("navigation", { name: "Temporary navigation" })
-      .waitFor({ state: "hidden" });
-    await page.getByLabel("Open navigation", { exact: true }).click();
+    assert.equal(await page.locator(".sidebar.compact").count(), 1);
     await page.mouse.click(900, 300);
-    await page
-      .getByRole("navigation", { name: "Temporary navigation" })
-      .waitFor({ state: "hidden" });
-    await page.getByLabel("Open navigation", { exact: true }).click();
-    await page
-      .getByRole("button", { name: "Show compact sidebar", exact: true })
-      .click();
-    await page.locator(".sidebar.compact").waitFor();
+    assert.equal(await page.locator(".sidebar.compact").count(), 1);
     await nav("Dashboard");
     await resize(1100, 700);
     await page.evaluate(async () => {
@@ -594,7 +566,7 @@ async function close(name) {
     assert.equal(completed.confirmedEarnings, 0);
     assert.deepEqual(errors, []);
     console.log(
-      "PASS v0.5.1 actual Windows Electron: 1440/1100/maximized navigation preferences and keyboard drawer; single/multi-contract location links and explicit SCU; centered details/objectives/actions/evidence; protected outside clicks, Escape, dirty warning and focus; no dialog transforms/transitions; mouse/keyboard ship search and concept toggle, favorites/recents/selection restart; aligned filters; OCR evidence replay; secure bridge and unchanged minimum size.",
+      "PASS v0.5.1 actual Windows Electron: 1440/1100/maximized navigation preferences, persistent compact reopening and keyboard page selection; single/multi-contract location links and explicit SCU; centered details/objectives/actions/evidence; protected outside clicks, Escape, dirty warning and focus; no dialog transforms/transitions; mouse/keyboard ship search and concept toggle, favorites/recents/selection restart; aligned filters; OCR evidence replay; secure bridge and unchanged minimum size.",
     );
   } catch (e) {
     if (page)

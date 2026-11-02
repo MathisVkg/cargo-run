@@ -54,7 +54,7 @@ async function nav(name) {
     await page.getByLabel("Hide navigation", { exact: true }).first().click();
   await page.getByLabel("Open navigation", { exact: true }).click();
   await page
-    .getByRole("navigation", { name: "Temporary navigation" })
+    .getByRole("navigation", { name: "Main navigation" })
     .getByRole("button", { name: new RegExp("^" + name) })
     .click();
 }

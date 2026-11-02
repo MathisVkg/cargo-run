@@ -1,6 +1,12 @@
 import type { AppSnapshot, SaveContractRequest } from "./tracking";
 import type { OcrSnapshot, CaptureSettings } from "./ocr";
 export interface DesktopBridge {
+  resolveLifecycle(
+    input: import("./lifecycle").LifecycleResolution,
+  ): Promise<AppSnapshot>;
+  lifecycleHistory(
+    id: string,
+  ): Promise<import("./lifecycle").LifecycleActivity[]>;
   cargoProgress(
     input: import("./progress").ProgressRequest,
   ): Promise<AppSnapshot>;

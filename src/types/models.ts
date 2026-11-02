@@ -55,6 +55,18 @@ export interface Contract {
     }
   >;
   completedAt?: string;
+  missionAssociation?: {
+    source: "ObjectiveIds" | "User confirmed";
+    at: string;
+    eventId: string;
+  };
+  lifecycle?: {
+    missionId: string;
+    eventId: string;
+    kind: "Completed" | "Abandoned";
+    eventAt: string | null;
+    receivedAt: string;
+  };
   cargoObjectives: CargoObjective[];
   dataOrigin: DataOrigin;
 }
