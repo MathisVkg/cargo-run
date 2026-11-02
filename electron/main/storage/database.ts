@@ -25,7 +25,7 @@ export class CargoDatabase {
     const version = Number(
       (this.db.prepare("PRAGMA user_version").get() as Row).user_version,
     );
-    if (version > 5) {
+    if (version > 6) {
       this.db.close();
       throw new Error(
         "This database was created by a newer Cargo Run version. No data was changed.",
@@ -87,6 +87,29 @@ export class CargoDatabase {
           projection = applyMissionEvent(projection, e).contracts;
         for (const c of projection) this.savePendingMission(c);
       });
+    if (version < 6) this.migrateProgress();
+  }
+  private migrateProgress() {
+    this.transaction(() => {
+      this.db.exec(
+        "CREATE TABLE IF NOT EXISTS cargo_progress_requests(id TEXT PRIMARY KEY,hash TEXT NOT NULL); CREATE TABLE IF NOT EXISTS cargo_progress_activity(id TEXT PRIMARY KEY,contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,objective_id TEXT NOT NULL,at TEXT NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS cargo_activity_objective ON cargo_progress_activity(objective_id);",
+      );
+      for (const row of this.db
+        .prepare("SELECT id,payload FROM cargo_objectives")
+        .all()) {
+        const o = JSON.parse(String(row.payload));
+        this.db.prepare("UPDATE cargo_objectives SET payload=? WHERE id=?").run(
+          JSON.stringify({
+            ...o,
+            loadedSCU: o.loadedSCU ?? 0,
+            loadedShipId: o.loadedShipId ?? null,
+            loadEvidence: o.loadEvidence ?? "Unknown",
+          }),
+          row.id as string,
+        );
+      }
+      this.db.exec("PRAGMA user_version=6");
+    });
   }
   pendingMissions(includeArchived = false): Contract[] {
     const archived = new Set(

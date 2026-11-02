@@ -1,11 +1,30 @@
-# Cargo Run 0.5.3 — Fleet Operations 2.0
+# Cargo Run 0.6.0 — Fleet Operations 2.0
 
 Cargo Run is a local Windows companion for Star Citizen hauling. The graphite and royal-purple workspace organizes accepted contracts, planned cargo, pickups and deliveries. OCR remains the primary contract source; Game.log is optional secondary evidence. SQLite, offline recognition, capture backends, identity matching and screenshot retention remain in place.
+
+## Cargo loading and delivery (v0.6.0)
+
+Manifest is the detailed cargo checklist. Every persistent objective keeps separate **Required**, **Loaded** and **Delivered** SCU:
+
+- Awaiting pickup = max(0, required - loaded - delivered).
+- Remaining delivery = max(0, required - delivered).
+- Selected-ship recorded onboard includes its loaded allocations on active **and closed** contracts; recorded available space subtracts this from catalog capacity.
+- Conservative planned capacity still sums outstanding active deliveries separately.
+
+Use **Load remainder** or **Record loading** for full/partial loading. Use **Deliver onboard** or **Record delivery** for full/partial delivery: loading 9 then delivering 4 leaves 5 onboard and 4 delivered. The inline action form also supports **Unload without delivery** and **Correct recorded onboard total**. Correction sets an absolute onboard amount; ordinary Load/Deliver/Unload are deltas. Individual controls always name their contract/commodity/route; identical commodities retain separate allocations. There is no automatic grouped distribution.
+
+**Undo last cargo change** reverses only the latest unchanged manual operation for that objective. Supported external progress, intervening edits/operations, wrong ship or insufficient capacity can prevent undo. Activity is auditable under Contract Details (latest 50 entries; technical evidence collapsed). Duplicate request UUIDs cannot apply the same change twice. All writes and multi-objective transactions stay in Electron main.
+
+Loading and delivery cannot exceed requirements, recorded onboard quantities or capacity. Inputs are rejected rather than silently clamped. Delivery does not automatically complete the contract or confirm payout. The contract editor cannot bypass these controls to invent delivered progress.
+
+Loaded cargo remains assigned to its recorded ship. Switching asks for confirmation if cargo is being left behind and never transfers it. Manifest retains off-ship and completed/abandoned inventory; select its ship to update it. Closed cargo can be unloaded/corrected downwards. History cleanup is blocked until closed loaded cargo is explicitly unloaded; full RESET intentionally clears it after backup. Finish Run snapshots progress without unloading or inventing delivery.
+
+SQLite migration **6** preserves existing required/delivered values and all other data, adding Loaded = 0 with **Unknown physical evidence**. “Load not confirmed” means zero is an unverified baseline, not proof of an empty ship. OCR required quantities and contract acceptance never load cargo. Rescans preserve manual progress; supported cumulative Game.log delivery can reconcile recorded inventory and is audited separately, without fabricated loading. Conflicting notifications retain inventory and raw evidence under Advanced diagnostics.
 
 ## Fleet Operations workspace
 
 - **Dashboard — Cargo Operations:** four statistics, separate Pickup Stops and Delivery Stops, and a remembered By Location / By Contract view. Each known full payout counts exactly once, never by destination. Unknown rewards are excluded. Planned cargo is outstanding required SCU, not physically loaded cargo.
-- **Manifest:** required/outstanding SCU and commodity/location counts, with separate collection and delivery tables. Rows keep their persistent objective IDs even when visible cargo matches. Collection requirements do not prove cargo is still awaiting pickup. There are no fictitious collection checkboxes.
+- **Manifest:** required/outstanding SCU and commodity/location counts, with separate collection and delivery tables. Rows keep their persistent objective IDs even when visible cargo matches. Collection and Delivery now show recorded progress with objective-specific loading/delivery controls.
 - **Contracts:** active records, title/commodity/pickup/destination search, compact active filters, full rewards and source/evidence access. Completed and abandoned records remain in History.
 - **Details:** centered, responsive modal up to 900px wide and 88% of viewport height. Overview statistics separate potential reward, confirmed earnings and required/delivered/remaining SCU. Objectives use a structured table; evidence uses thumbnails and a separate full viewer. IDs/raw OCR/provenance remain under Advanced, and permitted edit/completion/abandon/unlink actions remain accessible.
 - **Add/Edit Contract:** centered 680px native-dialog modal, scrollable body, visible Save/Cancel footer, multiple objectives, total SCU, validation, duplicate-submit protection and an unsaved-changes warning.
@@ -23,9 +42,9 @@ The shared tokens in `src/styles/global.css` are background #181A1D, secondary #
 
 ### Planning assumptions
 
-Capacity utilization assumes all outstanding cargo travels together; unallocated capacity is max(0, selected capacity − outstanding SCU). An excess warns about staged deliveries or additional trips; it does not claim simultaneous carriage is required. Required, delivered and remaining quantities stay separate. Manifest distinguishes Planned, Reported manually, Supported Game.log progress and otherwise Reported progress only when backed by the existing model.
+Capacity utilization assumes all outstanding cargo travels together; unallocated capacity is max(0, selected capacity − outstanding SCU). An excess warns about staged deliveries or additional trips; it does not claim simultaneous carriage is required. Required, delivered and remaining quantities stay separate. Manifest distinguishes required/awaiting/loaded/delivered and labels manual or supported reported evidence.
 
-Grouping is a pure presentation projection. Exact case/whitespace equivalence and a bounded NB Int. Spaceport / NB Int. Spaceport on microTech alias are supported. Original strings are preserved. No broad fuzzy geographic merge or mission/objective matching change was introduced. Distinct persistent contract/objective IDs remain distinct; superseded records are excluded.
+Grouping is a pure presentation projection. Exact case/whitespace equivalence and a bounded NB Int. Spaceport / NB Int. Spaceport on microTech alias are supported. Original strings are preserved. Grouping does not change mission/objective identity. Distinct persistent contract/objective IDs remain distinct; superseded records are excluded.
 
 ## Offline ship catalog
 
@@ -47,7 +66,7 @@ The updater validates source column definitions, paginates article metadata, che
 
 ### Local migration
 
-SQLite schema remains **5**. Startup transactionally upserts the merged catalog into the ships table; it does not rewrite contracts, objectives, evidence, audits, checkpoints or run history. Existing selected IDs are preserved. The additive `ui.preferences` setting stores navigation mode, view, favorites and recent IDs. Existing records default to expanded navigation without resetting other settings. A fixed, validated, trusted-sender IPC endpoint accepts only navigation mode, Dashboard view and known unique favorite IDs; the main process manages recents. Database access stays in main, context isolation/sandbox remain enabled and renderer Node integration remains disabled.
+SQLite schema is **6**. Catalog refresh transactionally upserts only the ships table. The separate schema-6 migration initializes physical-load metadata without changing existing required/delivered amounts, evidence, audits, checkpoints or run history. Existing selected IDs are preserved. The additive `ui.preferences` setting stores navigation mode, view, favorites and recent IDs. Existing records default to expanded navigation without resetting other settings. A fixed, validated, trusted-sender IPC endpoint accepts only navigation mode, Dashboard view and known unique favorite IDs; the main process manages recents. Database access stays in main, context isolation/sandbox remain enabled and renderer Node integration remains disabled.
 
 ## Run and verify
 
@@ -144,7 +163,7 @@ A missing acceptance timestamp stays null; capture time and event receipt time a
 
 ## Persistence, migration and evidence
 
-Schema **5** adds `pending_log_missions`, keyed by MissionId, and reconstructs its secondary projection from saved immutable events. It does **not** delete, move or convert existing ledger contracts, captures, links, runs, checkpoints or corrections. Import outcome metadata and coverage are additive JSON fields.
+Schema **5** introduced `pending_log_missions`, keyed by MissionId, and reconstructs its secondary projection from saved immutable events. It does **not** delete, move or convert existing ledger contracts, captures, links, runs, checkpoints or corrections. Import outcome metadata and coverage are additive JSON fields.
 
 Existing `capture_contract_links` and `ocr_review_audit` retain original observations, corrections, conflicts, before/after data and authorization type: Automatic, Issue resolved or Reviewed. Automatic associations are distinguished from user-confirmed associations.
 
@@ -152,11 +171,11 @@ Use **Details / evidence** from Dashboard, Manifest or History for screenshots, 
 
 SQLite, WAL, foreign keys, full synchronous commits, the serial OCR queue, 12-pending/50-capture/512-MiB limits, protected UUID image protocol and local English Tesseract remain. Settings shows actual data paths. When protected evidence fills storage, explicit cleanup/unlink/clear is still needed.
 
-Back up the database and captures folder with Cargo Run closed before upgrading. Older binaries intentionally refuse schema 5. Restore a pre-upgrade backup for rollback; do not lower PRAGMA user_version manually.
+Back up the database and captures folder with Cargo Run closed before upgrading. Older binaries intentionally refuse schema 6. Restore a pre-upgrade backup for rollback; do not lower PRAGMA user_version manually.
 
 ## Exact in-game test
 
-1. Back up local data with Cargo Run closed, launch v0.5.3, and leave Game.log monitoring and automatic screenshot capture off.
+1. Back up local data with Cargo Run closed, launch v0.6.0, and leave Game.log monitoring and automatic screenshot capture off.
 2. Show the accepted **Rookie Rank - Direct Small Cargo Haul**, 34,500 aUEC, 8 SCU Agricultural Supplies, NB Int. Spaceport → Port Tressler above microTech. Capture once. Without opening review, verify one active contract, correct route/SCU/reward and an Imported entry.
 3. Inspect the saved screenshot. Reprocess the same CaptureId: contract count must not increase. Capture the same OCR-only instance again: choose the existing contract from the compact issue; no row reconstruction should be required.
 4. With two genuinely separate identical accepted instances, choose **Create a separate contract**. Keep different MissionIds separate.
@@ -201,12 +220,14 @@ For a fresh v0.6.0 test, use Reset, record its backup path, verify empty pages a
 
 ## Verification and known limits
 
-Task 04.3: TypeScript, lint, **253 tests across 20 files**, and production build pass (232 existing tests plus 21 new matching/cleanup regressions). Regression coverage includes matching origins/identity, all cleanup scopes, active evidence/audits, actual in-flight OCR drain, pending automatic cancellation, backup failure, transactional rollback, locked-file warnings, reset/restart and explicit history replay.
+Task 05: TypeScript, lint, **272 tests across 21 files**, and production build pass (253 existing tests plus 19 focused cargo regressions). All prior behavior tests remain, with schema-version assertions updated to 6 and the old delivered-value edit test using supported load/deliver operations.
 
-Actual Windows Electron verification uses isolated profiles: all three confirmation workflows, required RESET, immediate refresh, unique verified backups, active evidence/current run preservation, settings/favorites persistence, OCR revision continuity and restart/fresh-tail behavior. Existing alignment, protected-dialog, Fleet/manual, Game.log, automatic import/evidence and OCR reprocess suites pass. No destructive operation was run against the user's actual local data.
+Actual Windows Electron tests pass for partial/full loading, partial delivery/undo, corrections, identical allocations, ship switching, retained closed inventory, run finalization, activity/restart and foreign keys. Existing alignment, polish, Fleet/manual, Game.log, automatic import/evidence, OCR review and data-management suites also pass using isolated profiles. The user's actual local data and Game.log were untouched.
 
-No live Star Citizen session, fresh screenshot OCR accuracy, physical in-game shortcut, Vulkan/exclusive fullscreen or native full-display capture was revalidated. Existing Electron and optional Raw Input backends remain unchanged; Listening/registration does not prove callback delivery. Identical active mission instances can remain genuinely ambiguous.
+Cargo progress is manually reported or supported notification evidence, not a verified inventory API. One objective can allocate cargo to one ship at a time; explicit unload/reload is required to move it. Loaded-source identity consolidation and history cleanup are blocked until physical allocations are explicitly resolved. Cleanup backups require manual whole-snapshot restoration; filesystem rollback is not guaranteed.
+
+No live Star Citizen session, fresh screenshot OCR accuracy, physical in-game shortcut, Vulkan/exclusive fullscreen or native full-display capture was revalidated. Electron and optional Raw Input backends remain unchanged; Listening/registration does not prove callback delivery. Genuine identity ambiguity still requires a choice.
 
 The genuine 61,500 fixture reads 7 SCU and the genuine 65,250 fixture reads 25 SCU; representative regression quantities are separate synthetic variants. Production quantities are never changed to fit an example.
 
-See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for implementation files, backup restoration details, test coverage and fresh-environment instructions.
+See [Cargo-Run-Handoff.md](Cargo-Run-Handoff.md) for the complete file list, migration/audit design, limitations and detailed real-game testing instructions.

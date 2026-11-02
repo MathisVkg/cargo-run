@@ -63,7 +63,7 @@ describe("Adaptive navigation preferences", () => {
     service.database.close();
     const db = new CargoDatabase(file);
     expect(db.db.prepare("PRAGMA user_version").get()).toMatchObject({
-      user_version: 5,
+      user_version: 6,
     });
     db.close();
   });

@@ -114,6 +114,19 @@ export class LocalDataManager {
     };
   }
   private removed(mode: CleanupMode) {
+    if (
+      mode !== "reset" &&
+      this.service
+        .domain()
+        .contracts.some(
+          (c) =>
+            c.status !== "Active" &&
+            c.cargoObjectives.some((o) => (o.loadedSCU ?? 0) > 0),
+        )
+    )
+      throw Error(
+        "Closed contracts still have recorded onboard cargo. Unload it in Manifest before clearing history, or use the explicit full reset.",
+      );
     const cs = this.service.domain().contracts,
       ids = new Set(
         cs
@@ -257,7 +270,7 @@ export class LocalDataManager {
         JSON.stringify(
           {
             createdAt: new Date().toISOString(),
-            schema: 5,
+            schema: 6,
             evidenceFiles: files.map((f) => ({ name: f.name, bytes: f.bytes })),
             restore:
               "Close Cargo Run. Restore cargo-run.sqlite and captures from this folder together; preserve a copy of current data and remove stale WAL/SHM only while the app is closed.",
@@ -334,7 +347,7 @@ export class LocalDataManager {
         );
         if (mode === "reset") {
           db.db.exec(
-            "DELETE FROM ocr_review_audit; DELETE FROM capture_contract_links; DELETE FROM cargo_objectives; DELETE FROM contracts; DELETE FROM cargo_runs; DELETE FROM ocr_captures; DELETE FROM pending_log_missions; DELETE FROM mission_events; DELETE FROM diagnostics; DELETE FROM automatic_captures; DELETE FROM read_checkpoints;",
+            "DELETE FROM cargo_progress_activity; DELETE FROM cargo_progress_requests; DELETE FROM ocr_review_audit; DELETE FROM capture_contract_links; DELETE FROM cargo_objectives; DELETE FROM contracts; DELETE FROM cargo_runs; DELETE FROM ocr_captures; DELETE FROM pending_log_missions; DELETE FROM mission_events; DELETE FROM diagnostics; DELETE FROM automatic_captures; DELETE FROM read_checkpoints;",
           );
           for (const key of [
             "parsingErrors",
@@ -374,22 +387,20 @@ export class LocalDataManager {
           }
           for (const { id, record } of this.capturesList())
             if (affected.has(id))
-              db.db
-                .prepare("UPDATE ocr_captures SET payload=? WHERE id=?")
-                .run(
-                  JSON.stringify({
-                    ...record,
-                    historyRemoved: true,
-                    importResult: {
-                      status: "Pending corrections",
-                      message:
-                        "Closed history was cleared; explicitly confirm a separate accepted instance to reuse.",
-                      candidateIds: [],
-                      processedHash: "history-cleared",
-                    },
-                  }),
-                  id,
-                );
+              db.db.prepare("UPDATE ocr_captures SET payload=? WHERE id=?").run(
+                JSON.stringify({
+                  ...record,
+                  historyRemoved: true,
+                  importResult: {
+                    status: "Pending corrections",
+                    message:
+                      "Closed history was cleared; explicitly confirm a separate accepted instance to reuse.",
+                    candidateIds: [],
+                    processedHash: "history-cleared",
+                  },
+                }),
+                id,
+              );
           const prune = (r: DomainSnapshot["currentRun"]) => ({
             ...r,
             contractIds: r.contractIds.filter((id) => !ids.has(id)),

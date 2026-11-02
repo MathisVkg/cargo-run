@@ -11,6 +11,9 @@ interface RendererState extends AppSnapshot {
   pending: number;
   setPage(page: Page): void;
   selectShip(id: string): Promise<void>;
+  recordProgress(
+    input: import("../types/progress").ProgressRequest,
+  ): Promise<void>;
   setPreferences(
     patch: import("../types/preferences").PreferencesPatch,
   ): Promise<void>;
@@ -89,6 +92,7 @@ export const cargoStore = createStore<RendererState>(() => ({
   setPage: (page) => cargoStore.setState({ page }),
   setPreferences: (patch) => quiet(() => window.cargoRun.setPreferences(patch)),
   selectShip: (id) => quiet(() => window.cargoRun.selectShip(id)),
+  recordProgress: (input) => call(() => window.cargoRun.cargoProgress(input)),
   saveContract: (draft, id) =>
     call(() => window.cargoRun.saveContract({ draft, id })),
   abandonContract: (id) => quiet(() => window.cargoRun.abandonContract(id)),

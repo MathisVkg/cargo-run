@@ -492,6 +492,31 @@ describe("reviewed OCR contract transactions", () => {
       c = capture(s),
       id = s.confirmOcr(input(s, c)).contractId,
       old = s.snapshot().contracts[0];
+    for (const o of old.cargoObjectives) {
+      for (const action of ["Load", "Deliver"] as const) {
+        const row = s
+          .domain()
+          .contracts[0].cargoObjectives.find((x) => x.id === o.id)!;
+        s.cargoProgress({
+          requestId: crypto.randomUUID(),
+          shipId: s.domain().selectedShipId,
+          changes: [
+            {
+              objectiveId: row.id,
+              action,
+              quantity: 1,
+              expected: JSON.stringify({
+                required: row.quantitySCU,
+                loaded: row.loadedSCU ?? 0,
+                delivered: row.deliveredSCU,
+                shipId: row.loadedShipId ?? null,
+                evidence: row.loadEvidence ?? "Unknown",
+              }),
+            },
+          ],
+        });
+      }
+    }
     s.saveContract({
       id,
       draft: {

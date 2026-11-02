@@ -223,7 +223,7 @@ async function close(name) {
     assert.match(await everus.innerText(), /7 SCU remaining/);
     assert.match(await everus.innerText(), /0 delivered \/ 7 required/);
     assert(!/7 \/ 7 SCU/.test(await everus.innerText()));
-    await tressler.locator("summary").click();
+    await tressler.locator(".associated-contracts > summary").click();
     assert.equal(await tressler.locator(".associated-contracts li").count(), 2);
     assert.match(await tressler.innerText(), /5 SCU remaining/);
     assert.match(await tressler.innerText(), /3 SCU remaining/);

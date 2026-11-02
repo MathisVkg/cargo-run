@@ -1,3 +1,4 @@
+import { recordedOnboard } from "../../stores/selectors";
 import { useMemo, useState } from "react";
 import { ChevronDown, Star, Search } from "lucide-react";
 import { useCargoStore, cargoStore } from "../../stores/useCargoStore";
@@ -6,6 +7,8 @@ import { Overlay } from "../ui/Overlay";
 import { number } from "../../utils/format";
 export function ShipSelector() {
   const pending = useCargoStore((s) => s.pending);
+  const contracts = useCargoStore((s) => s.contracts);
+  const [switchTo, setSwitchTo] = useState<string | null>(null);
   const ships = useCargoStore((s) => s.ships),
     selected = useCargoStore((s) => s.selectedShipId),
     select = useCargoStore((s) => s.selectShip),
@@ -129,6 +132,13 @@ export function ShipSelector() {
                   aria-pressed={s.id === selected}
                   aria-label={"Select " + s.name}
                   onClick={async () => {
+                    if (
+                      s.id !== selected &&
+                      recordedOnboard(contracts, selected) > 0
+                    ) {
+                      setSwitchTo(s.id);
+                      return;
+                    }
                     await select(s.id);
                     if (cargoStore.getState().selectedShipId === s.id)
                       setOpen(false);
@@ -173,9 +183,39 @@ export function ShipSelector() {
             Star Citizen Wiki · {shipCatalog.version} ·{" "}
             {shipCatalog.coverage.flightReady} flight ready /{" "}
             {shipCatalog.coverage.eligible} positive-SCU entries. Cargo capacity
-            is a planning reference; actual onboard cargo is not tracked. Data:
-            CC BY-SA 4.0.
+            is a planning reference; recorded cargo stays assigned to its ship
+            when switching. Data: CC BY-SA 4.0.
           </p>
+        </div>
+      </Overlay>
+      <Overlay
+        open={!!switchTo}
+        onClose={() => setSwitchTo(null)}
+        title="Keep cargo on its current ship?"
+        subtitle="SHIP SELECTION"
+        side="center"
+      >
+        <div className="dialog-body">
+          {number(recordedOnboard(contracts, selected))} SCU remains recorded on{" "}
+          {ship?.name}. Switching does not transfer cargo. Use Manifest to
+          inspect all ship allocations.
+        </div>
+        <div className="dialog-actions">
+          <button className="button" onClick={() => setSwitchTo(null)}>
+            Cancel
+          </button>
+          <button
+            className="button primary"
+            onClick={async () => {
+              if (switchTo) {
+                await select(switchTo);
+                setSwitchTo(null);
+                setOpen(false);
+              }
+            }}
+          >
+            Switch without transferring cargo
+          </button>
         </div>
       </Overlay>
     </>

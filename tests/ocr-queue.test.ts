@@ -387,7 +387,7 @@ describe("schema compatibility", () => {
     ).toContain("Preserved legacy cargo");
     expect(new CaptureRepository(upgraded).list()).toEqual([]);
     expect(upgraded.db.prepare("PRAGMA user_version").get()?.user_version).toBe(
-      5,
+      6,
     );
     upgraded.close();
   });

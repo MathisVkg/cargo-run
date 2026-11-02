@@ -84,6 +84,7 @@ export function applyMissionEvent(
     previous.lastLogEventAt > event.timestamp;
   if (stale) return { contracts, resolved: true };
   const objective = {
+    ...previous,
     id: previous?.id ?? existing.id + ":" + externalId,
     externalObjectiveId: externalId,
     contractId: existing.id,

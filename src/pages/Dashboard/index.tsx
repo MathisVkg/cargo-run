@@ -6,6 +6,7 @@ import {
   operationStats,
   contractSCU,
   planningCapacity,
+  recordedOnboard,
 } from "../../stores/selectors";
 import { number } from "../../utils/format";
 import { PageHeader, StatCard } from "../../components/ui";
@@ -30,6 +31,7 @@ export default function Dashboard() {
     );
   const ship = ships.find((s) => s.id === shipId),
     capacity = ship?.cargoCapacitySCU ?? 0,
+    onboard = recordedOnboard(contracts, shipId),
     plan = planningCapacity(stats.scu, capacity);
   return (
     <>
@@ -84,14 +86,19 @@ export default function Dashboard() {
           icon={<Container size={18} />}
         />
         <StatCard
-          label="Ship Capacity"
+          label="Recorded Onboard"
           value={
             <>
-              {ship ? number(capacity) : "—"}{" "}
+              {number(onboard)} / {ship ? number(capacity) : "—"}{" "}
               <span className="stat-unit">SCU</span>
             </>
           }
-          detail={ship?.name ?? "Saved ship unavailable"}
+          detail={
+            (ship?.name ?? "Saved ship unavailable") +
+            " · " +
+            number(Math.max(0, capacity - onboard)) +
+            " SCU recorded available"
+          }
           icon={<Rocket size={18} />}
         >
           <div
@@ -120,9 +127,11 @@ export default function Dashboard() {
         </StatCard>
       </div>
       <p className="planning-note">
-        Planning assumes all remaining cargo is carried together. Planned cargo
-        is not physically loaded cargo; staged pickups and deliveries may use
-        capacity differently.
+        Onboard values are manual records; unrecorded or migrated cargo is
+        unknown, not verified empty. Cargo on other ships remains assigned to
+        those ships. Planning assumes all remaining cargo is carried together.
+        Planned cargo is not physically loaded cargo; staged pickups and
+        deliveries may use capacity differently.
       </p>
       {plan.over && (
         <div className="notice warning" role="status">

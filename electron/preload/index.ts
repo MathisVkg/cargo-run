@@ -3,6 +3,8 @@ import type { DesktopBridge } from "../../src/types/desktop";
 import type { AppSnapshot } from "../../src/types/tracking";
 import type { OcrSnapshot } from "../../src/types/ocr";
 const bridge: DesktopBridge = {
+  cargoProgress: (input) => ipcRenderer.invoke("cargo:progress", input),
+  cargoActivity: (id) => ipcRenderer.invoke("cargo:activity", id),
   localDataStats: () => ipcRenderer.invoke("data:stats"),
   previewCleanup: (mode) => ipcRenderer.invoke("data:preview", mode),
   executeCleanup: (input) => ipcRenderer.invoke("data:execute", input),

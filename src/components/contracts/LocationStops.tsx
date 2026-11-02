@@ -1,3 +1,5 @@
+import { ProgressControls } from "../cargo/ProgressControls";
+import { loaded, awaitingPickup } from "../../types/progress";
 import { useMemo, useState } from "react";
 import type { Contract } from "../../types/models";
 import {
@@ -37,7 +39,13 @@ export function LocationStops({
             {groups.map((g) => {
               const commodities = new Map<
                 string,
-                { required: number; remaining: number; delivered: number }
+                {
+                  required: number;
+                  remaining: number;
+                  delivered: number;
+                  loaded: number;
+                  awaiting: number;
+                }
               >();
               const related = new Set<string>();
               for (const { objective: o } of g.rows) {
@@ -46,10 +54,14 @@ export function LocationStops({
                   required: 0,
                   remaining: 0,
                   delivered: 0,
+                  loaded: 0,
+                  awaiting: 0,
                 };
                 v.required += o.quantitySCU;
                 v.remaining += remainingSCU(o);
                 v.delivered += o.deliveredSCU;
+                v.loaded += loaded(o);
+                v.awaiting += awaitingPickup(o);
                 commodities.set(o.commodity, v);
                 related.add(
                   canonicalLocation(
@@ -91,10 +103,51 @@ export function LocationStops({
                           <span>{name || "Unknown commodity"}</span>
                           <span className="numeric">
                             {number(v.remaining)} SCU remaining
+                            <br />
+                            <small>
+                              {kind === "pickup"
+                                ? number(v.awaiting) +
+                                  " awaiting pickup · " +
+                                  number(v.loaded) +
+                                  " loaded · " +
+                                  number(v.required) +
+                                  " required"
+                                : number(v.delivered) +
+                                  " delivered / " +
+                                  number(v.required) +
+                                  " required · " +
+                                  number(v.loaded) +
+                                  " onboard"}
+                            </small>
                           </span>
                         </li>
                       ))}
                   </ul>
+                  <details className="stop-cargo-allocations">
+                    <summary>Objective allocations & cargo actions</summary>
+                    {g.rows.map(
+                      ({ contract, objective: o }) =>
+                        o && (
+                          <div key={o.id}>
+                            <strong>
+                              {contract.name} · {o.commodity}
+                            </strong>
+                            <p>
+                              {number(o.quantitySCU)} required ·{" "}
+                              {number(awaitingPickup(o))} awaiting pickup ·{" "}
+                              {number(loaded(o))} onboard ·{" "}
+                              {number(o.deliveredSCU)} delivered ·{" "}
+                              {number(remainingSCU(o))} remaining
+                            </p>
+                            <ProgressControls
+                              contract={contract}
+                              objective={o}
+                              kind={kind}
+                            />
+                          </div>
+                        ),
+                    )}
+                  </details>
                   {g.unknownCargo && (
                     <p className="warning-text">
                       Some cargo quantities are unknown.

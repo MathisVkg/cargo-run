@@ -141,7 +141,7 @@ export function Navigation({
           </button>
         )}
       </div>
-      <div className="nav-footer">Cargo Run / 0.5.3</div>
+      <div className="nav-footer">Cargo Run / 0.6.0</div>
     </Overlay>
   );
 }

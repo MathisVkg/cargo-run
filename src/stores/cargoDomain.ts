@@ -125,10 +125,9 @@ export function createCargoStore(seed: Contract[] = sampleContracts()) {
         corrected("company", draft.company ?? null, existing?.company ?? null);
         corrected("payout", draft.payout, existing?.payout);
         draft.objectives.forEach((o, i) => {
-          const prior =
-            existing?.source === "OCR"
-              ? existing.cargoObjectives.find((x) => x.id === o.id)
-              : existing?.cargoObjectives[i];
+          const prior = o.id
+            ? existing?.cargoObjectives.find((x) => x.id === o.id)
+            : existing?.cargoObjectives[i];
           for (const key of [
             "commodity",
             "pickupLocation",
@@ -165,11 +164,14 @@ export function createCargoStore(seed: Contract[] = sampleContracts()) {
           confirmedEarnings: existing?.confirmedEarnings ?? 0,
           acceptedAt: existing ? existing.acceptedAt : new Date().toISOString(),
           cargoObjectives: draft.objectives.map((o, i) => {
-            const prior =
-              existing?.source === "OCR"
-                ? existing.cargoObjectives.find((x) => x.id === o.id)
-                : existing?.cargoObjectives[i];
+            const prior = o.id
+              ? existing?.cargoObjectives.find((x) => x.id === o.id)
+              : existing?.cargoObjectives[i];
             return {
+              ...prior,
+              loadedSCU: prior?.loadedSCU ?? 0,
+              loadedShipId: prior?.loadedShipId ?? null,
+              loadEvidence: prior?.loadEvidence ?? "Unknown",
               id: prior?.id ?? crypto.randomUUID(),
               contractId,
               commodity: o.commodity.trim(),

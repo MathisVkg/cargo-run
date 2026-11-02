@@ -1,3 +1,6 @@
+import { ProgressControls } from "../cargo/ProgressControls";
+import { CargoActivityPanel } from "../cargo/CargoActivity";
+import { loaded, awaitingPickup } from "../../types/progress";
 import { useEffect, useState } from "react";
 import type { Contract } from "../../types/models";
 import type { EvidenceLink } from "../../types/review";
@@ -122,6 +125,7 @@ export function ContractDetails({
                   </div>
                 </dl>
               </section>
+              <CargoActivityPanel contract={contract} />
               <section aria-label="Cargo objectives">
                 <h2>Cargo Objectives</h2>
                 {!contract.cargoObjectives.length ? (
@@ -137,6 +141,7 @@ export function ContractDetails({
                           <th>Pickup</th>
                           <th>Destination</th>
                           <th className="align-right">Required SCU</th>
+                          <th className="align-right">Loaded / Awaiting SCU</th>
                           <th className="align-right">Delivered SCU</th>
                           <th className="align-right">Remaining SCU</th>
                         </tr>
@@ -149,6 +154,14 @@ export function ContractDetails({
                             <td>{o.destination || "Unknown destination"}</td>
                             <td className="align-right numeric">
                               {number(o.quantitySCU)}
+                            </td>
+                            <td>
+                              {number(loaded(o))} / {number(awaitingPickup(o))}
+                              <ProgressControls
+                                contract={contract}
+                                objective={o}
+                                kind="delivery"
+                              />
                             </td>
                             <td className="align-right numeric">
                               {number(o.deliveredSCU)}

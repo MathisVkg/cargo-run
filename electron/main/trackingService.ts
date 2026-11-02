@@ -8,6 +8,7 @@ import { inspectScan, scanConfirmation } from "./ocr/importer";
 import { CaptureRepository } from "./ocr/repository";
 import { versionOf } from "./ocr/review";
 import type { ResolveScan, ScanOutcome } from "../../src/types/review";
+import { applyProgress, activity, reconcileLogProgress } from "./cargoProgress";
 import { randomUUID } from "node:crypto";
 import { isAbsolute, basename } from "node:path";
 import { CargoDatabase } from "./storage/database";
@@ -190,10 +191,90 @@ export class TrackingService {
   saveContract(input: unknown): AppSnapshot {
     assertDraft(input);
     return this.mutate(() => {
+      const before = this.domain().contracts.find((c) => c.id === input.id);
+      for (const d of input.draft.objectives) {
+        const old = before?.cargoObjectives.find((o) => o.id === d.id);
+        if (
+          (d.deliveredSCU ?? old?.deliveredSCU ?? 0) !==
+          (old?.deliveredSCU ?? 0)
+        )
+          throw Error(
+            "Use Manifest loading and delivery controls; editing cannot invent delivery without onboard cargo.",
+          );
+      }
+      if (before)
+        for (const o of before.cargoObjectives) {
+          const d = input.draft.objectives.find((d) => d.id === o.id);
+          if (
+            (o.loadedSCU ?? 0) > 0 &&
+            d &&
+            [
+              d.commodity !== o.commodity,
+              d.pickupLocation !== o.pickupLocation,
+              d.destination !== o.destination,
+            ].some(Boolean)
+          )
+            throw Error(
+              "Unload recorded cargo before changing its commodity or route.",
+            );
+          if (
+            (o.loadedSCU ?? 0) > 0 &&
+            (!d || d.quantitySCU < (o.loadedSCU ?? 0) + o.deliveredSCU)
+          )
+            throw Error(
+              "Unload cargo before removing its objective or reducing its requirement.",
+            );
+          if (
+            d &&
+            d.deliveredSCU !== undefined &&
+            d.deliveredSCU !== o.deliveredSCU &&
+            ((o.loadedSCU ?? 0) > 0 ||
+              this.database.db
+                .prepare(
+                  "SELECT 1 FROM cargo_progress_activity WHERE objective_id=? LIMIT 1",
+                )
+                .get(o.id))
+          )
+            throw Error(
+              "Use cargo progress controls to update recorded delivery.",
+            );
+          if (
+            !d &&
+            this.database.db
+              .prepare(
+                "SELECT 1 FROM cargo_progress_activity WHERE objective_id=? LIMIT 1",
+              )
+              .get(o.id)
+          )
+            throw Error("Objectives with cargo activity cannot be removed.");
+        }
       this.store
         .getState()
         .saveContract(input.draft as ContractDraft, input.id);
     });
+  }
+  cargoProgress(input: unknown): AppSnapshot {
+    return this.mutate(() => {
+      const d = this.domain();
+      this.store.setState({
+        contracts: applyProgress(
+          this.database,
+          d.contracts,
+          d.selectedShipId,
+          this.savedShips.find((s) => s.id === d.selectedShipId)
+            ?.cargoCapacitySCU ?? 0,
+          input,
+        ),
+      });
+    });
+  }
+  cargoActivity(id: unknown) {
+    if (
+      typeof id !== "string" ||
+      !this.domain().contracts.some((c) => c.id === id)
+    )
+      throw Error("Contract not found.");
+    return activity(this.database, id);
   }
   prepareOcr(input: unknown) {
     return prepareReview(this.database, this.domain(), input);
@@ -428,6 +509,16 @@ export class TrackingService {
     return this.mutate(() => this.store.getState().finishRun());
   }
   removeSamples(): AppSnapshot {
+    if (
+      this.domain().contracts.some(
+        (c) =>
+          c.dataOrigin === "Sample" &&
+          c.cargoObjectives.some((o) => (o.loadedSCU ?? 0) > 0),
+      )
+    )
+      throw Error(
+        "Unload sample cargo before removing its tracked inventory, or explicitly reset all tracking data.",
+      );
     return this.mutate(() => this.store.getState().clearSampleData());
   }
   loadSamples(): AppSnapshot {
@@ -639,6 +730,20 @@ export class TrackingService {
               pending,
             );
             if (inLedger) {
+              reconcileLogProgress(
+                this.database,
+                this.store.getState().contracts,
+                result.contracts,
+                pending.id,
+                (message) =>
+                  this.database.diagnostic(
+                    "Cargo conflict",
+                    message,
+                    line.text,
+                    context,
+                    pending,
+                  ),
+              );
               this.store.setState({ contracts: result.contracts });
               const projected = applyMissionEvent(
                 this.database.pendingMissions(),

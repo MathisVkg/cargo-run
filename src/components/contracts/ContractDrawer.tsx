@@ -220,9 +220,8 @@ export function ContractDrawer({
                       max={o.quantitySCU}
                       step="any"
                       value={o.deliveredSCU ?? 0}
-                      onChange={(e) =>
-                        updateStop(i, { deliveredSCU: e.target.valueAsNumber })
-                      }
+                      readOnly
+                      title="Use Manifest to load or deliver cargo"
                     />
                   </label>
                 )}

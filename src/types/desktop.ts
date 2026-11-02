@@ -1,6 +1,10 @@
 import type { AppSnapshot, SaveContractRequest } from "./tracking";
 import type { OcrSnapshot, CaptureSettings } from "./ocr";
 export interface DesktopBridge {
+  cargoProgress(
+    input: import("./progress").ProgressRequest,
+  ): Promise<AppSnapshot>;
+  cargoActivity(id: string): Promise<import("./progress").CargoActivity[]>;
   localDataStats(): Promise<import("./maintenance").LocalDataStats>;
   previewCleanup(
     mode: import("./maintenance").CleanupMode,

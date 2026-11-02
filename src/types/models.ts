@@ -27,6 +27,9 @@ export interface CargoObjective {
   destination: string;
   quantitySCU: number;
   deliveredSCU: number;
+  loadedSCU?: number;
+  loadedShipId?: string | null;
+  loadEvidence?: "Manual" | "Unknown";
   externalObjectiveId?: string;
   lastLogEventAt?: string;
 }

@@ -2926,3 +2926,79 @@ h3 {
     flex-direction: column;
   }
 }
+
+/* Manual cargo progress uses the existing palette and dialog primitives. */
+.cargo-card-progress {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+.cargo-progress-control {
+  min-width: 180px;
+  max-width: 420px;
+  white-space: normal;
+  font-size: 12px;
+}
+.cargo-progress-control > span {
+  display: block;
+}
+.cargo-quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+.button.small {
+  padding: 5px 8px;
+  font-size: 12px;
+  min-height: 28px;
+}
+.cargo-progress-control details {
+  width: 100%;
+}
+.cargo-progress-control summary,
+.stop-cargo-allocations summary {
+  cursor: pointer;
+  color: #a994f0;
+}
+.cargo-progress-control form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 8px;
+  margin: 8px 0;
+}
+.cargo-progress-control label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cargo-progress-control input {
+  width: 105px;
+}
+.cargo-progress-control select {
+  max-width: 230px;
+}
+.stop-cargo-allocations {
+  margin: 10px 0;
+}
+.stop-cargo-allocations > div {
+  border-top: 1px solid #424a52;
+  padding: 12px 0;
+}
+.cargo-activity {
+  max-height: 260px;
+  overflow: auto;
+  padding-left: 22px;
+}
+.cargo-activity li {
+  margin: 10px 0;
+}
+.cargo-activity p {
+  margin: 4px 0;
+}
+.retained-cargo {
+  padding: 16px;
+  margin: 10px 0;
+}

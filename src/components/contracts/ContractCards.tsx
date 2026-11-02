@@ -1,3 +1,4 @@
+import { loaded, awaitingPickup } from "../../types/progress";
 import { useState } from "react";
 import { FileCheck2, Pencil, Ban } from "lucide-react";
 import type { Contract } from "../../types/models";
@@ -63,6 +64,13 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
                   {number(outstandingSCU(c))} remaining
                 </span>
               </div>
+              <p className="cargo-card-progress">
+                {number(objectives.reduce((n, o) => n + awaitingPickup(o), 0))}{" "}
+                SCU awaiting pickup ·{" "}
+                {number(objectives.reduce((n, o) => n + loaded(o), 0))} onboard
+                · {number(objectives.reduce((n, o) => n + o.deliveredSCU, 0))}{" "}
+                delivered
+              </p>
               <p className="commodity-summary">{commodities.join(" · ")}</p>
               <dl className="contract-locations">
                 <div>

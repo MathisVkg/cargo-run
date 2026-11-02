@@ -1,3 +1,6 @@
+import { ProgressControls } from "../../components/cargo/ProgressControls";
+import { loaded, awaitingPickup } from "../../types/progress";
+import { recordedOnboard } from "../../stores/selectors";
 import { useMemo, useState } from "react";
 import {
   Container,
@@ -20,7 +23,9 @@ import { PageHeader, StatCard, EmptyState } from "../../components/ui";
 import { ContractDetails } from "../../components/contracts/ContractDetails";
 import type { Contract } from "../../types/models";
 export default function Manifest() {
-  const contracts = useCargoStore((s) => s.contracts);
+  const contracts = useCargoStore((s) => s.contracts),
+    shipId = useCargoStore((s) => s.selectedShipId),
+    ships = useCargoStore((s) => s.ships);
   const [detail, setDetail] = useState<Contract | null>(null);
   const data = useMemo(() => {
     const active = activeContracts(contracts);
@@ -75,8 +80,11 @@ export default function Manifest() {
         />
       </div>
       <p className="planning-note">
-        Remaining quantities do not establish collection or onboard inventory.
-        Progress labels describe only recorded evidence.
+        Recorded onboard: {number(recordedOnboard(contracts, shipId))} /{" "}
+        {number(ships.find((s) => s.id === shipId)?.cargoCapacitySCU ?? 0)} SCU
+        on selected ship. Unconfirmed loads are not verified empty. Individual
+        allocations below retain objective identity; no grouped quantity is
+        applied automatically.
       </p>
       {!data.active.length && (
         <EmptyState
@@ -114,12 +122,15 @@ export default function Manifest() {
                       <th>
                         {kind === "pickup" ? "Intended destination" : "Pickup"}
                       </th>
+                      <th className="align-right">Required</th>
                       <th className="align-right">
-                        {kind === "pickup" ? "To collect*" : "Required"}
+                        {kind === "pickup" ? "Awaiting pickup" : "Onboard"}
                       </th>
-                      <th className="align-right">Delivered</th>
+                      <th className="align-right">
+                        {kind === "pickup" ? "Loaded" : "Delivered"}
+                      </th>
                       <th className="align-right">Remaining</th>
-                      <th>Progress</th>
+                      <th>Progress / actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -145,13 +156,37 @@ export default function Manifest() {
                           {o ? number(o.quantitySCU) : "—"}
                         </td>
                         <td className="align-right numeric">
-                          {o ? number(o.deliveredSCU) : "—"}
+                          {o
+                            ? number(
+                                kind === "pickup"
+                                  ? awaitingPickup(o)
+                                  : loaded(o),
+                              )
+                            : "—"}
+                        </td>
+                        <td className="align-right numeric">
+                          {o
+                            ? number(
+                                kind === "pickup" ? loaded(o) : o.deliveredSCU,
+                              )
+                            : "—"}
                         </td>
                         <td className="align-right numeric">
                           {o ? number(remainingSCU(o)) : "—"}
                         </td>
                         <td>
-                          {o ? progressLabel(c, o) : "Awaiting objectives"}
+                          {o ? (
+                            <>
+                              {progressLabel(c, o)}
+                              <ProgressControls
+                                contract={c}
+                                objective={o}
+                                kind={kind}
+                              />
+                            </>
+                          ) : (
+                            "Awaiting objectives"
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -162,10 +197,42 @@ export default function Manifest() {
           ))}
         </section>
       ))}
-      <p className="form-note">
-        * Collection quantities are contract requirements, not a verified amount
-        still awaiting pickup. No collection state is tracked.
-      </p>
+      <section className="manifest-section">
+        <h2>Retained onboard inventory</h2>
+        <p className="form-note">
+          All ships, including completed and abandoned contracts. Closed cargo
+          remains onboard and uses capacity until explicitly unloaded. Select
+          its ship to adjust it. History cleanup is blocked while closed cargo
+          remains onboard.
+        </p>
+        {contracts
+          .filter((c) => !c.supersededBy)
+          .flatMap((c) =>
+            c.cargoObjectives
+              .filter(
+                (o) =>
+                  loaded(o) > 0 &&
+                  (c.status !== "Active" || o.loadedShipId !== shipId),
+              )
+              .map((o) => (
+                <article className="panel retained-cargo" key={o.id}>
+                  <strong>
+                    {c.name} · {c.status} · {o.commodity}
+                  </strong>
+                  <p>
+                    {number(loaded(o))} SCU on{" "}
+                    {ships.find((s) => s.id === o.loadedShipId)?.name ??
+                      "Saved ship"}
+                  </p>
+                  <ProgressControls
+                    contract={c}
+                    objective={o}
+                    kind="delivery"
+                  />
+                </article>
+              )),
+          )}
+      </section>
       <ContractDetails contract={detail} onClose={() => setDetail(null)} />
     </>
   );

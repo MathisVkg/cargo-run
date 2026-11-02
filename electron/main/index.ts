@@ -227,6 +227,8 @@ else
       register("ocr:clear", () => ocr.clear());
       register("ocr:displays", () => ocr.refreshDisplays());
       register("cargo:getState", () => service.snapshot());
+      register("cargo:progress", (input) => service.cargoProgress(input), true);
+      register("cargo:activity", (id) => service.cargoActivity(id));
       register("cargo:saveContract", (input) => service.saveContract(input));
       register("cargo:selectShip", (id) => service.selectShip(id));
       register("cargo:preferences", (patch) => service.setPreferences(patch));

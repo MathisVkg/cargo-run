@@ -12,6 +12,12 @@ export const uniqueObjectives = (c: Contract): CargoObjective[] => [
 ];
 export const contractSCU = (c: Contract): number =>
   uniqueObjectives(c).reduce((n, o) => n + o.quantitySCU, 0);
+export const recordedOnboard = (cs: Contract[], shipId: string) =>
+  cs
+    .filter((c) => !c.supersededBy)
+    .flatMap(uniqueObjectives)
+    .filter((o) => o.loadedShipId === shipId)
+    .reduce((n, o) => n + (o.loadedSCU ?? 0), 0);
 export const remainingSCU = (o: CargoObjective): number =>
   Math.max(0, o.quantitySCU - o.deliveredSCU);
 export const outstandingSCU = (c: Contract): number =>

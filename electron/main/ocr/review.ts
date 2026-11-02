@@ -388,7 +388,17 @@ export function prepareReview(
     });
     for (const remove of ids(req.removeObjectiveIds)) {
       const o = target.cargoObjectives.find((x) => x.id === remove);
-      if (!o || mapped.has(remove) || o.deliveredSCU > 0)
+      if (
+        !o ||
+        mapped.has(remove) ||
+        o.deliveredSCU > 0 ||
+        (o.loadedSCU ?? 0) > 0 ||
+        db.db
+          .prepare(
+            "SELECT 1 FROM cargo_progress_activity WHERE objective_id=? LIMIT 1",
+          )
+          .get(o.id)
+      )
         errors.push(
           "Only explicitly removed, undelivered existing objectives can be deleted.",
         );
@@ -666,7 +676,10 @@ export function planReview(
       ),
       rowId = existing?.id ?? randomUUID();
     if (existing) mapped.add(existing.id);
-    const delivered = o.deliveredSCU!,
+    const delivered =
+        existing?.loadEvidence === "Manual"
+          ? existing.deliveredSCU
+          : o.deliveredSCU!,
       minimum = Math.max(
         existing?.deliveredSCU ?? 0,
         ...events
@@ -693,6 +706,10 @@ export function planReview(
         existing?.[key],
         "objectives." + rowId + "." + key,
       );
+    if ((existing?.loadedSCU ?? 0) + delivered > o.quantitySCU!)
+      throw Error(
+        "Requirement conflicts with recorded onboard cargo. Correct physical cargo first.",
+      );
     return {
       ...existing,
       id: rowId,
@@ -702,6 +719,9 @@ export function planReview(
       destination: o.destination,
       quantitySCU: o.quantitySCU!,
       deliveredSCU: delivered,
+      loadedSCU: existing?.loadedSCU ?? 0,
+      loadedShipId: existing?.loadedShipId ?? null,
+      loadEvidence: existing?.loadEvidence ?? "Unknown",
       externalObjectiveId:
         o.externalObjectiveId ?? existing?.externalObjectiveId,
     };
@@ -710,6 +730,10 @@ export function planReview(
     if (!mapped.has(o.id) && !ids(input.removeObjectiveIds).includes(o.id))
       rows.push(o);
   const source = review.sourceContract;
+  if (source?.cargoObjectives.some((o) => (o.loadedSCU ?? 0) > 0))
+    throw Error(
+      "Unload recorded cargo before consolidating its identity; physical inventory will not be discarded.",
+    );
   if (
     source?.confirmedEarnings &&
     target?.confirmedEarnings &&
