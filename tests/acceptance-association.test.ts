@@ -289,5 +289,63 @@ describe("Real November 5 identity-only fixture", () => {
     ).toBe(1);
     expect(s.domain().contracts).toEqual([]);
   });
+
+  it("corroborates the observed Aluminium template spelling against Aluminum OCR without title-only matching", () => {
+    const s = service(),
+      cap = capture(s),
+      repo = new CaptureRepository(s.database);
+    const c = s.domain().contracts[0];
+    const r = structuredClone(cap.result!);
+    r.lines = r.lines.map((l) => ({
+      ...l,
+      text: l.text.replaceAll("Corundum", "Aluminum"),
+    }));
+    r.text = r.lines.map((l) => l.text).join("\n");
+    // Update the same fixture's OCR-owned commodity, preserving its row identity.
+    const updated = {
+      ...c,
+      cargoObjectives: c.cargoObjectives.map((o) => ({
+        ...o,
+        commodity: "Aluminum",
+      })),
+    };
+    s.store.setState({ contracts: [updated] });
+    s.database.saveDomain(s.domain());
+    const observation = extractContract(r, cap.id, cap.capturedAt);
+    repo.put({ ...cap, result: r, observation });
+    const link = s.contractEvidence(c.id)[0];
+    s.database.db
+      .prepare("UPDATE capture_contract_links SET payload=? WHERE capture_id=?")
+      .run(JSON.stringify({ ...link, observation }), cap.id);
+    feed(
+      s,
+      start.map((l) => l.replaceAll("Corundum", "Aluminium")),
+    );
+    expect(s.domain().contracts[0].missionId).toBe(mission);
+    expect(s.domain().contracts[0].missionAssociation?.source).toBe(
+      "Acceptance context",
+    );
+    feed(
+      s,
+      real.map((l) => l.replaceAll("Corundum", "Aluminium")),
+    );
+    expect(s.domain().contracts[0]).toMatchObject({
+      status: "Completed",
+      confirmedEarnings: 0,
+    });
+  });
+  it("explains missing corroboration in manual fallback and does not resolve from one title candidate", () => {
+    const s = service();
+    capture(s);
+    feed(
+      s,
+      real.filter((l) => !l.includes("CreateMarker")),
+    );
+    const i = s.snapshot().lifecycleIssues![0];
+    expect(i.candidates).toHaveLength(1);
+    expect(i.candidates[0].automaticReason).toMatch(/No complete/);
+    expect(i.candidates[0].identityEvidence).toMatch(/objective state/);
+    expect(s.domain().contracts[0].status).toBe("Active");
+  });
 });
 const randomMission = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";

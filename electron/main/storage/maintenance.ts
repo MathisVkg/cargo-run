@@ -94,6 +94,7 @@ export class LocalDataManager {
       /* Preview/backup surfaces unsafe paths; counts remain usable. */
     }
     return {
+      retainedCargo: this.retainedCargo(),
       total: d.contracts.length,
       active: cs.filter((c) => c.status === "Active").length,
       completed: cs.filter((c) => c.status === "Completed").length,
@@ -113,19 +114,47 @@ export class LocalDataManager {
       ),
     };
   }
+  private retainedCargo(): LocalDataStats["retainedCargo"] {
+    const d = this.service.domain();
+    const cs = d.contracts.filter(
+      (c) =>
+        c.status !== "Active" &&
+        c.cargoObjectives.some((o) => (o.loadedSCU ?? 0) > 0),
+    );
+    const ships = new Map<
+      string | null,
+      { id: string | null; name: string; scu: number }
+    >();
+    for (const c of cs)
+      for (const o of c.cargoObjectives) {
+        if (!(o.loadedSCU! > 0)) continue;
+        const id = o.loadedShipId ?? null;
+        const entry = ships.get(id) ?? {
+          id,
+          name:
+            d.ships.find((s) => s.id === id)?.name ??
+            "Saved ship (unavailable)",
+          scu: 0,
+        };
+        entry.scu += o.loadedSCU!;
+        ships.set(id, entry);
+      }
+    return {
+      contracts: cs.length,
+      scu: [...ships.values()].reduce((n, s) => n + s.scu, 0),
+      ships: [...ships.values()],
+    };
+  }
   private removed(mode: CleanupMode) {
-    if (
-      mode !== "reset" &&
-      this.service
-        .domain()
-        .contracts.some(
-          (c) =>
-            c.status !== "Active" &&
-            c.cargoObjectives.some((o) => (o.loadedSCU ?? 0) > 0),
-        )
-    )
+    const retained = this.retainedCargo();
+    if (mode !== "reset" && retained.contracts)
       throw Error(
-        "Closed contracts still have recorded onboard cargo. Unload it in Manifest before clearing history, or use the explicit full reset.",
+        retained.contracts +
+          " closed contracts retain " +
+          retained.scu +
+          " SCU onboard (" +
+          retained.ships.map((s) => s.name).join(", ") +
+          "). Open Manifest → Retained onboard inventory, select each assigned ship and unload or correct its quantity. Full reset remains available.",
       );
     const cs = this.service.domain().contracts,
       ids = new Set(

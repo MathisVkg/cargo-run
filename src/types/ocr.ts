@@ -10,6 +10,7 @@ export interface OcrLine {
   text: string;
   box: Rect;
   confidence: number | null;
+  words?: { text: string; box: Rect; confidence: number | null }[];
 }
 export interface OcrResult {
   provider: string;

@@ -588,4 +588,83 @@ describe("Cargo precision and same-contract allocations", () => {
     expect(() => apply(s, "Load", 0.1234567)).toThrow(/decimal/);
     expect(() => apply(s, "Load", 0.000000001)).toThrow(/decimal/);
   });
+
+  it.each(["Completed", "Abandoned"] as const)(
+    "unloads/corrects %s inventory while blocking upward undo, delivery and corrections",
+    (status) => {
+      const s = setup();
+      apply(s, "Load", 9);
+      apply(s, "Deliver", 2);
+      const id = s.domain().contracts[0].id;
+      if (status === "Completed") s.completeContract(id);
+      else s.abandonContract(id);
+      const before = structuredClone(s.domain().contracts[0]);
+      for (const action of ["Load", "Deliver"] as const)
+        expect(() => apply(s, action, 1)).toThrow(/Closed/);
+      apply(s, "Unload", 2);
+      const a = s.cargoActivity(id)[0],
+        undo = request(s, "Undo", 0);
+      undo.changes[0].undoId = a.id;
+      expect(() => s.cargoProgress(undo)).toThrow(/Closed/);
+      expect(() => apply(s, "SetLoaded", 6)).toThrow(/downwards/);
+      apply(s, "SetLoaded", 3);
+      expect(row(s)).toMatchObject({
+        loadedSCU: 3,
+        deliveredSCU: 2,
+        loadedShipId: before.cargoObjectives[0].loadedShipId,
+      });
+      apply(s, "SetLoaded", 0);
+      expect(row(s)).toMatchObject({
+        loadedSCU: 0,
+        loadedShipId: null,
+        deliveredSCU: 2,
+      });
+      expect(s.domain().contracts[0]).toMatchObject({
+        status,
+        confirmedEarnings: before.confirmedEarnings,
+      });
+      expect(
+        s
+          .cargoActivity(id)
+          .slice(0, 3)
+          .map((a) => a.action),
+      ).toEqual(["SetLoaded", "SetLoaded", "Unload"]);
+    },
+  );
+  it("returns structured cleanup blockers across ships and allows cleanup only after each retained allocation reaches zero", async () => {
+    const folder = mkdtempSync(join(tmpdir(), "cargo-retained-"));
+    const s = setup(join(folder, "cargo.sqlite"), 2);
+    const original = s.domain().selectedShipId;
+    apply(s, "Load", 9);
+    s.completeContract(s.domain().contracts[0].id);
+    s.selectShip("hull-c");
+    apply(s, "Load", 4, 1);
+    s.abandonContract(s.domain().contracts[1].id);
+    mkdirSync(join(folder, "captures"));
+    const m = new LocalDataManager(s, join(folder, "captures"), {
+      pause: async () => {},
+      resume: async () => {},
+    });
+    expect(m.stats().retainedCargo).toMatchObject({ contracts: 2, scu: 13 });
+    expect(
+      m
+        .stats()
+        .retainedCargo.ships.map((s) => s.scu)
+        .sort((a, b) => a - b),
+    ).toEqual([4, 9]);
+    for (const mode of ["closed", "history"] as const)
+      expect(() => m.preview(mode)).toThrow(/2 closed contracts retain 13 SCU/);
+    expect(m.preview("reset").stopsMonitoring).toBe(true);
+    apply(s, "SetLoaded", 0, 1);
+    s.selectShip(original);
+    apply(s, "Unload", 9);
+    expect(m.stats().retainedCargo).toEqual({
+      contracts: 0,
+      scu: 0,
+      ships: [],
+    });
+    await m.execute({ token: m.preview("closed").token, confirmed: true });
+    expect(s.domain().contracts).toEqual([]);
+    expect(s.database.db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
 });

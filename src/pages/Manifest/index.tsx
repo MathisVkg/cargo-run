@@ -1,7 +1,7 @@
 import { ProgressControls } from "../../components/cargo/ProgressControls";
 import { loaded, awaitingPickup } from "../../types/progress";
 import { recordedOnboard } from "../../stores/selectors";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Container,
   MapPin,
@@ -26,6 +26,14 @@ export default function Manifest() {
   const contracts = useCargoStore((s) => s.contracts),
     shipId = useCargoStore((s) => s.selectedShipId),
     ships = useCargoStore((s) => s.ships);
+  const inventory = useRef<HTMLElement>(null);
+  const inventoryRequest = useCargoStore((s) => s.retainedInventoryRequest);
+  useEffect(() => {
+    if (inventoryRequest) {
+      inventory.current?.scrollIntoView({ block: "start" });
+      inventory.current?.focus({ preventScroll: true });
+    }
+  }, [inventoryRequest]);
   const [detail, setDetail] = useState<Contract | null>(null);
   const data = useMemo(() => {
     const active = activeContracts(contracts);
@@ -197,7 +205,12 @@ export default function Manifest() {
           ))}
         </section>
       ))}
-      <section className="manifest-section">
+      <section
+        className="manifest-section"
+        id="retained-inventory"
+        ref={inventory}
+        tabIndex={-1}
+      >
         <h2>Retained onboard inventory</h2>
         <p className="form-note">
           All ships, including completed and abandoned contracts. Closed cargo

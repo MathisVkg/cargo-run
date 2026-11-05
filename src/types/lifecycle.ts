@@ -24,6 +24,8 @@ export interface LifecycleIssue {
     required: number;
     onboard: number;
     reason: string;
+    automaticReason: string;
+    identityEvidence: string;
   }[];
 }
 export interface LifecycleResolution {

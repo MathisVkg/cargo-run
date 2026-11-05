@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import type { CargoObjective, Contract } from "../../types/models";
 import {
   loaded,
+  inventoryActions,
+  canUndoInventory,
+  cargoValues,
   awaitingPickup,
   progressStamp,
   type CargoActivity,
@@ -22,9 +25,10 @@ export function ProgressControls({
     ships = useCargoStore((s) => s.ships),
     revision = useCargoStore((s) => s.revision),
     update = useCargoStore((s) => s.recordProgress);
+  const closed = contract.status !== "Active";
   const [quantity, setQuantity] = useState(""),
     [action, setAction] = useState<ProgressChange["action"]>(
-      kind === "pickup" ? "Load" : "Deliver",
+      closed ? "Unload" : kind === "pickup" ? "Load" : "Deliver",
     ),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -70,7 +74,13 @@ export function ProgressControls({
       setBusy(false);
     }
   };
-  const full = kind === "pickup" ? awaitingPickup(o) : loaded(o);
+  const available = inventoryActions(contract.status);
+  const selectedAction = available.includes(action) ? action : available[0];
+  const full = closed
+    ? loaded(o)
+    : kind === "pickup"
+      ? awaitingPickup(o)
+      : loaded(o);
   return (
     <div className="cargo-progress-control" data-objective-id={o.id}>
       <span className="form-note">
@@ -85,16 +95,27 @@ export function ProgressControls({
       <div className="cargo-quick-buttons">
         <button
           className="button small"
-          disabled={
-            busy || offShip || contract.status !== "Active" || full <= 0
+          disabled={busy || offShip || full <= 0}
+          onClick={() =>
+            void run(
+              closed ? "Unload" : kind === "pickup" ? "Load" : "Deliver",
+              full,
+            )
           }
-          onClick={() => void run(kind === "pickup" ? "Load" : "Deliver", full)}
         >
-          {kind === "pickup" ? "Load remainder" : "Deliver onboard"}
+          {closed
+            ? "Unload cargo"
+            : kind === "pickup"
+              ? "Load remainder"
+              : "Deliver onboard"}
         </button>
         <details>
           <summary>
-            {kind === "pickup" ? "Record loading" : "Record delivery"}
+            {closed
+              ? "Adjust retained cargo"
+              : kind === "pickup"
+                ? "Record loading"
+                : "Record delivery"}
           </summary>
           <p>
             {contract.name} · {o.commodity} · {o.pickupLocation} →{" "}
@@ -103,25 +124,32 @@ export function ProgressControls({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void run(action, Number(quantity));
+              void run(selectedAction, Number(quantity));
             }}
           >
             <label>
               Action
               <select
                 aria-label="Action"
-                value={action}
+                value={selectedAction}
                 onChange={(e) =>
                   setAction(e.target.value as ProgressChange["action"])
                 }
-                disabled={busy}
+                disabled={busy || offShip}
               >
-                <option value="Load">Load additional cargo</option>
-                <option value="Deliver">Deliver onboard cargo</option>
-                <option value="Unload">Unload without delivery</option>
-                <option value="SetLoaded">
-                  Correct recorded onboard total
-                </option>
+                {available.map((a) => (
+                  <option key={a} value={a}>
+                    {a === "Load"
+                      ? "Load additional cargo"
+                      : a === "Deliver"
+                        ? "Deliver onboard cargo"
+                        : a === "Unload"
+                          ? closed
+                            ? "Unload cargo"
+                            : "Unload without delivery"
+                          : "Correct onboard quantity"}
+                  </option>
+                ))}
               </select>
             </label>
             <label>
@@ -129,12 +157,13 @@ export function ProgressControls({
               <input
                 type="number"
                 aria-label="Quantity (SCU)"
-                min={action === "SetLoaded" ? 0 : 0.000001}
+                min={selectedAction === "SetLoaded" ? 0 : 0.000001}
+                max={closed ? loaded(o) : undefined}
                 step="any"
                 required
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                disabled={busy}
+                disabled={busy || offShip}
               />
             </label>
             <button className="button primary small" disabled={busy || offShip}>
@@ -142,20 +171,22 @@ export function ProgressControls({
             </button>
           </form>
           <p className="form-note">
-            Correction sets the onboard total. Unloading returns cargo to
-            awaiting pickup. Delivery consumes recorded onboard cargo and does
-            not complete the contract or confirm payout.
+            {closed
+              ? "Unload removes cargo from its assigned ship. Correction sets an absolute onboard total, downward only. Status, delivery totals and earnings stay unchanged."
+              : "Correction sets the onboard total. Unloading returns cargo to awaiting pickup. Delivery consumes recorded onboard cargo and does not complete the contract or confirm payout."}
           </p>
         </details>
-        {last?.source === "Manual" && last.action !== "Undo" && (
-          <button
-            className="text-button"
-            disabled={busy || offShip}
-            onClick={() => void run("Undo", 0)}
-          >
-            Undo last cargo change
-          </button>
-        )}
+        {last?.source === "Manual" &&
+          last.action !== "Undo" &&
+          canUndoInventory(contract.status, cargoValues(o), last.previous) && (
+            <button
+              className="text-button"
+              disabled={busy || offShip}
+              onClick={() => void run("Undo", 0)}
+            >
+              Undo last cargo change
+            </button>
+          )}
       </div>
       {offShip && (
         <p className="warning-text">

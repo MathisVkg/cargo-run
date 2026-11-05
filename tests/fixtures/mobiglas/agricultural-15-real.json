@@ -1,0 +1,156 @@
+{
+  "provenance": "Re-recognized offline from available managed 3840x2160 screenshot on 2026-11-05. Only contract-pane/action OCR lines retained; positions/text/confidence unchanged. Historical 715 OCR is unavailable. This is actual 15-SCU evidence, not a synthetic replacement of an old fixture.",
+  "result": {
+    "width": 3840,
+    "height": 2160,
+    "text": "Reward\nH 34,500\nRookie Rank - Direct Small Cargo Haul\nContracted By\nCovalex Independent Contractors\nDETAILS\nPRIMARY OBJECTIVES\n<$ Deliver 0/15 SCU of Agricultural Supplies to Port\nTressler above microTech.\n¢ Collect Agricultural Supplies from NB Int.\nSpaceport.\nABANDON\nTRACK",
+    "lines": [
+      {
+        "id": "line-5",
+        "text": "Reward",
+        "box": {
+          "x": 2622,
+          "y": 388,
+          "width": 110,
+          "height": 24
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-6",
+        "text": "H 34,500",
+        "box": {
+          "x": 3347,
+          "y": 386,
+          "width": 141,
+          "height": 28
+        },
+        "confidence": 59
+      },
+      {
+        "id": "line-11",
+        "text": "Rookie Rank - Direct Small Cargo Haul",
+        "box": {
+          "x": 1384,
+          "y": 432,
+          "width": 865,
+          "height": 65
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-12",
+        "text": "Contracted By",
+        "box": {
+          "x": 2619,
+          "y": 483,
+          "width": 206,
+          "height": 29
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-13",
+        "text": "Covalex Independent Contractors",
+        "box": {
+          "x": 2975,
+          "y": 481,
+          "width": 503,
+          "height": 30
+        },
+        "confidence": 94
+      },
+      {
+        "id": "line-19",
+        "text": "DETAILS",
+        "box": {
+          "x": 1386,
+          "y": 627,
+          "width": 196,
+          "height": 33
+        },
+        "confidence": 95
+      },
+      {
+        "id": "line-20",
+        "text": "PRIMARY OBJECTIVES",
+        "box": {
+          "x": 2471,
+          "y": 624,
+          "width": 521,
+          "height": 34
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-23",
+        "text": "<$ Deliver 0/15 SCU of Agricultural Supplies to Port",
+        "box": {
+          "x": 2469,
+          "y": 703,
+          "width": 824,
+          "height": 32
+        },
+        "confidence": 88
+      },
+      {
+        "id": "line-25",
+        "text": "Tressler above microTech.",
+        "box": {
+          "x": 2520,
+          "y": 742,
+          "width": 419,
+          "height": 26
+        },
+        "confidence": 91
+      },
+      {
+        "id": "line-32",
+        "text": "¢ Collect Agricultural Supplies from NB Int.",
+        "box": {
+          "x": 2527,
+          "y": 796,
+          "width": 689,
+          "height": 33
+        },
+        "confidence": 92
+      },
+      {
+        "id": "line-34",
+        "text": "Spaceport.",
+        "box": {
+          "x": 2571,
+          "y": 836,
+          "width": 172,
+          "height": 31
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-45",
+        "text": "ABANDON",
+        "box": {
+          "x": 1344,
+          "y": 1702,
+          "width": 175,
+          "height": 26
+        },
+        "confidence": 96
+      },
+      {
+        "id": "line-46",
+        "text": "TRACK",
+        "box": {
+          "x": 3437,
+          "y": 1697,
+          "width": 123,
+          "height": 26
+        },
+        "confidence": 95
+      }
+    ],
+    "provider": "Tesseract 7 · offline English",
+    "language": "eng",
+    "durationMs": 0
+  }
+}

@@ -90,6 +90,21 @@ export class OfflineTesseract implements OcrProvider {
               width: l.bbox.x1 - l.bbox.x0,
               height: l.bbox.y1 - l.bbox.y0,
             },
+            words: l.words.map((w) => ({
+              text: w.text,
+              box: {
+                x: w.bbox.x0,
+                y: w.bbox.y0,
+                width: w.bbox.x1 - w.bbox.x0,
+                height: w.bbox.y1 - w.bbox.y0,
+              },
+              confidence:
+                Number.isFinite(w.confidence) &&
+                w.confidence >= 0 &&
+                w.confidence <= 100
+                  ? w.confidence
+                  : null,
+            })),
             confidence:
               Number.isFinite(l.confidence) &&
               l.confidence >= 0 &&

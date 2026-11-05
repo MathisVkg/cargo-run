@@ -17,7 +17,9 @@ export const recognitionKey = (o: ContractObservation | null) =>
             r.pickup.value,
             r.destination.value,
             r.requiredSCU.value,
+            r.requiredSCU.state,
             r.deliveredSCU.value,
+            r.deliveredSCU.state,
           ]),
         ]
       : null,

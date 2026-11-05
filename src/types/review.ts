@@ -73,6 +73,7 @@ export interface MatchingDiagnostic {
   reason: string;
 }
 export interface ScanIssue {
+  automaticChoices?: Record<string, "Keep" | "Reviewed">;
   review: OcrReview;
   outcome: ScanOutcome;
   coverageEstablished: boolean;

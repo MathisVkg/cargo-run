@@ -25,6 +25,19 @@ export interface ProgressChange {
   expected: string;
   undoId?: string;
 }
+// Shared lifecycle rules; quantities, ship ownership and concurrency are validated separately.
+export const inventoryActions = (status: string): ProgressChange["action"][] =>
+  status === "Active"
+    ? ["Load", "Deliver", "Unload", "SetLoaded"]
+    : ["Unload", "SetLoaded"];
+export const canUndoInventory = (
+  status: string,
+  current: CargoStateValues,
+  previous: CargoStateValues,
+) =>
+  status === "Active" ||
+  (previous.loaded <= current.loaded &&
+    previous.delivered === current.delivered);
 export interface ProgressRequest {
   requestId: string;
   shipId: string;

@@ -57,6 +57,10 @@ function markerPair(rows: MissionIdentityEvidence[], missionId: string) {
     ? [pickup[0], delivery[0]]
     : null;
 }
+const commodityKey = (s: string) =>
+  norm(s)
+    .replaceAll(" ", "")
+    .replace(/^aluminium$/, "aluminum");
 function templateCommodity(
   pair: MissionIdentityEvidence[] | null,
   c: Contract,
@@ -68,9 +72,7 @@ function templateCommodity(
     pair[0]
       .template!.split("_")
       .some(
-        (t) =>
-          norm(t).replaceAll(" ", "") ===
-          norm(c.cargoObjectives[0].commodity).replaceAll(" ", ""),
+        (t) => commodityKey(t) === commodityKey(c.cargoObjectives[0].commodity),
       )
   );
 }
@@ -149,8 +151,13 @@ export function reconcileAcceptedMissions(
         if (
           !alive(p, capture.at) ||
           capture.at - Date.parse(p.acceptedAt!) > 600000
-        )
+        ) {
+          diagnostics.set(
+            c.id,
+            "Accepted OCR was outside the supported acceptance window or mission lifetime.",
+          );
           continue;
+        }
         const evidenceIds = [String(accepted.id)];
         let proof: Proof | null = null;
         if (exactRows(c, p, true))
@@ -160,7 +167,10 @@ export function reconcileAcceptedMissions(
             reason:
               "Unique one-to-one objective identifiers and cargo details agree.",
           };
-        else if (exactRows(c, p))
+        else if (
+          capture.at - Date.parse(p.acceptedAt!) <= 600000 &&
+          exactRows(c, p)
+        )
           proof = {
             source: "Objective details",
             ids: evidenceIds,
@@ -179,10 +189,15 @@ export function reconcileAcceptedMissions(
             o.objectives[0].commodity.state === "Recognized" &&
             norm(o.objectives[0].commodity.value ?? "") ===
               norm(c.cargoObjectives[0].commodity) &&
+            o.objectives[0].requiredSCU.state === "Recognized" &&
             o.objectives[0].requiredSCU.value ===
               c.cargoObjectives[0].quantitySCU &&
-            o.objectives[0].pickup.value &&
-            o.objectives[0].destination.value
+            o.objectives[0].pickup.state === "Recognized" &&
+            norm(o.objectives[0].pickup.value ?? "") ===
+              norm(c.cargoObjectives[0].pickupLocation) &&
+            o.objectives[0].destination.state === "Recognized" &&
+            norm(o.objectives[0].destination.value ?? "") ===
+              norm(c.cargoObjectives[0].destination)
           ) {
             proof = {
               source: "Acceptance context",
@@ -192,7 +207,20 @@ export function reconcileAcceptedMissions(
             };
           }
         }
-        if (!proof) continue;
+        if (!proof) {
+          const pair = markerPair(rows, p.missionId);
+          diagnostics.set(
+            c.id,
+            !pair
+              ? "No complete, consistent pickup/dropoff marker pair or matching objective identifiers/details were recorded."
+              : !templateCommodity(pair, c)
+                ? "The marker template does not corroborate this contract's single commodity."
+                : capture.at - Date.parse(p.acceptedAt!) > 120000
+                  ? "Accepted capture is outside the two-minute marker-context window; no matching objective identifiers/details verify it."
+                  : "Accepted OCR coverage or objective fields are incomplete or disagree with the saved contract.",
+          );
+          continue;
+        }
         const competing = pending.some(
           (other) =>
             other.missionId !== p.missionId &&
@@ -249,10 +277,10 @@ export function reconcileAcceptedMissions(
       const diagnostic = {
         decision: "Pending" as const,
         reason:
-          diagnostics.get(c.id) ??
-          (choices.length > 1 || competingContract
+          choices.length > 1 || competingContract
             ? "More than one contract or mission can own this evidence."
-            : "Acceptance identity lacks unique corroborating evidence."),
+            : (diagnostics.get(c.id) ??
+              "Acceptance identity lacks unique corroborating evidence."),
         candidateMissionIds: pending
           .filter((p) => norm(p.name) === norm(c.name))
           .map((p) => p.missionId!)

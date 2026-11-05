@@ -1,3 +1,4 @@
+import { deliveryQuantity } from "./quantity";
 import { establishCoverage } from "./coverage";
 import type {
   OcrResult,
@@ -21,7 +22,9 @@ const heading = (s: string) =>
 // Checkbox/currency glyphs vary by font and OCR. Strip a checkbox prefix only
 // immediately before a recognized objective verb; never alter evidence text.
 const objectiveText = (s: string) =>
-  s.replace(/^[^A-Za-z0-9]*\s*(?=(?:Deliver|Collect|Pick\s*up)\b)/i, "");
+  s
+    .replace(/^\s*\[[ xX✓✔]?\]\s*/, "")
+    .replace(/^[^A-Za-z0-9]*\s*(?=(?:Deliver|Collect|Pick\s*up)\b)/i, "");
 const excludedTitle = (s: string) =>
   navigation(s) ||
   heading(s) ||
@@ -526,7 +529,7 @@ export function extractContract(
       const body = p.text.replace(/^(?:Collect|Pick\s*up)\s+/i, "");
       if (body === p.text) continue;
       const stripped = body.replace(
-        /^(?:\d+(?:\.\d+)?\/)?\d+(?:\.\d+)?\s*SCU\s+(?:of\s+)?/i,
+        /^(?:[\d,]+(?:\.\d+)?\s*[/⁄／]\s*)?[\d,]+(?:\.\d+)?\s*SCU\s+(?:of\s+)?/i,
         "",
       );
       const m = /^(?:(.*?)\s+)?(?:from|at)\s+(.+)$/i.exec(stripped);
@@ -542,18 +545,15 @@ export function extractContract(
     used = new Set<string>();
   for (const p of paragraphs(objectiveLines)) {
     if (!/^Deliver\b/i.test(p.text)) continue;
-    const m =
-      /^Deliver\s+(\d+(?:\.\d+)?)(?:\s*\/\s*(\d+(?:\.\d+)?))?\s*SCU\s+(?:of\s+)?(.+)$/i.exec(
-        p.text,
-      );
-    if (!m) {
+    const quantity = deliveryQuantity(p.text, p.lines);
+    if (!quantity) {
       warnings.push(
         "A delivery row was recognized but could not be parsed: " +
           p.text.slice(0, 200),
       );
       continue;
     }
-    const body = m[3],
+    const body = quantity.body,
       split = /\s+to(?:\s+|$)/i.exec(body),
       commodity = clean(split ? body.slice(0, split.index) : body),
       destination = split
@@ -562,11 +562,8 @@ export function extractContract(
     const evidenceKey = p.lines.map((l) => l.id).join("|") + "|" + p.text;
     if (used.has(evidenceKey)) continue;
     used.add(evidenceKey);
-    const required = numeric(m[2] ?? m[1]),
-      delivered = m[2] ? numeric(m[1]) : null;
-    const invalid =
-      required === null ||
-      (delivered !== null && required !== null && delivered > required);
+    const { required, delivered } = quantity;
+    const invalid = quantity.ambiguous;
     const matches = pickups.filter(
         (p) => p.commodity?.toLowerCase() === commodity.toLowerCase(),
       ),
@@ -623,7 +620,7 @@ export function extractContract(
       );
     if (invalid)
       warnings.push(
-        "A delivery quantity failed validation; review its evidence.",
+        "A delivery quantity is uncertain (missing progress separator, low confidence, or invalid total); review its evidence.",
       );
     objectives.push({
       commodity: field(commodity || null, p.lines, "Primary Objectives"),
@@ -651,6 +648,35 @@ export function extractContract(
       pickup,
     });
   }
+  // Explicit primary Collect quantities corroborate the aggregate for a commodity.
+  // A conflicting count identifies uncertainty; it never silently replaces a delivery total.
+  for (const collect of pickups.filter((p) => p.primary && p.commodity)) {
+    const m =
+      /^(?:Collect|Pick\s*up)\s+(?:(?:[\d,.]+)\s*[/⁄／]\s*)?([\d,.]+)\s*SCU\b/i.exec(
+        collect.block.text,
+      );
+    if (!m) continue;
+    const rows = objectives.filter(
+      (r) =>
+        r.commodity.value?.toLowerCase() === collect.commodity!.toLowerCase() &&
+        collect.block.lines.some((l) =>
+          r.pickup.evidence?.lineIds.includes(l.id),
+        ),
+    );
+    const total = numeric(m[1]);
+    if (
+      rows.length &&
+      total !== null &&
+      Math.abs(
+        rows.reduce((n, r) => n + (r.requiredSCU.value ?? 0), 0) - total,
+      ) > 0.000001
+    ) {
+      for (const r of rows) r.requiredSCU.state = "Ambiguous";
+      warnings.push(
+        "Delivery and collection quantities disagree; confirm the objective totals against the screenshot.",
+      );
+    }
+  }
   const keys = new Set<string>();
   for (const row of objectives) {
     const key = JSON.stringify([
@@ -674,7 +700,7 @@ export function extractContract(
   if (!objectives.length)
     warnings.push("No validated visible delivery objectives were extracted.");
   const observation: ContractObservation = {
-    parserVersion: "0.4.1",
+    parserVersion: "0.4.2",
     captureId,
     capturedAt,
     acceptanceTimestamp: null,

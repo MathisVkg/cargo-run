@@ -140,6 +140,47 @@ export function inspectScan(
         ambiguousRows.join(", ") +
         ". Use Advanced to choose their identity; no duplicate rows were appended.",
     );
+  // Repair only an OCR-owned requirement from this exact attached capture.
+  // Stable row identity and physical progress constrain any automatic replacement.
+  const automaticChoices: Record<string, "Keep" | "Reviewed"> = {};
+  if (
+    !options.draft &&
+    prior?.attached &&
+    bound &&
+    selected?.id === bound.id &&
+    c.observation?.coverage?.state === "Established"
+  ) {
+    for (const conflict of review.conflicts) {
+      const match = /^objectives\.(\d+)\.quantitySCU$/.exec(conflict.path);
+      if (!match) continue;
+      const i = Number(match[1]),
+        incoming = review.draft.objectives[i];
+      const row = bound.cargoObjectives.find(
+        (r) => r.id === incoming?.existingObjectiveId,
+      );
+      const owner =
+        row && bound.fieldProvenance?.["objectives." + row.id + ".quantitySCU"];
+      const observed = c.observation.objectives[i];
+      if (
+        row &&
+        owner?.source === "OCR" &&
+        owner.captureId === c.id &&
+        observed?.requiredSCU.state === "Recognized" &&
+        observed.deliveredSCU.state === "Recognized" &&
+        observed.requiredSCU.value === incoming.quantitySCU &&
+        norm(row.commodity) === norm(incoming.commodity) &&
+        norm(row.destination) === norm(incoming.destination) &&
+        norm(row.pickupLocation) === norm(incoming.pickupLocation) &&
+        bound.cargoObjectives.filter(
+          (r) =>
+            norm(r.commodity) === norm(incoming.commodity) &&
+            norm(r.destination) === norm(incoming.destination),
+        ).length === 1 &&
+        (row.loadedSCU ?? 0) + row.deliveredSCU <= incoming.quantitySCU!
+      )
+        automaticChoices[conflict.path] = "Reviewed";
+    }
+  }
   // Routine choices exclude closed history and unrelated reward-only candidates.
   review.candidates = review.candidates.filter((r) =>
     candidates.some((c) => c.id === r.contract.id),
@@ -185,6 +226,14 @@ export function inspectScan(
     )
   )
     message = "Confirm the ambiguous recognized field.";
+  else if (
+    !options.draft &&
+    c.observation!.objectives.some((r) =>
+      [r.requiredSCU, r.deliveredSCU].some((f) => f.state === "Ambiguous"),
+    )
+  )
+    message =
+      "Confirm uncertain objective quantities against the screenshot; automatic import was withheld.";
   else if (review.errors.length) message = review.errors[0];
   else if (!coverageEstablished && !options.coverageConfirmed)
     message =
@@ -229,7 +278,11 @@ export function inspectScan(
   )
     message =
       "Saved manual corrections are protected. Use Edit details / Advanced to confirm consolidation.";
-  else if (review.conflicts.some((x) => !options.choices?.[x.path]))
+  else if (
+    review.conflicts.some(
+      (x) => !options.choices?.[x.path] && !automaticChoices[x.path],
+    )
+  )
     message =
       "Stored values differ. Choose which values to keep; manual corrections are protected.";
   else {
@@ -238,6 +291,7 @@ export function inspectScan(
   }
   return {
     review,
+    automaticChoices,
     coverageEstablished,
     outcome: {
       status,
@@ -272,6 +326,6 @@ export function scanConfirmation(
     consolidationConfirmed:
       !!r.sourceContract && options.targetId !== undefined,
     objectiveRemovalConfirmed: false,
-    choices: options.choices ?? {},
+    choices: { ...issue.automaticChoices, ...options.choices },
   };
 }

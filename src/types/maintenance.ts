@@ -1,5 +1,10 @@
 export type CleanupMode = "closed" | "history" | "reset";
 export interface LocalDataStats {
+  retainedCargo: {
+    contracts: number;
+    scu: number;
+    ships: { id: string | null; name: string; scu: number }[];
+  };
   total: number;
   active: number;
   completed: number;

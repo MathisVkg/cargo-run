@@ -1,3 +1,4 @@
+import { inventoryActions, canUndoInventory } from "../../src/types/progress";
 import { randomUUID, createHash } from "node:crypto";
 import type { CargoDatabase } from "./storage/database";
 import type { Contract, CargoObjective } from "../../src/types/models";
@@ -158,6 +159,10 @@ export function applyProgress(
         );
       if (a.previous.loaded > 0 && a.previous.shipId !== selectedShipId)
         throw Error("Select the original ship before undoing this operation.");
+      if (!canUndoInventory(c.status, cargoValues(o), a.previous))
+        throw Error(
+          "Closed cargo cannot restore onboard quantities or change delivery totals through undo.",
+        );
       o.loadedSCU = a.previous.loaded;
       o.deliveredSCU = a.previous.delivered;
       o.loadedShipId = a.previous.shipId;
@@ -165,7 +170,7 @@ export function applyProgress(
     } else {
       if (
         c.status !== "Active" &&
-        !["Unload", "SetLoaded"].includes(change.action)
+        !inventoryActions(c.status).includes(change.action)
       )
         throw Error(
           "Closed cargo can only be unloaded or corrected downwards.",

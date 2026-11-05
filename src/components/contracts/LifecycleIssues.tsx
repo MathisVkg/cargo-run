@@ -56,6 +56,18 @@ export function LifecycleIssues() {
           {selected[i.missionId] && (
             <p className="form-note">
               {i.candidates.find((c) => c.id === selected[i.missionId])?.reason}
+              <br />
+              Available identity evidence:{" "}
+              {
+                i.candidates.find((c) => c.id === selected[i.missionId])
+                  ?.identityEvidence
+              }
+              <br />
+              Automatic association unavailable:{" "}
+              {
+                i.candidates.find((c) => c.id === selected[i.missionId])
+                  ?.automaticReason
+              }
             </p>
           )}
           <label className="checkbox-label">

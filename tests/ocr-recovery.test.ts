@@ -308,4 +308,116 @@ describe("Saved screenshot recognition recovery", () => {
       /without image recognition/,
     );
   });
+
+  it.each(["image", "saved text"])(
+    "repairs an OCR-owned 715 requirement to 15 via %s without replacing row identity, verified mission or cargo",
+    async (mode) => {
+      const x = await setup();
+      const r: OcrResult = JSON.parse(
+        readFileSync(
+          join(__dirname, "fixtures/mobiglas/agricultural-15-real.json"),
+          "utf8",
+        ),
+      ).result;
+      const old = extractContract(r, x.c.id, x.c.capturedAt);
+      old.parserVersion = "0.4.1";
+      old.objectives[0].requiredSCU.value = 715;
+      x.repo.put({ ...x.c, result: r, observation: old });
+      expect(x.s.processScan(x.c.id)?.status).toBe("Imported");
+      let c = x.s.domain().contracts[0];
+      const objectiveId = c.cargoObjectives[0].id;
+      for (const [action, quantity] of [
+        ["Load", 9],
+        ["Deliver", 2],
+      ] as const) {
+        const o = x.s.domain().contracts[0].cargoObjectives[0];
+        x.s.cargoProgress({
+          requestId: randomUUID(),
+          shipId: x.s.domain().selectedShipId,
+          changes: [
+            { objectiveId: o.id, action, quantity, expected: progressStamp(o) },
+          ],
+        });
+      }
+      c = x.s.domain().contracts[0];
+      const missionId = randomUUID();
+      x.s.store.setState({
+        contracts: [
+          {
+            ...c,
+            missionId,
+            missionAssociation: {
+              source: "User confirmed",
+              at: x.c.capturedAt,
+              eventId: "verified-fixture",
+            },
+          },
+        ],
+      });
+      x.s.database.saveDomain(x.s.domain());
+      const before = structuredClone(x.s.domain().contracts[0]);
+      if (mode === "image") {
+        x.setRecognition(async () => structuredClone(r));
+        x.q.reprocess(x.c.id);
+        await finished(x);
+      } else x.q.reparse(x.c.id);
+      const after = x.s.domain().contracts[0];
+      expect(after).toMatchObject({
+        id: before.id,
+        missionId,
+        status: "Active",
+        confirmedEarnings: 0,
+      });
+      expect(after.cargoObjectives).toHaveLength(1);
+      expect(after.cargoObjectives[0]).toMatchObject({
+        id: objectiveId,
+        quantitySCU: 15,
+        loadedSCU: 7,
+        deliveredSCU: 2,
+        loadedShipId: before.cargoObjectives[0].loadedShipId,
+      });
+      expect(x.repo.get(x.c.id)?.importResult?.status).toBe("Updated");
+      expect(x.s.cargoActivity(before.id)).toHaveLength(2);
+      expect(x.repo.get(x.c.id)?.originalRecognition?.observation).toEqual(old);
+    },
+  );
+  it("withholds uncertain quantities even when a verified target could establish coverage", async () => {
+    const x = await setup();
+    const obs = structuredClone(x.c.observation!);
+    obs.objectives[0].requiredSCU.state = "Ambiguous";
+    x.repo.put({ ...x.c, observation: obs });
+    expect(x.s.processScan(x.c.id)?.status).toBe("Pending corrections");
+    expect(x.s.domain().contracts).toEqual([]);
+  });
+
+  it("preserves a manually corrected requirement when fresh recognition disagrees", async () => {
+    const x = await setup();
+    const r: OcrResult = JSON.parse(
+      readFileSync(
+        join(__dirname, "fixtures/mobiglas/agricultural-15-real.json"),
+        "utf8",
+      ),
+    ).result;
+    const old = extractContract(r, x.c.id, x.c.capturedAt);
+    old.objectives[0].requiredSCU.value = 715;
+    x.repo.put({ ...x.c, result: r, observation: old });
+    x.s.processScan(x.c.id);
+    const c = x.s.domain().contracts[0];
+    x.s.saveContract({
+      id: c.id,
+      draft: {
+        name: c.name,
+        payout: c.payout,
+        objectives: c.cargoObjectives.map((o) => ({ ...o, quantitySCU: 20 })),
+      },
+    });
+    const before = structuredClone(x.s.domain().contracts);
+    x.setRecognition(async () => structuredClone(r));
+    x.q.reprocess(x.c.id);
+    await finished(x);
+    expect(x.s.domain().contracts).toEqual(before);
+    expect(x.repo.get(x.c.id)?.importResult?.status).toBe(
+      "Pending corrections",
+    );
+  });
 });

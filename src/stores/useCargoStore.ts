@@ -6,6 +6,8 @@ import type { AppSnapshot } from "../types/tracking";
 export { createCargoStore, validateDraft } from "./cargoDomain";
 interface RendererState extends AppSnapshot {
   page: Page;
+  retainedInventoryRequest: number;
+  showRetainedInventory(): void;
   ready: boolean;
   actionError: string | null;
   pending: number;
@@ -89,6 +91,12 @@ const quiet = (action: () => Promise<AppSnapshot>): Promise<void> =>
 export const cargoStore = createStore<RendererState>(() => ({
   ...initial,
   page: "Dashboard",
+  retainedInventoryRequest: 0,
+  showRetainedInventory: () =>
+    cargoStore.setState((s) => ({
+      page: "Manifest",
+      retainedInventoryRequest: s.retainedInventoryRequest + 1,
+    })),
   ready: false,
   actionError: null,
   pending: 0,

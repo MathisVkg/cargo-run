@@ -176,6 +176,33 @@ export function lifecycleIssues(
         required: c.cargoObjectives.reduce((n, o) => n + o.quantitySCU, 0),
         onboard: c.cargoObjectives.reduce((n, o) => n + (o.loadedSCU ?? 0), 0),
         reason,
+        automaticReason:
+          c.associationDiagnostics?.decision === "Pending"
+            ? c.associationDiagnostics.reason
+            : "No verified MissionId relationship or uniquely matching complete objective identifiers were established.",
+        identityEvidence: (() => {
+          const rows = db.db
+            .prepare(
+              "SELECT payload FROM mission_identity_evidence WHERE mission_id=?",
+            )
+            .all(e.missionId)
+            .map(
+              (r) =>
+                JSON.parse(
+                  String(r.payload),
+                ) as import("../../src/types/association").MissionIdentityEvidence,
+            );
+          const markers = rows.filter((r) => r.kind === "Marker");
+          const states = rows.filter((r) => r.kind === "ObjectiveState");
+          return (
+            markers.length +
+            " marker(s), " +
+            states.length +
+            " objective state event(s)" +
+            (markers[0]?.template ? "; template " + markers[0].template : "") +
+            ". These identify the log mission; they do not independently identify an OCR contract."
+          );
+        })(),
       })),
       version: version([e, candidates.map((c) => c.contract)]),
     });
@@ -292,7 +319,7 @@ export function reconcileTerminalIdentities(
       db.resolve(e.id);
       continue;
     }
-    if(next.some(c=>c.missionId===e.missionId))continue;
+    if (next.some((c) => c.missionId === e.missionId)) continue;
     const p = db.pendingMissions().find((p) => p.missionId === e.missionId);
     if (!p) continue;
     const matches = lifecycleCandidates(db, next, e).filter((c) =>

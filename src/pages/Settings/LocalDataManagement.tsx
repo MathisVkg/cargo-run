@@ -30,6 +30,7 @@ const options = [
 ] as const;
 export function LocalDataManagement() {
   const revision = useCargoStore((s) => s.revision);
+  const showRetainedInventory = useCargoStore((s) => s.showRetainedInventory);
   const [stats, setStats] = useState<LocalDataStats | null>(null),
     [preview, setPreview] = useState<CleanupPreview | null>(null),
     [resetText, setResetText] = useState(""),
@@ -123,6 +124,31 @@ export function LocalDataManagement() {
         includes superseded source records. A consistent database and
         managed-evidence backup is required before each cleanup.
       </p>
+      {!!stats?.retainedCargo.contracts && (
+        <div className="notice" role="status">
+          <p>
+            History cleanup is blocked by {stats.retainedCargo.contracts} closed
+            contract(s) with {stats.retainedCargo.scu} SCU retained onboard.
+          </p>
+          <p>
+            {stats.retainedCargo.ships
+              .map((s) => s.name + ": " + s.scu + " SCU")
+              .join(" · ")}
+          </p>
+          <p>
+            Open Cargo Manifest, select the assigned ship, then unload cargo or
+            correct its onboard quantity downward. Full reset remains available
+            with backup and RESET confirmation.
+          </p>
+          <button
+            className="button"
+            disabled={busy}
+            onClick={showRetainedInventory}
+          >
+            Open retained inventory
+          </button>
+        </div>
+      )}
       <div className="local-data-actions">
         {options.map((o) => (
           <div key={o.mode}>
