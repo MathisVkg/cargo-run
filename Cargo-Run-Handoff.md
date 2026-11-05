@@ -1,139 +1,141 @@
-# Cargo Run v0.6.1 — Task 06.1 handoff
+# Cargo Run v0.6.2 — Task 06.2 handoff
 
-Completion reliability and navigation refinement in `C:\Users\zeyros\Documents\repository\cargo-run`. The starting v0.6.0 working tree was clean. Pre-edit copies are under ignored `work/task061-backup/`. No dependencies, new input hooks, route/market/financial system, commit or installer were added. OCR-first imports, automatic capture, manual cargo operations/undo, ship inventory and maintenance remain.
+Mission association and OCR recovery reliability in `C:\Users\zeyros\Documents\repository\cargo-run`. The initial v0.6.1 working tree was clean. Pre-edit copies are under ignored `work/task062-backup/`. No dependencies, online OCR, external APIs, new input hooks, cargo automation or Dashboard/Manifest redesign were added. No commit or installer was created.
 
-## Investigation and root-cause findings
+## Root causes and real evidence
 
-The v0.6.0 processing chain was traced through log polling/checkpoints → parser → immutable mission-event storage → pending mission projection / ledger reconciliation → SQLite save → snapshot broadcast → Dashboard/Manifest/History.
+**Association:** v0.6.1 could promote a newly processed capture against a unique structured log candidate. However, an already imported OCR-only contract was not reconsidered at acceptance when stronger log evidence arrived later. Its terminal reconciliation required matching non-fallback objective IDs, which ordinary Mobiglas OCR does not expose. The supplied game's log uses marker/template identifiers rather than readable cargo-quantity notifications, leaving the existing association path without comparable structured objectives.
 
-Two concrete gaps were reproduced:
+**Reprocessing:** the UI's Reprocess saved OCR button invoked `ocr:reparse`. That method parsed the same saved text synchronously, never checked/loaded the saved image and never scheduled an OCR worker. When fields stayed the same, the existing import hash could return the previous outcome and the UI showed no operation-specific result. Retry OCR was limited to Failed captures and cleared prior recognition before retry. A processed capture missing pickup information could therefore appear to do nothing.
 
-1. The parser recognized `Contract Complete:` but ignored the explicit `MissionEnded` / `EndMission` terminal records described in the task.
-2. Existing completion reconciliation required the ledger contract's MissionId to equal the event's MissionId. A valid OCR-created contract can intentionally remain unbound when only title-level log evidence exists. Completion then updated secondary pending evidence (or stayed unresolved without acceptance), while the active OCR ledger record remained active. No short lifecycle association issue was surfaced.
+**Real log located and inspected:** `C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\Game.log` contained the exact November 5 mission from the task. It was read only. No historical screenshots or private paths were requested. The standard Cargo Run profile had no relevant mission/configured monitor path, so the user's exact capture/association row was not diagnosed; source-event formats and timing were verified directly.
 
-Existing verified MissionId notification completion already worked; changing cargo quantities or marking everything delivered would not fix an identity gap. The new workflow closes the gap without guessing from title, reward or nearest time.
+Observed UTC times (+01:00 = the task's Europe/Brussels local times):
 
-**Specific gameplay-session limit:** the task supplied event fragments and the reported MissionId, not the November 2 log file. Read-only inspection of the standard local Cargo Run database found no relevant contract/events and no configured monitor path in that profile. Therefore this work cannot prove which gap affected that particular running profile, whether monitoring was active, or the exact formatting of its terminal records. No actual user database or log was modified. The findings above are code-traced and synthetically reproduced; they are not a claim of replaying the user's mission or live Star Citizen validation.
+| Event                                      | Actual source time                |
+| ------------------------------------------ | --------------------------------- |
+| Paired pickup/dropoff CreateMarker records | 18:24:01.546Z                     |
+| Contract Accepted notification             | 18:24:01.549Z                     |
+| Pickup ObjectiveUpserted completed         | 18:29:56.806Z                     |
+| Dropoff ObjectiveUpserted completed        | 18:37:35.607Z                     |
+| Phase ObjectiveComplete                    | 18:37:35.645Z; repeated at .665Z  |
+| MissionEnded and EndMission                | 18:37:35.664Z                     |
+| Contract Complete notification             | 18:37:35.668Z                     |
+| Awarded 50,250 aUEC                        | 18:37:35.822Z; all-zero MissionId |
 
-## Supported parsing and evidence
+The actual MissionEnded line uses **unbracketed** `mission_id UUID`, unlike the synthetic bracketed form covered by v0.6.1. The terminal parser now handles both. The source also contains bracketed `MissionId[UUID]` in EndMission, and the notification's `MissionId: [UUID]`.
 
-The supported, explicitly tested shapes are:
+The genuine log does **not** provide SCU quantities or readable pickup/destination names for this mission. Its `HaulCargo_AToB_...` template includes a Corundum token and its paired objective identifiers. Objective-state completion is identity evidence only; it does not prove an amount loaded or delivered.
 
-- Existing `Contract Complete: <title>` notification with a valid `MissionId: [UUID]`.
-- `MissionEnded ... MissionId: [UUID] ... mission_state MISSION_STATE_COMPLETED`.
-- `EndMission ... MissionId: [UUID] ... CompletionType[Complete] Reason[Mission Ended]`.
-- Explicit abandonment: `Contract Abandoned:`, `MISSION_STATE_ABANDONED`, or `CompletionType[Abandon|Abandoned]` with the same supported EndMission reason. These are synthetic supported formats, not a claim that every game build emits them.
+A sanitized minimal **11-line** fixture and provenance are in `tests/fixtures/log/nov05-sanitized.log` and `nov05-provenance.md`. IDs are replaced consistently; player identifiers, positions, entity IDs and unrelated records are removed. Six raw identity records collapse to five unique semantic marker/state records. OCR quantities/routes combined with these records in tests are explicitly synthetic, not claimed as values extracted from the real log.
 
-The terminal parser accepts bracketed MissionId/mission_id with optional colon/equal separator, and optional brackets around the mission_state value. It requires a concrete UUID and explicit terminal state. Generic failure, cancellation, partial state names, other EndMission reasons and unidentified terminal records never close contracts by inference. Unsupported failure formats need exact evidence before adding automatic handling.
+## v0.6.1 versus v0.6.2
 
-Completed notifications and both terminal record forms normalize to the same semantic kind + MissionId event identifier. Repeated imports, restart and different presentation/timestamp duplicates do not produce additional transitions. Later duplicate evidence may fill a missing title or timestamp; it cannot overwrite an already known event time. Timestamp enrichment updates the same audit row while preserving its original previous status.
+| Workflow                             | v0.6.1                                                        | v0.6.2                                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Acceptance arriving after OCR import | Usually remained unbound until terminal/manual reconciliation | Reconsiders persisted OCR evidence as acceptance/identity evidence arrives, preserving the existing contract ID         |
+| Actual MissionEnded format           | Bare mission_id was not recognized                            | Verified genuine bare and bracketed formats normalize with existing terminal notifications                              |
+| Reprocess saved OCR                  | Reparsed saved text only                                      | Recognizes the existing PNG through the real offline worker                                                             |
+| Same or failed recognition           | Could look like no action                                     | Explicit queued, processing, changed/improved, unchanged or failed feedback                                             |
+| Saved-text extraction                | Hidden behind the ambiguous label                             | Separate **Re-extract saved text**, with visible reconciliation outcome                                                 |
+| Recognition evidence on retry        | Failed retry cleared result/observation                       | Prior data remains until a replacement is validated; original recognition and bounded attempt evidence remain available |
 
-`completedAt` is the actual recognized event timestamp when available. Missing event time remains unknown, with receipt time stored separately in lifecycle metadata/activity. Arrival order is not treated as proof of the actual completion time. The first terminal status is retained; contradictory later states do not reopen or flip an already closed contract. Raw variants remain bounded evidence.
+## Automatic association rules
 
-## Association and lifecycle behavior
+Association runs transactionally at OCR confirmation, after committed log batches and on restart. It updates identity/acceptance metadata and linked evidence association in place; it never creates an active contract from Game.log alone or renumbers objectives. MissionId uniqueness is enforced by the existing SQLite unique constraint plus candidate/reservation checks.
 
-An already associated MissionId receives supported lifecycle updates directly, without an OCR rescan or manual editor. Startup and OCR confirmation also reconcile saved verified terminal events, including schema-6 backlog. No new active placeholder contract is created for a lifecycle event.
+Common requirements for the new acceptance path:
 
-For an unbound active contract, automatic association requires a unique, complete, one-to-one agreement of **non-fallback objective identifiers and cargo details** against a pending mission projection. Commodity, destination, required quantity and available pickup must agree. Multiple plausible contracts, reused objective IDs in other pending/historical ledger missions, incomplete mappings or title/cargo-only agreement do not establish identity.
+- Active, non-superseded OCR-origin contract with attached saved Accepted observation and matching normalized title.
+- A persisted acceptance event with a valid MissionId and known timestamp; MissionId must be unused by every stored contract, including historical aliases.
+- Capture no more than two seconds before acceptance (clock tolerance), and no more than ten minutes after it. Capture time must precede any known closure. These are conservative verification windows, not event-expiration/deletion policies.
+- A unique mission-to-contract and contract-to-mission assignment. Historical records are not routine active candidates. Same-title unknown or genuinely competing candidates remain unverified.
 
-Otherwise Dashboard presents a bounded **mission lifecycle association** issue when an actionable active candidate exists:
+One of these corroborating paths must also hold:
 
-1. Expand the completion/abandonment issue.
-2. Choose the tracked contract; candidates display its name, required/onboard SCU and ID suffix.
-3. Confirm these are the same in-game mission.
-4. Apply association and closure.
+1. **ObjectiveIds:** complete one-to-one non-fallback external objective IDs and matching commodity/destination/required quantity/available pickup.
+2. **Objective details:** complete one-to-one cargo details and normalized acceptance title, without a competing unknown/same-cargo mission.
+3. **Acceptance context:** a single-objective complete Accepted capture within **two minutes**, plus exactly one pickup and one dropoff marker from the observed `HaulCargo_AToB_` family. Their UUID-based objective family and concrete contract-definition UUID must agree; the template must contain an exact commodity token matching the recognized OCR commodity. Recognized required quantity and visible pickup/destination must be consistent with the saved contract. Incomplete/inconsistent markers, ambiguous commodity/template or any plausible same-title alternative block verification.
 
-Title-only agreement is explicitly labeled unverified and requires that user confirmation. Stale evidence/contract versions are rejected. Synchronous UI submission guards prevent double clicks. A successful resolution preserves the OCR contract/objective IDs and physical inventory, adds the verified MissionId association to linked evidence metadata, records authorization and applies the event atomically. Raw OCR/screenshots/observations and manual corrections are not rewritten. Distinct missions are never merged merely because their details match.
+No actual title, MissionId, commodity, reward, screenshot name or example quantity is hardcoded in production. The marker rule deliberately supports the observed template family only; it does not decode arbitrary template names or infer missing quantities/locations. Unknown families and captures outside the windows remain pending. Timing/title alone never verify identity.
 
-Issue presentation is at most 20 missions with up to 10 candidates each, derived from the latest 200 semantic terminal records; repeated events do not create duplicate issues. Dismissal is persisted as a bounded 200-MissionId exclusion list and does not delete raw events. An unmatched event without a candidate remains stored evidence without a placeholder. Closed/abandoned/superseded/sample contracts are excluded from routine candidates. The v0.5.3 title-only pending exclusion remains unchanged.
+Contract Details' existing Advanced data includes bounded `associationDiagnostics` and `missionAssociation` metadata: decision, reason, candidate MissionIds and evidence IDs. Missing original proof does not rewrite historical contract payloads. Existing verified associations remain stable. An otherwise valid OCR import is still allowed without an association.
 
-Contract Details → **Mission Lifecycle** shows bounded lifecycle activity, event time and preserved-cargo explanation; technical association/event identity is collapsed under Advanced.
+After verification, existing terminal reconciliation closes the correct contract with the saved event timestamp, including completion that arrived before OCR finished. It does not need an OCR rescan or manual lifecycle association. Weak/genuinely ambiguous cases retain the v0.6.1 Dashboard confirmation workflow. Existing explicit Advanced/manual recovery remains available for old or corrected records.
 
-## Cargo and earnings safeguards
+## OCR recovery implementation
 
-Closure changes lifecycle status/time/metadata, not physical inventory:
+The actual path is now:
 
-| Scenario                                 | Result                                                                                                           |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| A: 8 required, 8 delivered, zero onboard | Completed; recorded remaining delivery and onboard stay zero                                                     |
-| B: 8 required, 5 delivered, 3 onboard    | Completed; 3 remain assigned to the same ship, consuming recorded capacity; historical discrepancy stays visible |
-| C: no loading/delivery recorded          | Completed when identity verified; quantities/evidence remain unconfirmed, no fabricated cargo operations         |
-| D: duplicate terminal records            | One semantic event/transition/audit; no duplicate issues, negative cargo or earnings                             |
-| E: verified abandonment                  | Abandoned; loaded cargo, ship assignment, audit/history remain; no earnings invented                             |
+Scan History button → renderer store → preload `ocrReprocess` → trusted main IPC `ocr:reprocess` → UUID capture/image lookup → engine/queue checks → existing serialized image loader/offline worker → structured parser → replacement validation → existing idempotent import/reconciliation → snapshot/visible row result.
 
-Closed contracts stop contributing to active planning. Manifest's existing **Retained onboard inventory** exposes explicit unload/correction controls for closed cargo. Finish Run and undo behavior remain as in v0.6.0; closure itself never fabricates delivery or unloads cargo.
+- The operation checks image availability, engine readiness and the existing 12-pending queue bound. Missing/expired images and unavailable engine errors are persisted and shown.
+- Queued/Processing are visible while original recognized data remains readable. Duplicate in-flight requests do not schedule extra recognition.
+- The existing image loader enforces size/decoding limits and the provider retains its local timeout/recovery behavior. No new screenshot is captured.
+- Blank/unusable or less-complete candidates, including regression from a recognized Accepted view, do not replace the working recognition.
+- Valid changed extraction reports improved/changed fields. Identical structured information explicitly reports **the same information was extracted**. It can still retry idempotent reconciliation.
+- If pickup is still missing, the result explains that invisible information cannot be recovered by another recognition pass and offers screenshot inspection/compact field correction.
+- Worker and import failures report an actionable error and retain the previous recognition/import state. Main-process contract transactions continue to protect manual corrections and loaded/delivered cargo.
+- The first saved recognition snapshot is retained as `originalRecognition`; at most three bounded candidate/failure attempts are retained in `recognitionHistory`. The original screenshot file is never rewritten. These fields and the current operation result appear in the existing Advanced OCR diagnostics.
+- An unchanged reprocess keeps the prior raw recognized result. Re-extract saved text remains separate and does not increment image-recognition attempts or invoke a worker. It now reports whether reconciliation succeeded or failed and protects the old observation on failure.
+- Failed-capture retry now uses the same preserving image-recognition path rather than clearing prior data.
+- Existing retention protects Captured/Processing records. Manual deletion/reset remains intentional; maintenance drains workers before resetting.
 
-`Awarded <amount> aUEC` Added notification records are retained as bounded **Unattributed reward** evidence, including empty MissionIds. Neither reward amount nor proximity to completion establishes attribution. Confirmed earnings remain unchanged for all completion/abandonment/award paths. This release does not implement reward confirmation or financial reconciliation.
+The compact issue form, screenshot preview and automatic import behavior remain. Users can correct only missing/conflicting fields and save without deleting the capture. No long mandatory review was reintroduced.
 
-## Persistence and maintenance
+## Persistence, cargo and rewards
 
-Additive SQLite **schema 7** creates:
+Additive SQLite **schema 8** adds `mission_identity_evidence` (semantic ID, MissionId, normalized evidence JSON and a MissionId index). It preserves marker/state evidence across restart and out-of-order events without storing unrelated player/system/position data.
 
-- `lifecycle_evidence`: at most 200 raw terminal/reward variants with parsed metadata and source context. Canonical mission events remain in the existing authoritative mission_events table.
-- `lifecycle_activity`: contract-owned lifecycle audit, ON DELETE CASCADE, one semantic lifecycle/contract ID with timestamp enrichment in place.
-- `unattributed_rewards`: canonical unique raw award evidence retained beyond diagnostic eviction, with no mission attribution or earnings effect. Full reset intentionally clears it; consistent backups include it.
+Contract/capture JSON fields are additive. Existing contracts, screenshots, links/audits, manual corrections, cargo operations, runs, settings, shortcuts and monitoring state remain. Original OCR and working recognition remain available during recovery. Existing schemas migrate through their normal steps; older binaries refuse schema 8, so downgrade requires a pre-upgrade backup.
 
-Contract JSON adds lifecycle event metadata and optional association authorization. Existing contracts/objectives, cargo progress, screenshots, settings, checkpoints, monitoring preferences and history are preserved. Older binaries refuse schema 7; rollback requires a pre-upgrade snapshot.
+Acceptance association does not change loaded/delivered quantities, ship assignments or cargo activity. The newly observed ObjectiveUpserted/ObjectiveComplete records are **not** routed to delivery-quantity reconciliation. No automatic loading/unloading or new Game.log delivery tracking was added. Existing v0.6.0 supported quantity-notification behavior was not expanded.
 
-Event processing, association, evidence annotation, audit and domain state use existing main-process SQLite transactions and rollback handling. Trusted-sender fixed IPC adds only resolve/history methods. Snapshot broadcasts refresh all pages immediately.
+Completion/abandonment still preserves retained onboard inventory and unknown physical evidence. Unattributed rewards, including all-zero MissionIds, remain canonical evidence with **zero automatic earnings effect**.
 
-Consistent online SQLite/evidence backups include the new tables. A/B cleanup cascades removed-contract lifecycle audit, preserves active evidence and keeps authoritative log evidence under the existing archive policy. Full RESET deletes lifecycle tables/dismissals alongside tracking data, checks foreign keys, drains workers and leaves monitoring stopped across restart. Backup restore remains a manual whole-snapshot operation; no complete filesystem rollback is claimed.
-
-## Navigation
-
-One persistent sidebar replaces the old temporary navigation drawer.
-
-- Top: Dashboard, Manifest, Contracts, History, Scan History.
-- Bottom: Settings plus a 32px icon-only compact/expanded toggle; no visible Collapse navigation text. Toggle and menu icons retain labels/tooltips and 19px alignment.
-- Expanded (212px): icons/labels; Settings and toggle share a bottom row.
-- Compact (62px): icons only; Settings/toggle stack at the bottom.
-- Hamburger: hides either visible mode completely; reopening uses compact mode. It no longer duplicates the compact/expanded toggle.
-- At widths below **1200px**, automatically hide without overwriting the saved wide preference. Reopening within this band uses compact mode temporarily and the hamburger hides it again.
-- At 1200–1399px constrain to compact; expansion becomes available at 1400px+. The compact toggle is visibly disabled below that width, with an explanatory tooltip.
-- Returning to a wider window restores the saved mode; wide explicit hidden/compact choices persist across restart. Narrow reopening is temporary, not forced expanded.
-- Selecting a page, Escape or an outside click does not dismiss a persistent sidebar. Existing modal Escape/outside/dirty-edit safeguards remain.
-- No width animations, overlapping drawers or additional hide/pin controls. Native window controls, drag regions, theme and available content width remain intact. Windows minimum remains 1100 × 700, where automatic hiding now has a practical effect.
+Online backups include identity evidence and recognition history. Full RESET clears identity evidence with tracking data; A/B preserve authoritative evidence under the existing archived-MissionId policy. Foreign-key checks and worker draining remain. The user's live database, screenshots and Game.log were never modified by automated tests.
 
 ## Files created and modified
 
-| Area                      | Files                                                                                                                                                                    |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| New parser/reconciliation | `electron/main/log/lifecycleParser.ts`, `electron/main/lifecycle.ts`                                                                                                     |
-| Existing backend          | log/parser.ts, log/reconcile.ts, trackingService.ts, storage/database.ts, storage/maintenance.ts, main/index.ts                                                          |
-| New shared types          | `src/types/lifecycle.ts`; additive models/tracking/desktop types                                                                                                         |
-| New UI                    | `LifecycleIssues.tsx`, `LifecycleHistory.tsx` in components/contracts                                                                                                    |
-| Existing UI               | Dashboard, ContractDetails, Navigation, TopBar, App, utils/navigation, global CSS, renderer store                                                                        |
-| IPC                       | electron/preload/index.ts, src/types/desktop.ts                                                                                                                          |
-| Version/scripts           | package/lock root version only, native manifest, App/Settings labels, test:lifecycle:desktop                                                                             |
-| Tests                     | New lifecycle.test.ts and lifecycle-desktop.cjs; schema-version assertions and existing navigation helpers/geometry assertions updated to the requested persistent model |
-| Documentation             | README and this handoff                                                                                                                                                  |
+| Area                            | Files                                                                                                                                               |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New identity parser/association | `electron/main/log/identityParser.ts`, `electron/main/association.ts`, `src/types/association.ts`                                                   |
+| Existing event pipeline         | log/parser.ts, log/lifecycleParser.ts, trackingService.ts under electron/main                                                                       |
+| New recovery helper             | `electron/main/ocr/recovery.ts`                                                                                                                     |
+| Image recovery / IPC / UI       | ocr/queue.ts, main/index.ts, preload/index.ts, desktop/ocr/model/tracking types, useOcrStore.ts, ScanReview/index.tsx                               |
+| Additive migration/cleanup      | storage/database.ts, storage/maintenance.ts                                                                                                         |
+| Real evidence fixtures          | tests/fixtures/log/nov05-sanitized.log and nov05-provenance.md                                                                                      |
+| New tests                       | acceptance-association.test.ts, ocr-recovery.test.ts, ocr-recovery-desktop.cjs, native/OcrRecoveryFixture.cs                                        |
+| Compatibility tests             | schema-version assertions; late-import expectation now verifies in-place automatic association; saved-text review suite uses its explicit new label |
+| Version/docs                    | package + lock root versions, native manifest, App/Settings labels, README and this handoff                                                         |
 
-No dependency versions changed. Existing parser/identity/cargo/queue/input tests remain, with intended navigation/schema assertions updated.
+The gitignore exception includes only the sanitized fixture log; personal/runtime logs remain ignored. The existing native automatic capture/OCR, cancellation and retention suite also passed against its synthetic fixture application.
+
+No dependency versions changed. `npm run test:recovery:desktop` builds and runs the new isolated Windows workflow.
 
 ## Verification executed
 
-- TypeScript validation, lint, **293 tests / 22 files**, and production build pass: 272 prior tests plus 21 lifecycle regressions.
-- Unit cases include normalization, real-time/receipt distinction, A–E, exact IDs, title-only ambiguity, unknown/unmatched lifecycle events, late association, reward isolation, raw enrichment, repeated/restarted events, saved schema-6 recovery, reused IDs, transaction rollback, reset/backups and FK integrity.
-- New `node tests/lifecycle-desktop.cjs`: actual Windows Electron with isolated userData and a synthetic owned Game.log. Tests native monitoring/polling → event normalization → issue → explicit association without rescan → status/audit/UI; automatic verified completion/abandonment, cargo/ship discrepancies, reward/duplicate protection, persistence and integrity.
-- New navigation workflow checks 1440 × 900, 1100 × 700 and maximized windows; top/bottom geometry, icon-only toggle, hidden content width, compact reopening, expansion constraints, saved preference restoration, drag/window security regressions.
-- Existing Windows alignment, polish, Fleet/manual, tracking, automatic import, OCR review, cargo progress and data-management suites pass on the v0.6.1 build. Navigation helpers/assertions now test the new requested behavior, while card geometry, dialogs, evidence and cargo workflows remain covered.
-- Existing `automatic-desktop.cjs` passes with its native synthetic fixture: live acceptance → delayed screenshot capture → offline OCR; unchanged-screen detection, stop/cancel and retention. This verifies a normal test application, not Star Citizen.
-- Screenshots visually inspected: ignored `work/navigation-{expanded,compact,narrow}-v061.png`, `lifecycle-association-v061.png`, `lifecycle-retained-v061.png`, `lifecycle-history-v061.png`.
-- All destructive cleanup tests use temporary profiles/databases and synthetic log files. The standard user database was inspected read-only for diagnosis; no live user database/log mutation was executed.
+- TypeScript validation, ESLint, **315 tests / 24 files**, production native + Electron build: final passing results.
+- 293 previous tests retained, with intended schema/late-association expectations updated; 11 association and 11 recovery tests added.
+- Genuine-format tests verify observed UTC records/IDs, real bare MissionEnded syntax, marker-before-acceptance, OCR-first/log-first/terminal-before-OCR, same-title collisions, different commodities, incomplete/mismatched markers, timing windows, reserved IDs, duplicate notifications, restart, rewards and unchanged cargo.
+- Recovery tests use temporary SQLite/images and provider fault injection: actual scheduling, improvement, unchanged missing fields, missing image, unavailable engine, worker error/retry, blank/worse recognition, manual corrections/cargo preservation, duplicate requests, bounded history, import failure and separate saved-text extraction.
+- New Windows suite uses an isolated profile and **actual offline Tesseract** on a generated 3200 × 1800 PNG. It clicks the real UI action, sees Processing → Improved, repeats to Unchanged, verifies raw/image preservation and unchanged objective IDs/cargo operations, replays sanitized genuine log formats through the real monitor, verifies automatic association/closure, tests missing-file feedback and restart/FK integrity.
+- Existing Windows import, saved-text review/recorder, lifecycle, cargo, data-management, tracking, polish, alignment and manual desktop suites are run against v0.6.2; final results are recorded in README.
+- The first native rebuild was blocked by the running application's CaptureHost file lock. The user closed Cargo Run; the normal native rebuild then passed. No Windows security settings were changed.
+- Ignored Windows artifacts: `work/ocr-recovery-{processing,improved,missing}-v062.png`; generated images/profiles remain under ignored `work/`.
+- The real Game.log was inspected read-only to derive sanitized fixtures; all monitoring/replay/cleanup operations used temporary owned logs/profiles. No user's real data was mutated.
 
-**Still unverified:** exact November 2 raw record/profile association, new live gameplay completion/abandonment formats, physical in-game shortcut, Vulkan/exclusive-fullscreen capture and fresh screenshot recognition. Listening/registration is not proof of callback delivery. User-reported v0.6.0 gameplay success is context, not new v0.6.1 verification.
+## Limitations and real Star Citizen test
 
-## Exact Star Citizen manual tests
+This is real-log-format replay plus synthetic-image recognition, **not fresh live Star Citizen verification**. The actual source log does not prove its capture's recognition, SCU count, pickup/destination text or original app association. Marker/template naming may change between game versions; unsupported or insufficient evidence deliberately stays pending. The context rule is narrow, not a guarantee that every accepted mission can be associated. Missing/off-screen text cannot be recovered from the same image.
 
-1. Preserve a closed-app database/captures backup before upgrading. Launch v0.6.1; confirm old contracts, history, objectives, per-ship cargo, favorites, shortcuts and Game.log settings survived schema 7.
-2. Select the correct Game.log and explicitly start monitoring. Confirm ONLINE and inspect Advanced diagnostics/source path. Monitoring must start before mission completion; historical import remains explicit.
-3. Accept a new hauling mission and capture its accepted Mobiglas screen. Verify required routes/quantities, OCR evidence and whether Details → Advanced shows a MissionId. Acceptance/title alone need not associate an OCR-only contract.
-4. Record actual loading/delivery. Complete the mission in game with all cargo recorded delivered. If MissionId is verified, verify it moves automatically to History with the log event time; no rescan/manual editor should be needed.
-5. If identity remains unbound, Dashboard should show a completion association issue only when there is an actionable candidate. Inspect the screenshot/mission and choose the correct contract, confirm identity, then apply completion. With two identical active missions, choose deliberately; the app must not guess.
-6. In an intentionally controlled test, let the mission close while Cargo Run still records 3 SCU onboard. Verify History retains required/delivered/loaded values and ship assignment, active planning excludes it, onboard capacity still includes it and Manifest offers unload/correction. Do not use the app's record as a verified game inventory reading.
-7. Repeat with no recorded cargo operations: completion may close a verified mission, but loading/delivery must stay unknown rather than becoming fabricated delivery. Inspect Cargo Activity and Mission Lifecycle separately.
-8. Observe duplicate MissionEnded/EndMission/Contract Complete entries, pause/restart and intentionally import history. Verify one lifecycle audit/status transition, stable cargo and no duplicate issues.
-9. Test abandonment only if your game emits one of the explicit supported abandonment records. Verify closure/inventory preservation. If the game uses another failure/cancel format, inspect retained raw diagnostics and leave it for evidence-based support; do not assume it means Abandoned.
-10. Inspect an Awarded notification with empty MissionId: confirmed earnings must remain unchanged regardless of matching amount/time.
-11. Test wide expanded/compact bottom controls, hamburger hide/reopen, minimum-width automatic hiding and compact reopening, maximized geometry and restart preferences. Ensure Settings remains reachable and window buttons/drag regions work.
-12. Repeat your physical shortcut and automatic/manual screenshot tests in the actual Star Citizen renderer mode. Check callback/capture delivery, not just shortcut registration. No real-game pass is claimed by this handoff.
+1. Preserve a closed-app database/captures backup, launch v0.6.2 and verify existing records, cargo, history, images and preferences survived schema 8.
+2. Confirm the correct Game.log path and start monitoring before accepting a mission. Keep automatic capture off initially to isolate manual capture behavior.
+3. Accept a new hauling mission and capture its accepted screen promptly. For marker-context verification, use one fully visible objective within two minutes, with recognized commodity/pickup/destination and complete objective coverage. Inspect Details → Advanced for MissionId, association source and evidence IDs.
+4. With multiple identical accepted titles/commodities or uncertain evidence, verify the contract remains unbound and the app does not choose a nearest-time candidate. Use the existing explicit association workflow when needed.
+5. Record real partial loading/delivery. Complete the verified mission in game: the correct contract should close automatically, with the event time and original objective IDs. Any still-recorded onboard cargo must remain assigned to its ship and exposed in Manifest.
+6. For a scan reporting missing pickup, open the original screenshot, click Reprocess saved OCR and watch Processing followed by changed/improved, unchanged or failed feedback. Verify it uses the same CaptureId and screenshot; no deletion/new capture should be required.
+7. If the image never showed the pickup, expect an unchanged/missing-field explanation and correct only that field. Re-extract saved text is the explicitly separate parser/reconciliation action.
+8. Repeat recovery on an imported scan after manual corrections and cargo operations; verify no duplicate contracts/objectives/operations and no overwritten corrections. Inspect original/attempt evidence under Advanced.
+9. Restart and optionally import history deliberately. Verify associations and closure remain idempotent, and an Awarded notification does not become confirmed earnings by amount/time alone.
+10. Repeat optional automatic capture and physical shortcut tests in the actual game/renderer mode. No live gameplay, physical in-game input, exclusive fullscreen or Vulkan verification is claimed here.

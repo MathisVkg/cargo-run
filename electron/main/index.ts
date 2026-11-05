@@ -172,6 +172,7 @@ else
         ocr.resetShortcutDiagnostics(),
       );
       register("ocr:reparse", (id) => ocr.reparse(id));
+      register("ocr:reprocess", (id) => ocr.reprocess(id));
       register("ocr:policy", (input) => ocr.configurePolicy(input));
       register("ocr:cleanup", () => ocr.cleanup());
       register("ocr:issue", (input) => service.scanIssue(input), true);

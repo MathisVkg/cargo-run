@@ -25,7 +25,7 @@ export class CargoDatabase {
     const version = Number(
       (this.db.prepare("PRAGMA user_version").get() as Row).user_version,
     );
-    if (version > 7) {
+    if (version > 8) {
       this.db.close();
       throw new Error(
         "This database was created by a newer Cargo Run version. No data was changed.",
@@ -92,6 +92,12 @@ export class CargoDatabase {
       this.transaction(() =>
         this.db.exec(
           "CREATE TABLE IF NOT EXISTS lifecycle_evidence(id TEXT PRIMARY KEY,mission_id TEXT,kind TEXT NOT NULL,payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS unattributed_rewards(id TEXT PRIMARY KEY,payload TEXT NOT NULL); CREATE TABLE IF NOT EXISTS lifecycle_activity(id TEXT PRIMARY KEY,contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,payload TEXT NOT NULL); PRAGMA user_version=7;",
+        ),
+      );
+    if (version < 8)
+      this.transaction(() =>
+        this.db.exec(
+          "CREATE TABLE IF NOT EXISTS mission_identity_evidence(id TEXT PRIMARY KEY,mission_id TEXT NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS identity_by_mission ON mission_identity_evidence(mission_id); PRAGMA user_version=8;",
         ),
       );
   }

@@ -1,4 +1,10 @@
 import type { InputPrototype } from "./rawInput";
+import {
+  recognitionKey,
+  recognitionQuality,
+  recoveryMessage,
+  recoveryHistory,
+} from "./recovery";
 import { randomUUID, createHash } from "node:crypto";
 import {
   defaultCapturePolicy,
@@ -660,6 +666,7 @@ export class OcrQueue {
   private importRecognized(id: string) {
     try {
       this.onRecognized(id);
+      return true;
     } catch (error) {
       const c = this.repository.get(id);
       if (c)
@@ -674,17 +681,124 @@ export class OcrQueue {
             processedHash: "",
           },
         });
+      return false;
     }
+  }
+  reprocess(id: unknown) {
+    if (this.closing) throw Error("OCR service is shutting down.");
+    const c = this.record(id);
+    if (["Captured", "Processing"].includes(c.status)) return this.snapshot();
+    const startedAt = new Date().toISOString(),
+      recovery = {
+        id: randomUUID(),
+        status: "Queued" as const,
+        startedAt,
+        message: "Saved screenshot queued for offline OCR recognition.",
+      };
+    const fail = (message: string) => {
+      this.repository.put({
+        ...c,
+        recovery: {
+          ...recovery,
+          status: "Failed",
+          finishedAt: new Date().toISOString(),
+          message,
+        },
+      });
+      this.publish();
+      throw Error(message);
+    };
+    if (!c.screenshot || !existsSync(this.file(c.id)))
+      return fail(
+        "Saved screenshot is missing, unavailable or expired. Saved recognition and linked cargo were retained; inspect/correct the saved fields or capture again.",
+      );
+    if (!this.provider.available().available)
+      return fail(
+        this.provider.available().error ??
+          "Offline OCR engine is unavailable. Repair the local installation and retry.",
+      );
+    if (
+      this.repository
+        .list()
+        .filter((r) => ["Captured", "Processing"].includes(r.status)).length >=
+      12
+    )
+      return fail(
+        "OCR queue is full. Wait for current recognition and retry; saved evidence was retained.",
+      );
+    this.repository.put({
+      ...c,
+      status: "Captured",
+      recovery,
+      originalRecognition:
+        c.originalRecognition ??
+        (c.result
+          ? { result: c.result, observation: c.observation }
+          : undefined),
+    });
+    this.publish();
+    this.kick();
+    return this.snapshot();
   }
   reparse(id: unknown) {
     const record = this.record(id);
+    if (["Captured", "Processing"].includes(record.status))
+      throw Error(
+        "Wait for current OCR recognition before extracting saved text.",
+      );
     if (!record.result)
       throw Error("No saved OCR text exists for this capture.");
+    const observation = extractContract(
+        record.result,
+        record.id,
+        record.capturedAt,
+      ),
+      at = new Date().toISOString();
     this.repository.put({
       ...record,
-      observation: extractContract(record.result, record.id, record.capturedAt),
+      observation,
+      originalRecognition: record.originalRecognition ?? {
+        result: record.result,
+        observation: record.observation,
+      },
+      recovery: {
+        id: randomUUID(),
+        status:
+          recognitionKey(record.observation) === recognitionKey(observation)
+            ? "Unchanged"
+            : "Improved",
+        startedAt: at,
+        finishedAt: at,
+        message:
+          "Saved text was re-extracted without image recognition. " +
+          recoveryMessage(
+            recognitionKey(record.observation) !== recognitionKey(observation),
+            observation,
+          ),
+      },
     });
-    this.importRecognized(record.id);
+    const imported = this.importRecognized(record.id),
+      current = this.repository.get(record.id)!;
+    this.repository.put({
+      ...current,
+      ...(!imported
+        ? { observation: record.observation, importResult: record.importResult }
+        : {}),
+      recovery: {
+        ...current.recovery!,
+        status: imported ? current.recovery!.status : "Failed",
+        message: imported
+          ? current.recovery!.message +
+            (["Imported", "Updated"].includes(
+              current.importResult?.status ?? "",
+            )
+              ? " Dashboard and Manifest updated."
+              : " " +
+                (current.importResult?.message ?? "Review missing fields."))
+          : "Saved-text extraction could not be reconciled. " +
+            current.importResult?.message,
+      },
+    });
     return this.publish();
   }
   private kick() {
@@ -710,6 +824,15 @@ export class OcrQueue {
         ...next,
         status: "Processing",
         attempts: next.attempts + 1,
+        ...(next.recovery
+          ? {
+              recovery: {
+                ...next.recovery,
+                status: "Processing" as const,
+                message: "Offline OCR is recognizing the saved screenshot.",
+              },
+            }
+          : {}),
         error: null,
       });
       this.publish();
@@ -720,6 +843,7 @@ export class OcrQueue {
         const imageHash = createHash("sha256").update(image).digest("hex");
         if (
           next.source === "Automatic" &&
+          !next.recovery &&
           this.repository
             .list()
             .some(
@@ -759,6 +883,101 @@ export class OcrQueue {
           observation.warnings.push(
             "The screenshot contained no recognizable text. This does not mean capture failed.",
           );
+        if (next.recovery) {
+          const previous = next,
+            changed =
+              recognitionKey(previous.observation) !==
+              recognitionKey(observation);
+          const valid =
+            !!bounded.text.trim() &&
+            !!observation.title.value &&
+            observation.objectives.length > 0;
+          const worse =
+            recognitionQuality(observation) <
+              recognitionQuality(previous.observation) ||
+            (previous.observation?.view.value === "Accepted" &&
+              observation.view.value !== "Accepted");
+          if (!valid || worse) {
+            const message = !valid
+              ? "OCR could not recover a usable contract. Previous recognition and linked cargo were retained; inspect the screenshot or correct the missing fields."
+              : "OCR completed but found less complete information. Previous recognition was retained; inspect the screenshot and correct only the missing field.";
+            this.repository.put({
+              ...previous,
+              attempts: previous.attempts + 1,
+              status: previous.result ? "Processed" : "Failed",
+              recovery: {
+                ...previous.recovery!,
+                status: valid ? "Unchanged" : "Failed",
+                finishedAt: new Date().toISOString(),
+                message,
+              },
+              recognitionHistory: recoveryHistory(
+                previous,
+                bounded,
+                observation,
+                message,
+              ),
+            });
+            this.publish();
+            continue;
+          }
+          this.repository.put({
+            ...this.repository.get(next.id)!,
+            imageHash,
+            status: "Processed",
+            error: null,
+            validation:
+              next.validation === "Rejected" || next.validation === "Cancelled"
+                ? undefined
+                : next.validation,
+            ...(changed || !previous.result
+              ? { result: bounded, observation }
+              : {}),
+          });
+          const imported = this.importRecognized(next.id),
+            current = this.repository.get(next.id)!;
+          const message = imported
+            ? recoveryMessage(
+                changed,
+                changed ? observation : previous.observation,
+              ) +
+              (current.importResult?.status === "Pending corrections"
+                ? " " + current.importResult.message
+                : "")
+            : "Recognition completed, but reconciliation failed. " +
+              current.importResult?.message;
+          this.repository.put({
+            ...current,
+            ...(!imported
+              ? {
+                  result: previous.result,
+                  observation: previous.observation,
+                  importResult: previous.importResult,
+                  status: previous.result
+                    ? ("Processed" as const)
+                    : ("Failed" as const),
+                }
+              : {}),
+            recovery: {
+              ...previous.recovery!,
+              status: imported
+                ? changed
+                  ? "Improved"
+                  : "Unchanged"
+                : "Failed",
+              finishedAt: new Date().toISOString(),
+              message,
+            },
+            recognitionHistory: recoveryHistory(
+              previous,
+              bounded,
+              observation,
+              message,
+            ),
+          });
+          this.publish();
+          continue;
+        }
         const signature = createHash("sha256")
           .update(
             JSON.stringify([
@@ -828,7 +1047,30 @@ export class OcrQueue {
       } catch (error) {
         if (this.closing) return;
         const current = this.repository.get(next.id);
-        if (current)
+        if (current && next.recovery) {
+          const message =
+            "Saved-image OCR failed. Previous recognition, screenshot and cargo were retained. " +
+            (error instanceof Error ? error.message : String(error));
+          this.repository.put({
+            ...current,
+            status: next.result ? "Processed" : "Failed",
+            result: next.result,
+            observation: next.observation,
+            importResult: next.importResult,
+            recovery: {
+              ...next.recovery,
+              status: "Failed",
+              finishedAt: new Date().toISOString(),
+              message,
+            },
+            recognitionHistory: recoveryHistory(
+              next,
+              undefined,
+              undefined,
+              message,
+            ),
+          });
+        } else if (current)
           this.repository.put({
             ...current,
             status: "Failed",
@@ -883,28 +1125,10 @@ export class OcrQueue {
     };
   }
   retry(id: unknown) {
-    const record = this.record(id);
-    if (record.status !== "Failed")
+    const c = this.record(id);
+    if (c.status !== "Failed")
       throw Error("Only failed OCR captures can be retried.");
-    if (!record.screenshot || !existsSync(this.file(record.id)))
-      throw Error("Screenshot is missing; take a new capture.");
-    if (
-      this.repository
-        .list()
-        .filter((c) => c.status === "Captured" || c.status === "Processing")
-        .length >= 12
-    )
-      throw Error("Queue is full. Wait before retrying.");
-    this.repository.put({
-      ...record,
-      status: "Captured",
-      error: null,
-      result: null,
-      observation: null,
-    });
-    this.publish();
-    this.kick();
-    return this.snapshot();
+    return this.reprocess(id);
   }
   delete(id: unknown) {
     const record = this.record(id);

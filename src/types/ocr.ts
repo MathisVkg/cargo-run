@@ -56,6 +56,24 @@ export interface ContractObservation {
   acceptanceTimestamp: null;
 }
 export interface CaptureRecord {
+  recovery?: {
+    id: string;
+    status: "Queued" | "Processing" | "Improved" | "Unchanged" | "Failed";
+    startedAt: string;
+    finishedAt?: string;
+    message: string;
+  };
+  originalRecognition?: {
+    result: OcrResult;
+    observation: ContractObservation | null;
+  };
+  recognitionHistory?: {
+    id: string;
+    at: string;
+    message: string;
+    result?: OcrResult;
+    observation?: ContractObservation;
+  }[];
   historyRemoved?: boolean;
   importResult?: import("./review").ScanOutcome;
   id: string;

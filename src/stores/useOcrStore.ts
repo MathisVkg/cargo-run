@@ -10,6 +10,7 @@ interface OcrState {
   probeShortcut(): Promise<void>;
   resetShortcutDiagnostics(): Promise<void>;
   reparse(id: string): Promise<void>;
+  reprocess(id: string): Promise<void>;
   configurePolicy(
     policy: import("../types/capturePolicy").CapturePolicy,
   ): Promise<void>;
@@ -48,6 +49,7 @@ export const ocrStore = createStore<OcrState>(() => ({
   resetShortcutDiagnostics: () =>
     action(() => window.cargoRun.ocrResetShortcutDiagnostics()),
   reparse: (id) => action(() => window.cargoRun.ocrReparse(id)),
+  reprocess: (id) => action(() => window.cargoRun.ocrReprocess(id)),
   configurePolicy: (policy) =>
     action(() => window.cargoRun.ocrConfigurePolicy(policy)),
   cleanup: () => action(() => window.cargoRun.ocrCleanup()),

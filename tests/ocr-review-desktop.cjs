@@ -91,7 +91,7 @@ let app;
       .getByRole("button", { name: /^Scan History/ })
       .click();
     await page
-      .getByRole("button", { name: "Reprocess saved OCR", exact: true })
+      .getByRole("button", { name: "Re-extract saved text", exact: true })
       .click();
     await page
       .getByRole("heading", {

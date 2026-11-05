@@ -23,6 +23,7 @@ const bridge: DesktopBridge = {
   ocrResetShortcutDiagnostics: () =>
     ipcRenderer.invoke("ocr:resetShortcutDiagnostics"),
   ocrReparse: (id) => ipcRenderer.invoke("ocr:reparse", id),
+  ocrReprocess: (id) => ipcRenderer.invoke("ocr:reprocess", id),
   ocrConfigurePolicy: (policy) => ipcRenderer.invoke("ocr:policy", policy),
   ocrCleanup: () => ipcRenderer.invoke("ocr:cleanup"),
   ocrState: () => ipcRenderer.invoke("ocr:state"),

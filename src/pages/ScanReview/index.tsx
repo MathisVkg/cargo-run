@@ -12,8 +12,17 @@ import { date, money, number } from "../../utils/format";
 import { ContractReview } from "./ContractReview";
 import { ScanIssueCard } from "./ScanIssueCard";
 export default function ScanReview() {
-  const { state, busy, error, capture, reparse, retry, remove, clear } =
-      useOcrStore((s) => s),
+  const {
+      state,
+      busy,
+      error,
+      capture,
+      reparse,
+      reprocess,
+      retry,
+      remove,
+      clear,
+    } = useOcrStore((s) => s),
     setPage = useCargoStore((s) => s.setPage);
   const [filter, setFilter] = useState("All"),
     [editing, setEditing] = useState<string | null>(null),
@@ -149,12 +158,22 @@ export default function ScanReview() {
                     >
                       {status}
                     </Badge>
-                    <p role="status">
-                      {success
-                        ? "Dashboard and Manifest updated."
-                        : (outcome?.message ??
-                          c.error ??
-                          "Reprocess saved OCR to import this earlier scan.")}
+                    <p
+                      role={
+                        c.recovery?.status === "Failed" ? "alert" : "status"
+                      }
+                      className={
+                        c.recovery?.status === "Failed"
+                          ? "form-error"
+                          : undefined
+                      }
+                    >
+                      {c.recovery?.message ??
+                        (success
+                          ? "Dashboard and Manifest updated."
+                          : (outcome?.message ??
+                            c.error ??
+                            "Reprocess saved OCR to import this earlier scan."))}
                     </p>
                     {failedAutomaticAttempt(c) && (
                       <small>
@@ -190,16 +209,33 @@ export default function ScanReview() {
                     >
                       Edit details / Advanced
                     </button>
-                    {c.result && (
+                    {(c.result || c.screenshot) && (
                       <button
                         className="button"
-                        disabled={busy}
+                        disabled={
+                          busy || ["Captured", "Processing"].includes(c.status)
+                        }
+                        onClick={() => {
+                          setEditing(null);
+                          void reprocess(c.id);
+                        }}
+                      >
+                        Reprocess saved OCR
+                      </button>
+                    )}
+                    {c.result && (
+                      <button
+                        className="text-button"
+                        disabled={
+                          busy || ["Captured", "Processing"].includes(c.status)
+                        }
+                        title="Rerun structured extraction from saved text; this does not recognize the screenshot again."
                         onClick={() => {
                           setEditing(null);
                           void reparse(c.id);
                         }}
                       >
-                        Reprocess saved OCR
+                        Re-extract saved text
                       </button>
                     )}
                     {c.status === "Failed" && image && (
@@ -240,6 +276,9 @@ export default function ScanReview() {
                       <pre className="ocr-raw">
                         {JSON.stringify(
                           {
+                            recovery: c.recovery,
+                            originalRecognition: c.originalRecognition,
+                            recognitionHistory: c.recognitionHistory,
                             result: c.result,
                             observation: o,
                             trigger: c.trigger,

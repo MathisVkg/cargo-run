@@ -270,7 +270,7 @@ export class LocalDataManager {
         JSON.stringify(
           {
             createdAt: new Date().toISOString(),
-            schema: 7,
+            schema: 8,
             evidenceFiles: files.map((f) => ({ name: f.name, bytes: f.bytes })),
             restore:
               "Close Cargo Run. Restore cargo-run.sqlite and captures from this folder together; preserve a copy of current data and remove stale WAL/SHM only while the app is closed.",
@@ -347,7 +347,7 @@ export class LocalDataManager {
         );
         if (mode === "reset") {
           db.db.exec(
-            "DELETE FROM lifecycle_activity; DELETE FROM lifecycle_evidence; DELETE FROM unattributed_rewards; DELETE FROM cargo_progress_activity; DELETE FROM cargo_progress_requests; DELETE FROM ocr_review_audit; DELETE FROM capture_contract_links; DELETE FROM cargo_objectives; DELETE FROM contracts; DELETE FROM cargo_runs; DELETE FROM ocr_captures; DELETE FROM pending_log_missions; DELETE FROM mission_events; DELETE FROM diagnostics; DELETE FROM automatic_captures; DELETE FROM read_checkpoints;",
+            "DELETE FROM mission_identity_evidence; DELETE FROM lifecycle_activity; DELETE FROM lifecycle_evidence; DELETE FROM unattributed_rewards; DELETE FROM cargo_progress_activity; DELETE FROM cargo_progress_requests; DELETE FROM ocr_review_audit; DELETE FROM capture_contract_links; DELETE FROM cargo_objectives; DELETE FROM contracts; DELETE FROM cargo_runs; DELETE FROM ocr_captures; DELETE FROM pending_log_missions; DELETE FROM mission_events; DELETE FROM diagnostics; DELETE FROM automatic_captures; DELETE FROM read_checkpoints;",
           );
           for (const key of [
             "parsingErrors",

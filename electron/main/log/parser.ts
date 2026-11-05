@@ -1,3 +1,4 @@
+import { parseIdentityEvidence } from "./identityParser";
 import { lifecycleLine } from "./lifecycleParser";
 import { createHash } from "node:crypto";
 import type { MissionEvent, ParseResult } from "../../../src/types/tracking";
@@ -9,6 +10,8 @@ export function parseLogLine(
   line: string,
   receivedAt = new Date().toISOString(),
 ): ParseResult {
+  const identity = parseIdentityEvidence(line);
+  if (identity) return { type: "identity", evidence: identity };
   const lifecycle = lifecycleLine(line, receivedAt);
   if (lifecycle) return lifecycle;
   const kindMatch =

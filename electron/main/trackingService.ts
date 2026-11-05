@@ -1,3 +1,4 @@
+import { reconcileAcceptedMissions } from "./association";
 import {
   retainReward,
   retainLifecycleEvidence,
@@ -40,8 +41,10 @@ import type {
   MonitoringStatus,
   SaveContractRequest,
 } from "../../src/types/tracking";
-import type { ContractDraft } from "../../src/types/models";
+import type { ContractDraft, Contract } from "../../src/types/models";
 
+const reconcileMissions = (db: CargoDatabase, contracts: Contract[]) =>
+  reconcileTerminalIdentities(db, reconcileAcceptedMissions(db, contracts));
 export function assertDraft(
   input: unknown,
 ): asserts input is SaveContractRequest {
@@ -141,7 +144,7 @@ export class TrackingService {
     this.config = this.database.getMonitorConfig();
     this.database.transaction(() => {
       const current = this.domain().contracts,
-        next = reconcileTerminalIdentities(this.database, current);
+        next = reconcileMissions(this.database, current);
       if (versionOf(current) !== versionOf(next)) {
         this.store.setState({ contracts: next });
         this.database.saveDomain(this.domain());
@@ -334,7 +337,7 @@ export class TrackingService {
           this.database.saveDomain(this.domain());
           persistReview(this.database, next);
           this.store.setState({
-            contracts: reconcileTerminalIdentities(
+            contracts: reconcileMissions(
               this.database,
               this.domain().contracts,
             ),
@@ -742,6 +745,16 @@ export class TrackingService {
             }
             continue;
           }
+          if (parsed.type === "identity") {
+            const item = parsed.evidence;
+            const result = this.database.db
+              .prepare(
+                "INSERT OR IGNORE INTO mission_identity_evidence(id,mission_id,payload) VALUES(?,?,?)",
+              )
+              .run(item.id, item.missionId, JSON.stringify(item));
+            if (Number(result.changes) > 0) changed = true;
+            continue;
+          }
           const event = parsed.event;
           if (event.kind === "Completed" || event.kind === "Abandoned")
             changed =
@@ -859,7 +872,7 @@ export class TrackingService {
         }
         if (changed) {
           this.store.setState({
-            contracts: reconcileTerminalIdentities(
+            contracts: reconcileMissions(
               this.database,
               this.domain().contracts,
             ),

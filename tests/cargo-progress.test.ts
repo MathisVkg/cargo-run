@@ -262,7 +262,7 @@ describe("Physical cargo operations", () => {
     expect(s.database.getSetting("custom")).toEqual({ keep: true });
     expect(
       s.database.db.prepare("PRAGMA user_version").get()!.user_version,
-    ).toBe(7);
+    ).toBe(8);
   });
   it("reconciles supported cumulative log delivery without fabricating loading and ignores old events", () => {
     const s = setup();

@@ -456,27 +456,29 @@ describe("operational automatic OCR importing", () => {
     expect(new CaptureRepository(restored.database).get(c.id)).not.toBeNull();
     expect(
       restored.database.db.prepare("PRAGMA user_version").get()?.user_version,
-    ).toBe(7);
+    ).toBe(8);
   });
 });
 describe("late identity and unknown timing", () => {
-  it("offers a compact late-identity choice and consolidates the original capture without duplicate cargo", () => {
+  it("associates late unique objective evidence in place without duplicate cargo", () => {
     const s = service(),
       c = capture(s);
     s.processScan(c.id);
-    const original = s.snapshot().contracts[0];
+    const original = structuredClone(s.snapshot().contracts[0]);
     log(s);
+    expect(s.snapshot().contracts).toHaveLength(1);
+    expect(s.snapshot().contracts[0]).toMatchObject({
+      id: original.id,
+      missionId: missionA,
+      missionAssociation: { source: "Objective details" },
+    });
+    expect(s.snapshot().contracts[0].cargoObjectives).toEqual(
+      original.cargoObjectives,
+    );
     expect(
       new CaptureRepository(s.database).get(c.id)?.importResult?.status,
-    ).toBe("Ambiguous match");
-    const result = resolveIssue(s, c, { targetId: "log-" + missionA });
-    expect(result?.status).toBe("Updated");
-    expect(s.snapshot().contracts).toHaveLength(1);
-    expect(s.snapshot().contracts[0].missionId).toBe(missionA);
-    expect(
-      s.domain().contracts.find((c) => c.id === original.id)?.supersededBy,
-    ).toBe("log-" + missionA);
-    expect(s.snapshot().contracts[0].cargoObjectives).toHaveLength(1);
+    ).toBe("Imported");
+    expect(s.contractEvidence(original.id)).toHaveLength(1);
   });
   it("retains unknown acceptance time even when the uniquely matched log notification lacks a timestamp", () => {
     const s = service();

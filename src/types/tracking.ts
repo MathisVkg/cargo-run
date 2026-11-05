@@ -79,6 +79,10 @@ export interface MissionEvent {
 }
 export type ParseResult =
   | {
+      type: "identity";
+      evidence: import("./association").MissionIdentityEvidence;
+    }
+  | {
       type: "reward";
       id: string;
       timestamp: string | null;

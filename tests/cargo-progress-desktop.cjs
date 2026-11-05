@@ -243,7 +243,7 @@ async function record(control, action, quantity) {
     const db = new DatabaseSync(path.join(folder, "cargo-run.sqlite"), {
       readOnly: true,
     });
-    assert.equal(db.prepare("PRAGMA user_version").get().user_version, 7);
+    assert.equal(db.prepare("PRAGMA user_version").get().user_version, 8);
     assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
     db.close();
     assert.deepEqual(errors, []);

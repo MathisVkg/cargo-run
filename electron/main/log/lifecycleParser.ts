@@ -34,7 +34,7 @@ export function lifecycleLine(
   if (!ended && !end) return null;
   // A concrete identity and an explicit supported terminal state are both required.
   const mission =
-    /(?:\bMissionId|\bmission_id)\s*[:=]?\s*\[([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\]/i.exec(
+    /(?:\bMissionId|\bmission_id)\s*[:=]?\s*(?:\[([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})\]|([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})(?=\s|$))/i.exec(
       line,
     );
   const state = ended
@@ -53,7 +53,7 @@ export function lifecycleLine(
   const kind: MissionEvent["kind"] = /COMPLETED|^Complete$/i.test(state)
       ? "Completed"
       : "Abandoned",
-    missionId = mission[1].toLowerCase();
+    missionId = (mission[1] ?? mission[2]).toLowerCase();
   return {
     type: "event",
     event: {

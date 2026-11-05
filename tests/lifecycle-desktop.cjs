@@ -403,7 +403,7 @@ async function cargo(c, action, q) {
       readOnly: true,
     });
     assert.deepEqual(final.prepare("PRAGMA foreign_key_check").all(), []);
-    assert.equal(final.prepare("PRAGMA user_version").get().user_version, 7);
+    assert.equal(final.prepare("PRAGMA user_version").get().user_version, 8);
     final.close();
     assert.deepEqual(errors, []);
     console.log(

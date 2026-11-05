@@ -43,6 +43,7 @@ export interface DesktopBridge {
   ocrProbeShortcut(): Promise<OcrSnapshot>;
   ocrResetShortcutDiagnostics(): Promise<OcrSnapshot>;
   ocrReparse(id: string): Promise<OcrSnapshot>;
+  ocrReprocess(id: string): Promise<OcrSnapshot>;
   ocrConfigurePolicy(
     policy: import("./capturePolicy").CapturePolicy,
   ): Promise<OcrSnapshot>;

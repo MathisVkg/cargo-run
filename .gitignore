@@ -7,3 +7,6 @@ work/
 
 resources/native/*.exe
 resources/native/*.wav
+
+# Sanitized real-format regression evidence only.
+!tests/fixtures/log/nov05-sanitized.log

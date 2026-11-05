@@ -55,8 +55,18 @@ export interface Contract {
     }
   >;
   completedAt?: string;
+  associationDiagnostics?: {
+    decision: "Pending" | "Verified";
+    reason: string;
+    candidateMissionIds: string[];
+  };
   missionAssociation?: {
-    source: "ObjectiveIds" | "User confirmed";
+    source:
+      | "ObjectiveIds"
+      | "User confirmed"
+      | "Objective details"
+      | "Acceptance context";
+    evidenceIds?: string[];
     at: string;
     eventId: string;
   };
