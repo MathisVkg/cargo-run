@@ -1,3 +1,4 @@
+import { CargoWorkflow } from "./CargoWorkflow";
 import { useState } from "react";
 import { Rocket, Database, Info, Trash2 } from "lucide-react";
 import { PageHeader, Badge } from "../../components/ui";
@@ -78,6 +79,7 @@ export default function Settings() {
             run together.
           </p>
         </section>
+        <CargoWorkflow />
         <LocalDataManagement />
         <details className="panel setting-card advanced-panel">
           <summary>Advanced &amp; Diagnostics</summary>
@@ -90,7 +92,7 @@ export default function Settings() {
           </div>
           <div>
             <h2>
-              Cargo Run <Badge>0.6.4</Badge>
+              Cargo Run <Badge>0.7.0</Badge>
             </h2>
             <p>Fleet Operations 2.0 · Local OCR and optional Game.log</p>
             <p className="form-note">

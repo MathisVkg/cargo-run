@@ -4,7 +4,7 @@ import {
   validatePreferences,
   defaultPreferences,
 } from "../src/types/preferences";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { CargoDatabase } from "../electron/main/storage/database";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -65,7 +65,7 @@ describe("Adaptive navigation preferences", () => {
     service.database.close();
     const db = new CargoDatabase(file);
     expect(db.db.prepare("PRAGMA user_version").get()).toMatchObject({
-      user_version: 8,
+      user_version: 9,
     });
     db.close();
   });

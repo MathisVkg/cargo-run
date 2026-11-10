@@ -1,3 +1,10 @@
+import {
+  workflow,
+  setAutomation,
+  observeTerminal,
+  automaticEvent,
+} from "./workflow";
+import { applyChecklist } from "./checklist";
 import { corroborateQuantities } from "./ocr/objectiveEvidence";
 import { reconcileAcceptedMissions } from "./association";
 import {
@@ -45,7 +52,11 @@ import type {
 import type { ContractDraft, Contract } from "../../src/types/models";
 
 const reconcileMissions = (db: CargoDatabase, contracts: Contract[]) =>
-  reconcileTerminalIdentities(db, reconcileAcceptedMissions(db, contracts));
+  reconcileTerminalIdentities(
+    db,
+    reconcileAcceptedMissions(db, contracts),
+    (e) => automaticEvent(db, e),
+  );
 export function assertDraft(
   input: unknown,
 ): asserts input is SaveContractRequest {
@@ -167,7 +178,14 @@ export class TrackingService {
     return {
       ...this.domain(),
       contracts: this.domain().contracts.filter((c) => !c.supersededBy),
-      lifecycleIssues: lifecycleIssues(this.database, this.domain().contracts),
+      workflow: {
+        automaticCompletion: workflow(this.database).automaticCompletion,
+      },
+      lifecycleIssues: workflow(this.database).automaticCompletion
+        ? lifecycleIssues(this.database, this.domain().contracts).filter((i) =>
+            workflow(this.database).eligibleIds.includes(i.eventId),
+          )
+        : [],
       preferences: structuredClone(this.preferences),
       revision: this.revision,
       databasePath: this.database.path,
@@ -275,7 +293,39 @@ export class TrackingService {
         .saveContract(input.draft as ContractDraft, input.id);
     });
   }
+  setWorkflow(input: unknown): AppSnapshot {
+    if (
+      !input ||
+      typeof input !== "object" ||
+      Array.isArray(input) ||
+      Object.keys(input).length !== 1 ||
+      typeof (input as { automaticCompletion?: unknown })
+        .automaticCompletion !== "boolean"
+    )
+      throw Error("Invalid workflow preference.");
+    setAutomation(
+      this.database,
+      (input as { automaticCompletion: boolean }).automaticCompletion,
+    );
+    return this.publish();
+  }
+  checklist(input: unknown): AppSnapshot {
+    return this.mutate(() =>
+      this.store.setState({
+        contracts: applyChecklist(
+          this.database,
+          this.domain().contracts,
+          input,
+        ),
+      }),
+    );
+  }
   resolveLifecycle(input: unknown): AppSnapshot {
+    const id = (input as { missionId?: string })?.missionId;
+    if (!this.snapshot().lifecycleIssues?.some((i) => i.missionId === id))
+      throw Error(
+        "Automatic completion Beta is off, or this event is not eligible for confirmation.",
+      );
     return this.mutate(() =>
       this.store.setState({
         contracts: resolveLifecycle(
@@ -498,25 +548,49 @@ export class TrackingService {
     });
     return this.publish();
   }
-  completeContract(id: unknown) {
+  private completeInStore(id: string) {
     const c = this.domain().contracts.find(
       (c) => c.id === id && !c.supersededBy,
     );
-    if (!c || c.status !== "Active" || c.missionId || c.source === "Log")
-      throw Error("Only an active local contract can be manually completed.");
-    return this.mutate(() =>
-      this.store.setState({
-        contracts: this.domain().contracts.map((x) =>
-          x.id === id
-            ? {
-                ...x,
-                status: "Completed",
-                completedAt: new Date().toISOString(),
-              }
-            : x,
-        ),
-      }),
-    );
+    if (!c || c.status !== "Active") throw Error("Active contract not found.");
+    const at = new Date().toISOString(),
+      eventId = randomUUID();
+    this.store.setState({
+      contracts: this.domain().contracts.map((x) =>
+        x.id === id
+          ? {
+              ...x,
+              status: "Completed" as const,
+              completedAt: at,
+              manualClosure: { kind: "Completed" as const, at },
+            }
+          : x,
+      ),
+    });
+    this.database.db
+      .prepare(
+        "INSERT INTO lifecycle_activity(id,contract_id,payload) VALUES(?,?,?)",
+      )
+      .run(
+        eventId,
+        id,
+        JSON.stringify({
+          id: eventId,
+          contractId: id,
+          missionId: c.missionId ?? "",
+          eventId,
+          action: "Completed",
+          at,
+          receivedAt: at,
+          previousStatus: c.status,
+          newStatus: "Completed",
+          source: "Manual",
+        }),
+      );
+  }
+  completeContract(id: unknown) {
+    if (typeof id !== "string") throw Error("Invalid contract identifier.");
+    return this.mutate(() => this.completeInStore(id));
   }
   selectShip(id: unknown): AppSnapshot {
     if (typeof id !== "string" || !this.savedShips.some((s) => s.id === id))
@@ -558,10 +632,59 @@ export class TrackingService {
         .contracts.some((c) => c.id === id && c.status === "Active")
     )
       throw new Error("Active contract not found.");
-    return this.mutate(() => this.store.getState().abandonContract(id));
+    return this.mutate(() => {
+      this.store.getState().abandonContract(id);
+      this.store.setState({
+        contracts: this.domain().contracts.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                manualClosure: {
+                  kind: "Abandoned" as const,
+                  at: c.completedAt!,
+                },
+              }
+            : c,
+        ),
+      });
+    });
   }
-  finishRun(): AppSnapshot {
-    return this.mutate(() => this.store.getState().finishRun());
+  finishRun(input?: unknown): AppSnapshot {
+    const r = input as
+      | import("../../src/types/workflow").FinishRunRequest
+      | undefined;
+    if (
+      r &&
+      (Object.keys(r).some(
+        (k) =>
+          !["confirmed", "runId", "expectedRevision", "completeIds"].includes(
+            k,
+          ),
+      ) ||
+        r.confirmed !== true ||
+        r.runId !== this.domain().currentRun.id ||
+        r.expectedRevision !== this.revision ||
+        !Array.isArray(r.completeIds) ||
+        r.completeIds.length > 1000 ||
+        new Set(r.completeIds).size !== r.completeIds.length ||
+        r.completeIds.some(
+          (id) =>
+            !this.domain().contracts.some(
+              (c) =>
+                c.id === id &&
+                !c.supersededBy &&
+                c.status === "Active" &&
+                this.domain().currentRun.contractIds.includes(id),
+            ),
+        ))
+    )
+      throw Error(
+        "Run or contract data changed. Reopen the finish-run dialog.",
+      );
+    return this.mutate(() => {
+      for (const id of r?.completeIds ?? []) this.completeInStore(id);
+      this.store.getState().finishRun();
+    });
   }
   removeSamples(): AppSnapshot {
     if (
@@ -801,15 +924,19 @@ export class TrackingService {
               )
               .get(event.missionId);
           if (!this.database.recordEvent(event, context)) continue;
+          observeTerminal(this.database, event, context);
           if (firstAcceptance && source.mode === "Live" && this.running)
             accepted.push(event);
           changed = true;
           const apply = (pending: typeof event) => {
-            const inLedger = this.store
-              .getState()
-              .contracts.some(
-                (c) => c.missionId === pending.missionId && !c.supersededBy,
-              );
+            const inLedger =
+              (!["Completed", "Abandoned"].includes(pending.kind) ||
+                automaticEvent(this.database, pending)) &&
+              this.store
+                .getState()
+                .contracts.some(
+                  (c) => c.missionId === pending.missionId && !c.supersededBy,
+                );
             const result = applyMissionEvent(
               inLedger
                 ? this.store.getState().contracts

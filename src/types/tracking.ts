@@ -40,6 +40,7 @@ export interface TrackingInfo {
   events: DiagnosticEvent[];
 }
 export interface AppSnapshot extends DomainSnapshot {
+  workflow: import("./workflow").WorkflowPreferences;
   lifecycleIssues?: import("./lifecycle").LifecycleIssue[];
   preferences: import("./preferences").UiPreferences;
   revision: number;

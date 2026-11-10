@@ -1,4 +1,5 @@
-import { loaded, awaitingPickup } from "../../types/progress";
+import { checklistProgress } from "../../types/workflow";
+import { CompleteContractDialog } from "./CompleteContractDialog";
 import { useState } from "react";
 import { FileCheck2, Pencil, Ban } from "lucide-react";
 import type { Contract } from "../../types/models";
@@ -17,7 +18,8 @@ import { useCargoStore } from "../../stores/useCargoStore";
 export function ContractCards({ contracts }: { contracts: Contract[] }) {
   const [detail, setDetail] = useState<Contract | null>(null),
     [edit, setEdit] = useState<Contract | null>(null),
-    [abandon, setAbandon] = useState<Contract | null>(null);
+    [abandon, setAbandon] = useState<Contract | null>(null),
+    [complete, setComplete] = useState<Contract | null>(null);
   const abandonContract = useCargoStore((s) => s.abandonContract);
   if (!contracts.length)
     return (
@@ -49,7 +51,11 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
               c.sources?.includes("OCR") ||
               c.source === "OCR";
           return (
-            <article className="panel contract-card" key={c.id}>
+            <article
+              className="panel contract-card"
+              data-contract-id={c.id}
+              key={c.id}
+            >
               <div className="contract-card-heading">
                 <div>
                   <h3>{c.name}</h3>
@@ -65,11 +71,8 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
                 </span>
               </div>
               <p className="cargo-card-progress">
-                {number(objectives.reduce((n, o) => n + awaitingPickup(o), 0))}{" "}
-                SCU awaiting pickup ·{" "}
-                {number(objectives.reduce((n, o) => n + loaded(o), 0))} onboard
-                · {number(objectives.reduce((n, o) => n + o.deliveredSCU, 0))}{" "}
-                delivered
+                {checklistProgress(c).done} / {checklistProgress(c).total}{" "}
+                deliveries marked done
               </p>
               <p className="commodity-summary">{commodities.join(" · ")}</p>
               <dl className="contract-locations">
@@ -89,6 +92,13 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
                   </dd>
                 </div>
               </dl>
+              <button
+                className="button small complete-contract-quick"
+                aria-label={"Complete contract " + c.name}
+                onClick={() => setComplete(c)}
+              >
+                Complete contract
+              </button>
               <footer className="contract-card-footer">
                 <div className="contract-card-footer__metadata">
                   <Badge>{(c.sources ?? [c.source]).join(" + ")}</Badge>
@@ -137,6 +147,10 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
           );
         })}
       </div>
+      <CompleteContractDialog
+        contract={complete}
+        onClose={() => setComplete(null)}
+      />
       <ContractDetails contract={detail} onClose={() => setDetail(null)} />
       <ContractDrawer
         open={!!edit}

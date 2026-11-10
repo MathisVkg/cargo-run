@@ -56,4 +56,6 @@ export interface CargoActivity {
   previous: CargoStateValues;
   next: CargoStateValues;
   undoOf?: string;
+  previousChecklist?: import("./workflow").ObjectiveChecklist;
+  nextChecklist?: import("./workflow").ObjectiveChecklist;
 }

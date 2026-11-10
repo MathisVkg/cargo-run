@@ -234,13 +234,15 @@ else
         true,
       );
       register("lifecycle:history", (id) => service.lifecycleHistory(id));
+      register("cargo:workflow", (input) => service.setWorkflow(input), true);
+      register("cargo:checklist", (input) => service.checklist(input), true);
       register("cargo:progress", (input) => service.cargoProgress(input), true);
       register("cargo:activity", (id) => service.cargoActivity(id));
       register("cargo:saveContract", (input) => service.saveContract(input));
       register("cargo:selectShip", (id) => service.selectShip(id));
       register("cargo:preferences", (patch) => service.setPreferences(patch));
       register("cargo:abandonContract", (id) => service.abandonContract(id));
-      register("cargo:finishRun", () => service.finishRun());
+      register("cargo:finishRun", (input) => service.finishRun(input), true);
       register("cargo:removeSamples", () => service.removeSamples());
       register("cargo:loadSamples", () => service.loadSamples());
       register(

@@ -55,6 +55,10 @@ export default function Dashboard() {
         </button>
       </PageHeader>
       <LifecycleIssues />
+      <p className="form-note">
+        Mark pickup and delivery reminders here, or use Manifest to record SCU
+        when needed.
+      </p>
       <div className="stats-grid operations-stats">
         <StatCard
           label="Active Contracts"
@@ -129,11 +133,8 @@ export default function Dashboard() {
         </StatCard>
       </div>
       <p className="planning-note">
-        Onboard values are manual records; unrecorded or migrated cargo is
-        unknown, not verified empty. Cargo on other ships remains assigned to
-        those ships. Planning assumes all remaining cargo is carried together.
-        Planned cargo is not physically loaded cargo; staged pickups and
-        deliveries may use capacity differently.
+        Recorded onboard reflects explicit records; unrecorded inventory is
+        unknown. Checklist marks are reminders, not cargo movement.
       </p>
       {plan.over && (
         <div className="notice warning" role="status">

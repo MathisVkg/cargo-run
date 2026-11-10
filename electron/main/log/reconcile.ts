@@ -10,6 +10,7 @@ export function applyMissionEvent(
     (c) => c.missionId === event.missionId && !c.supersededBy,
   );
 
+  if (existing?.manualClosure) return { contracts, resolved: true };
   if (event.kind === "Accepted") {
     if (existing) return { contracts, resolved: true };
     const id = "log-" + event.missionId;

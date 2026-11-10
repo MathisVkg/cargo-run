@@ -1,3 +1,5 @@
+import { CompleteContractDialog } from "./CompleteContractDialog";
+import { ChecklistToggle } from "../cargo/ChecklistToggle";
 import { LifecycleHistory } from "./LifecycleHistory";
 import { ProgressControls } from "../cargo/ProgressControls";
 import { CargoActivityPanel } from "../cargo/CargoActivity";
@@ -159,6 +161,17 @@ export function ContractDetails({
                             </td>
                             <td>
                               {number(loaded(o))} / {number(awaitingPickup(o))}
+                              <p className="form-note">Checklist reminders</p>
+                              <ChecklistToggle
+                                objective={o}
+                                kind="pickup"
+                                disabled={contract.status !== "Active"}
+                              />
+                              <ChecklistToggle
+                                objective={o}
+                                kind="delivery"
+                                disabled={contract.status !== "Active"}
+                              />
                               <ProgressControls
                                 contract={contract}
                                 objective={o}
@@ -300,18 +313,6 @@ export function ContractDetails({
         <div className="dialog-actions contract-details-actions">
           {contract?.status === "Active" && (
             <>
-              {!contract.missionId && (
-                <label className="checkbox-label completion-confirmation">
-                  <input
-                    type="checkbox"
-                    checked={complete}
-                    disabled={submitting}
-                    onChange={(e) => setComplete(e.target.checked)}
-                  />
-                  I confirm completion of this local contract. This does not
-                  confirm earnings.
-                </label>
-              )}
               <button
                 className="button"
                 disabled={contract.source === "Log" || submitting}
@@ -319,25 +320,13 @@ export function ContractDetails({
               >
                 Edit contract
               </button>
-              {!contract.missionId && (
-                <button
-                  className="button"
-                  disabled={!complete || submitting}
-                  onClick={async () => {
-                    setSubmitting(true);
-                    try {
-                      await window.cargoRun.completeContract(contract.id);
-                      onClose();
-                    } catch (e) {
-                      setError(String(e));
-                    } finally {
-                      setSubmitting(false);
-                    }
-                  }}
-                >
-                  Complete local contract
-                </button>
-              )}
+              <button
+                className="button"
+                disabled={submitting}
+                onClick={() => setComplete(true)}
+              >
+                Complete contract
+              </button>
               <button
                 className="button danger"
                 disabled={submitting}
@@ -352,6 +341,11 @@ export function ContractDetails({
           </button>
         </div>
       </Overlay>
+      <CompleteContractDialog
+        contract={complete ? contract : null}
+        onClose={() => setComplete(false)}
+        onCompleted={onClose}
+      />
       {editing && (
         <ContractDrawer
           open={editing}

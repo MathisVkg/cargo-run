@@ -9,7 +9,7 @@ import {
   rmSync,
 } from "node:fs";
 import { resolve, join, sep } from "node:path";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { CaptureRepository } from "../electron/main/ocr/repository";
 import { CaptureRetention, expiration } from "../electron/main/ocr/retention";
 import { extractContract } from "../electron/main/ocr/parser";

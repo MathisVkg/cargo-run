@@ -71,6 +71,11 @@ function accept(n) {
     await until(async () => !!(await state()).displays.length, 10000);
     let s = await state();
     assert.equal(s.policy.autoEnabled, false);
+    assert.equal(
+      (await page.evaluate(() => window.cargoRun.getState())).workflow
+        .automaticCompletion,
+      false,
+    );
     await page.evaluate((settings) => window.cargoRun.ocrConfigure(settings), {
       ...s.settings,
       sounds: false,

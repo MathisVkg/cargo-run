@@ -2,6 +2,7 @@ import type { ContractStatus } from "./models";
 export interface LifecycleActivity {
   id: string;
   contractId: string;
+  source?: "Manual" | "Game.log";
   missionId: string;
   eventId: string;
   action: string;

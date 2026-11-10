@@ -5,7 +5,7 @@ import { readFileSync, mkdtempSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { randomUUID } from "node:crypto";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { CaptureRepository } from "../electron/main/ocr/repository";
 import { extractContract } from "../electron/main/ocr/parser";
 import { progressStamp } from "../src/types/progress";

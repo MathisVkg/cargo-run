@@ -3138,3 +3138,50 @@ h3 {
 .scan-primary-actions {
   align-self: center;
 }
+
+/* Lightweight checklist actions are independent of recorded SCU controls. */
+.stop-grid {
+  align-items: start;
+}
+.stop-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.stop-checklist {
+  table-layout: auto;
+}
+.stop-checklist td {
+  vertical-align: top;
+}
+.checklist-contract {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+  font-size: 11px;
+  max-width: 28ch;
+}
+.checklist-action {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+.checklist-action small {
+  font-size: 11px;
+  max-width: 30ch;
+}
+.checklist-done {
+  border-color: var(--success);
+  color: var(--success);
+}
+.cargo-workflow h3 {
+  margin-top: 20px;
+}
+.complete-contract-quick {
+  align-self: flex-start;
+  margin: 12px 0;
+}

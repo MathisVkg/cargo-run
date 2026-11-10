@@ -712,6 +712,11 @@ export function planReview(
       );
     return {
       ...existing,
+      checklist:
+        existing?.checklist ??
+        review.sourceContract?.cargoObjectives.find(
+          (x) => x.id === o.sourceObjectiveId,
+        )?.checklist,
       id: rowId,
       contractId,
       commodity: o.commodity,

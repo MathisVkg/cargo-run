@@ -3,6 +3,8 @@ import type { DesktopBridge } from "../../src/types/desktop";
 import type { AppSnapshot } from "../../src/types/tracking";
 import type { OcrSnapshot } from "../../src/types/ocr";
 const bridge: DesktopBridge = {
+  setWorkflow: (input) => ipcRenderer.invoke("cargo:workflow", input),
+  checklist: (input) => ipcRenderer.invoke("cargo:checklist", input),
   resolveLifecycle: (input) => ipcRenderer.invoke("lifecycle:resolve", input),
   lifecycleHistory: (id) => ipcRenderer.invoke("lifecycle:history", id),
   cargoProgress: (input) => ipcRenderer.invoke("cargo:progress", input),
@@ -58,7 +60,7 @@ const bridge: DesktopBridge = {
   setPreferences: (patch) => ipcRenderer.invoke("cargo:preferences", patch),
   selectShip: (id) => ipcRenderer.invoke("cargo:selectShip", id),
   abandonContract: (id) => ipcRenderer.invoke("cargo:abandonContract", id),
-  finishRun: () => ipcRenderer.invoke("cargo:finishRun"),
+  finishRun: (input) => ipcRenderer.invoke("cargo:finishRun", input),
   removeSamples: () => ipcRenderer.invoke("cargo:removeSamples"),
   loadSamples: () => ipcRenderer.invoke("cargo:loadSamples"),
   chooseLog: () => ipcRenderer.invoke("tracking:chooseLog"),

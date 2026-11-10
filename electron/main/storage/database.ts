@@ -1,3 +1,4 @@
+import { lifecycleIssues } from "../lifecycle";
 import { applyMissionEvent } from "../log/reconcile";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
@@ -25,7 +26,7 @@ export class CargoDatabase {
     const version = Number(
       (this.db.prepare("PRAGMA user_version").get() as Row).user_version,
     );
-    if (version > 8) {
+    if (version > 9) {
       this.db.close();
       throw new Error(
         "This database was created by a newer Cargo Run version. No data was changed.",
@@ -100,6 +101,29 @@ export class CargoDatabase {
           "CREATE TABLE IF NOT EXISTS mission_identity_evidence(id TEXT PRIMARY KEY,mission_id TEXT NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS identity_by_mission ON mission_identity_evidence(mission_id); PRAGMA user_version=8;",
         ),
       );
+    if (version < 9)
+      this.transaction(() => {
+        this.db.exec(
+          "CREATE TABLE IF NOT EXISTS objective_checklist_activity(id TEXT PRIMARY KEY,contract_id TEXT NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,objective_id TEXT NOT NULL,payload TEXT NOT NULL); CREATE INDEX IF NOT EXISTS checklist_by_objective ON objective_checklist_activity(objective_id); CREATE TABLE IF NOT EXISTS checklist_requests(id TEXT PRIMARY KEY,hash TEXT NOT NULL);",
+        );
+        if (!this.getSetting("workflow.automation"))
+          this.setSetting("workflow.automation", {
+            automaticCompletion: false,
+            since: null,
+            afterRow: Number(
+              this.db
+                .prepare(
+                  "SELECT COALESCE(MAX(rowid),0) AS n FROM mission_events",
+                )
+                .get()!.n,
+            ),
+            eligibleIds: lifecycleIssues(
+              this,
+              this.loadDomain()?.contracts ?? [],
+            ).map((i) => i.eventId),
+          });
+        this.db.exec("PRAGMA user_version=9");
+      });
   }
   private migrateProgress() {
     this.transaction(() => {

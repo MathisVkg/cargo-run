@@ -107,7 +107,7 @@ export default function App() {
           >
             <CircleHelp size={13} />
           </button>
-          <span className="status-divider">/</span>v0.6.4
+          <span className="status-divider">/</span>v0.7.0
         </span>
       </footer>
     </div>

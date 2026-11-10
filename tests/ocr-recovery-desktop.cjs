@@ -54,6 +54,7 @@ async function launch() {
   await page
     .getByRole("heading", { name: "Cargo Operations", exact: true })
     .waitFor();
+  await require("./helpers/beta-desktop.cjs")(page);
   await page.waitForFunction(
     () => !document.body.textContent.includes("Loading saved operations"),
   );
@@ -216,6 +217,31 @@ async function cargo(action, q) {
     });
     await cargo("Load", 8);
     await cargo("Deliver", 5);
+    await page.evaluate(async () => {
+      for (const kind of ["pickup", "delivery"]) {
+        const s = await window.cargoRun.getState(),
+          o = s.contracts[0].cargoObjectives[0];
+        await window.cargoRun.checklist({
+          requestId: crypto.randomUUID(),
+          changes: [
+            {
+              objectiveId: o.id,
+              kind,
+              done: true,
+              expected: JSON.stringify(
+                o.checklist ?? {
+                  pickedUp: false,
+                  delivered: false,
+                  pickupRevision: "",
+                  deliveryRevision: "",
+                  deliverySource: "Player",
+                },
+              ),
+            },
+          ],
+        });
+      }
+    });
     const before = JSON.parse(
       JSON.stringify((await state()).contracts[0].cargoObjectives),
     );
@@ -304,7 +330,7 @@ async function cargo(action, q) {
       readOnly: true,
     });
     assert.deepEqual(final.prepare("PRAGMA foreign_key_check").all(), []);
-    assert.equal(final.prepare("PRAGMA user_version").get().user_version, 8);
+    assert.equal(final.prepare("PRAGMA user_version").get().user_version, 9);
     final.close();
     assert.deepEqual(errors, []);
     console.log(

@@ -1,6 +1,10 @@
 import type { AppSnapshot, SaveContractRequest } from "./tracking";
 import type { OcrSnapshot, CaptureSettings } from "./ocr";
 export interface DesktopBridge {
+  setWorkflow(
+    input: import("./workflow").WorkflowPreferences,
+  ): Promise<AppSnapshot>;
+  checklist(input: import("./workflow").ChecklistRequest): Promise<AppSnapshot>;
   resolveLifecycle(
     input: import("./lifecycle").LifecycleResolution,
   ): Promise<AppSnapshot>;
@@ -68,7 +72,9 @@ export interface DesktopBridge {
   ): Promise<AppSnapshot>;
   selectShip(id: string): Promise<AppSnapshot>;
   abandonContract(id: string): Promise<AppSnapshot>;
-  finishRun(): Promise<AppSnapshot>;
+  finishRun(
+    input?: import("./workflow").FinishRunRequest,
+  ): Promise<AppSnapshot>;
   removeSamples(): Promise<AppSnapshot>;
   loadSamples(): Promise<AppSnapshot>;
   chooseLog(): Promise<AppSnapshot>;

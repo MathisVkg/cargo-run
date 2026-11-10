@@ -1,4 +1,42 @@
-# Cargo Run 0.6.4 — Fleet Operations 2.0
+# Cargo Run 0.7.0 — Fleet Operations 2.0
+
+## Manual-first cargo workflow (v0.7.0)
+
+Cargo Run now works as a lightweight pickup/delivery checklist. Detailed SCU tracking remains optional in Manifest.
+
+- **Dashboard / By Location:** each objective has its own commodity, required SCU, destination/origin, Pending/Done state and quick toggle. Shared locations are grouped; identical cargo objectives retain separate IDs. Pickup stops include **Mark all picked up**. The old quantity-allocation/correction panel is removed from these cards.
+- **By Contract:** cards retain their layout, company, full potential reward, requirements and locations, with a concise “2 / 4 deliveries marked done” indicator and **Complete contract**. Details, Edit and Abandon remain available under existing editing rules.
+- **Checklist marks are reminders.** Pickup does not load a ship; delivery does not consume recorded onboard cargo, update delivered SCU, complete a mission or confirm a payout. Toggle again to undo a reminder. A newly fully recorded delivery in Manifest can mark the delivery reminder Done; partial quantities cannot. Undoing that physical delivery restores the auto-mark only if a player has not subsequently changed it independently.
+- **Complete contract** works for any active tracked contract, including a verified MissionId. A centered confirmation shows the reward and marked-delivery count. Outstanding/unknown entries produce a warning but do not prevent explicit completion. Checklist state, retained cargo and existing confirmed earnings are preserved; the action records manual closure rather than pretending to receive a payout.
+- **Finish Run** now distinguishes **Finish run only** from **Complete selected and finish**. The dialog shows active contracts, completed/outstanding delivery checklists, potential payout and recorded cargo across ships. The first action carries active contracts forward. The second closes only the selected contracts before saving the snapshot. Both require explicit confirmation; changed data requires reopening the dialog.
+- **Settings → Cargo Workflow → Experimental Automation → Automatic contract completion (Beta)** is **Off by default**, including upgrades. Off preserves log evidence/identity and automatic OCR capture, but Game.log completion/abandonment cannot close ledger contracts or generate new Dashboard association prompts. Existing eligible unresolved prompts are hidden, not deleted.
+- Explicit Beta opt-in retains verified identity/ambiguity safeguards. A saved activation time and event-row boundary prevent already stored or older historical notifications from being replayed as fresh completions. Previously eligible unresolved prompts can still be explicitly confirmed after re-enabling; old events are not silently replayed. Screenshot automation is configured independently.
+
+### Persistence and migration
+
+SQLite moves additively from **schema 8 to 9**. Two tables retain checklist audit and idempotent request hashes; optional checklist fields live on existing objective JSON records. Missing fields mean Pending without rewriting legacy objective payloads or run snapshots. Identity-retaining OCR enrichment/rescans preserve marks, and newly discovered rows start Pending. Closed history keeps its checklist snapshot; reminder controls are read-only after closure, while retained cargo unloading/correction remains available.
+
+Ships, favorites, settings, captures, evidence links, physical cargo activity and lifecycle history are retained. Cleanup still blocks closed cargo until unloaded/corrected, requires backup, validates foreign keys and stops monitoring after full reset. Reset clears checklist records/requests while preserving the workflow preference and resetting its event boundary safely.
+
+Keep a closed-app backup before upgrading. An older schema-8 application must not open a schema-9 database; rolling back requires restoring the pre-upgrade backup, not downgrading the database in place. Development/tests did not alter the live user database, screenshots or Game.log.
+
+### v0.7.0 verification and exact gameplay steps
+
+Typecheck, lint, **385 tests / 28 files**, production build and **14 Windows/Electron workflows** passed. The standalone shortcut/OCR suite was attempted twice but stopped when its required test-window foreground focus changed; stable-foreground and real in-game checks remain. Exact commands/results are in the technical handoff. New regressions cover single/shared/multi-objective checklists, independent recorded cargo, full/partial delivery and undo, OCR preservation, manual closure, both run modes, Beta Off/On boundaries, legacy prompts, migration, restart, backup and reset. Previous lifecycle suites explicitly opt into Beta; default-Off behavior has separate coverage.
+
+1. Back up Cargo Run with the app closed; launch v0.7.0. Verify old contracts, retained SCU, ships/favorites, history and captures. In Settings, verify Automatic contract completion (Beta) is Off. Leave automatic OCR capture configured as you prefer.
+2. Accept/capture a hauling contract in Star Citizen. Confirm the normal OCR result appears in Dashboard, Contracts and Manifest. In Dashboard mark pickup Done, then delivery Done. Recorded onboard/delivered SCU must remain unchanged and the contract must stay Active.
+3. With several contracts sharing one pickup, mark one row and verify the other objective IDs remain Pending. Try Mark all picked up. Toggle a mark back to Pending; no quantity entry or modal should be needed.
+4. In Manifest optionally record a partial load/delivery, then a full delivery. Capacity must reflect actual records only; partial progress must not mark the full objective Done. Undo physical progress and verify an independent later player mark is preserved.
+5. In By Contract, click Complete contract. Check the centered warning for outstanding entries; Cancel first, then explicitly confirm. Status/History should update while checklist marks, onboard inventory and potential-versus-confirmed earnings remain intact. A game completion/abandonment notification with Beta Off must not close another contract or show an association prompt.
+6. Finish a run using Finish run only: active contracts and cargo must carry forward. In a second run select one contract and choose Complete selected and finish; only that selection should close, and both run snapshots must remain in History.
+7. Reprocess/re-extract an existing scan in Scan History. Existing objective IDs and marks must survive with no duplicate contract or physical cargo operations. Restart and check persistence.
+8. Only if desired, enable Beta before new game events. Complete a newly verified mission and check the actual event timestamp; ambiguous identities still need explicit confirmation. Disable Beta and verify prompts are hidden and new game lifecycle events no longer close tracked contracts. Re-enabling must not automatically replay older notifications. Automatic screenshot capture must work in either setting.
+9. Check both Dashboard modes and confirmation dialogs at 1100 × 700, 1440 × 900 and maximized. Test reset/deletion only in a disposable profile; retained cargo must remain protected.
+
+**Known limits:** checklist marks do not detect physical cargo or game payout. Closed checklist history is not reopened by later log events. Beta depends on supported identity/event evidence and valid timing; missing/ambiguous or pre-activation evidence remains manual. No real Star Citizen mission or foreground in-game shortcut delivery was executed during development.
+
+Earlier release notes below describe prior versions; v0.7.0's manual-first rules take precedence.
 
 ## OCR confidence and review reliability (v0.6.4)
 

@@ -4,7 +4,7 @@ import { mkdtempSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { DatabaseSync } from "node:sqlite";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { LocalDataManager } from "../electron/main/storage/maintenance";
 import { recordedOnboard } from "../electron/main/cargoProgress";
 import {
@@ -262,7 +262,7 @@ describe("Physical cargo operations", () => {
     expect(s.database.getSetting("custom")).toEqual({ keep: true });
     expect(
       s.database.db.prepare("PRAGMA user_version").get()!.user_version,
-    ).toBe(8);
+    ).toBe(9);
   });
   it("reconciles supported cumulative log delivery without fabricating loading and ignores old events", () => {
     const s = setup();

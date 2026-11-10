@@ -26,6 +26,7 @@ async function launch() {
   await page
     .getByRole("heading", { name: "Cargo Operations", exact: true })
     .waitFor();
+  await require("./helpers/beta-desktop.cjs")(page);
   await page.waitForFunction(
     () => !document.body.textContent.includes("Loading saved operations"),
   );
@@ -405,7 +406,7 @@ async function cargo(c, action, q) {
       readOnly: true,
     });
     assert.deepEqual(final.prepare("PRAGMA foreign_key_check").all(), []);
-    assert.equal(final.prepare("PRAGMA user_version").get().user_version, 8);
+    assert.equal(final.prepare("PRAGMA user_version").get().user_version, 9);
     final.close();
     assert.deepEqual(errors, []);
     console.log(

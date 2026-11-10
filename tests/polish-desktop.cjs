@@ -192,13 +192,15 @@ async function close(name) {
           exact: true,
         }),
       });
-    assert.match(await everus.innerText(), /7 SCU remaining/);
-    assert.match(await everus.innerText(), /0 delivered \/ 7 required/);
+    assert.match(await everus.innerText(), /7\s*SCU required/);
+    assert(
+      !/awaiting pickup|Objective allocations/.test(await everus.innerText()),
+    );
     assert(!/7 \/ 7 SCU/.test(await everus.innerText()));
     await tressler.locator(".associated-contracts > summary").click();
     assert.equal(await tressler.locator(".associated-contracts li").count(), 2);
-    assert.match(await tressler.innerText(), /5 SCU remaining/);
-    assert.match(await tressler.innerText(), /3 SCU remaining/);
+    assert.match(await tressler.innerText(), /5 SCU/);
+    assert.match(await tressler.innerText(), /3 SCU/);
     await everus
       .getByRole("button", { name: "View Contract", exact: true })
       .click();
@@ -221,9 +223,9 @@ async function close(name) {
     assert.match(stats, /Remaining SCU\s*12/);
     assert.equal(
       await dialog("Polish Alpha")
-        .getByRole("button", { name: "Complete local contract", exact: true })
+        .getByRole("button", { name: "Complete contract", exact: true })
         .isEnabled(),
-      false,
+      true,
     );
     await outside("Polish Alpha");
     await page.screenshot({
@@ -485,9 +487,9 @@ async function close(name) {
     );
     assert.equal(
       await dialog("Polish Alpha")
-        .getByRole("button", { name: "Complete local contract", exact: true })
+        .getByRole("button", { name: "Complete contract", exact: true })
         .count(),
-      0,
+      1,
     );
     await close("Polish Alpha");
     await page.evaluate((id) => window.cargoRun.ocrReparse(id), id);
@@ -554,9 +556,12 @@ async function close(name) {
     await page
       .getByLabel("Details for Polish Completion", { exact: true })
       .click();
-    await dialog("Polish Completion").getByRole("checkbox").check();
     await dialog("Polish Completion")
-      .getByRole("button", { name: "Complete local contract", exact: true })
+      .getByRole("button", { name: "Complete contract", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Complete contract?", exact: true })
+      .getByRole("button", { name: "Confirm completion", exact: true })
       .click();
     await dialog("Polish Completion").waitFor({ state: "hidden" });
     const completed = (await state()).contracts.find(

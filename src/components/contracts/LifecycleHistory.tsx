@@ -29,8 +29,10 @@ export function LifecycleHistory({ contract }: { contract: Contract }) {
       </p>
       {rows.map((a) => (
         <div key={a.id}>
-          <strong>{a.action}</strong> · {date(a.at)} · Verified Game.log
-          identity
+          <strong>{a.action}</strong> · {date(a.at)} ·{" "}
+          {a.source === "Manual"
+            ? "Manually marked; payout unconfirmed"
+            : "Verified Game.log identity"}
           <details>
             <summary>Advanced · Lifecycle evidence</summary>
             <pre className="ocr-raw">

@@ -4,7 +4,7 @@ import { readFileSync, mkdtempSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { CaptureRepository } from "../electron/main/ocr/repository";
 import { extractContract } from "../electron/main/ocr/parser";
 import { parseLogLine } from "../electron/main/log/parser";
@@ -43,7 +43,7 @@ function feed(s: TrackingService, ...lines: string[]) {
       path: "synthetic-Game.log",
       generation: "synthetic",
       offset: 0,
-      mode: "Import",
+      mode: "Live",
     },
   );
 }
@@ -544,7 +544,7 @@ describe("Safe late OCR mission association", () => {
 });
 
 describe("Lifecycle migration, collisions and rollback", () => {
-  it("recovers a saved verified completion during additive schema-6 startup without rescanning OCR", async () => {
+  it("retains historical completion evidence during migration without replaying it as a new automatic closure", async () => {
     const file = join(
         mkdtempSync(join(tmpdir(), "cargo-legacy-terminal-")),
         "cargo.sqlite",
@@ -569,10 +569,10 @@ describe("Lifecycle migration, collisions and rollback", () => {
     const upgraded = service(file);
     expect(upgraded.domain().contracts[0]).toMatchObject({
       id,
-      status: "Completed",
-      completedAt: time,
+      status: "Active",
     });
-    expect(upgraded.lifecycleHistory(id)).toHaveLength(1);
+    expect(upgraded.lifecycleHistory(id)).toHaveLength(0);
+    expect(upgraded.database.counts().completed).toBe(1);
     expect(
       upgraded.database.db.prepare("PRAGMA foreign_key_check").all(),
     ).toEqual([]);
@@ -609,8 +609,27 @@ describe("Lifecycle migration, collisions and rollback", () => {
     expect(s.domain().contracts[0].status).toBe("Active");
     expect(s.domain().contracts[0].missionId).toBeUndefined();
     expect(s.snapshot().lifecycleIssues).toHaveLength(2);
-    s.store.setState({contracts:[...s.domain().contracts,{...c,id:randomUUID(),missionId:a,status:"Completed",supersededBy:c.id,cargoObjectives:[]}]});
-    feed(s,notification("New Objective: Deliver 1/8 SCU of Agricultural Supplies to Port Tressler above microTech",b,oid));
+    s.store.setState({
+      contracts: [
+        ...s.domain().contracts,
+        {
+          ...c,
+          id: randomUUID(),
+          missionId: a,
+          status: "Completed",
+          supersededBy: c.id,
+          cargoObjectives: [],
+        },
+      ],
+    });
+    feed(
+      s,
+      notification(
+        "New Objective: Deliver 1/8 SCU of Agricultural Supplies to Port Tressler above microTech",
+        b,
+        oid,
+      ),
+    );
     expect(s.domain().contracts[0].missionId).toBeUndefined();
     expect(s.snapshot().lifecycleIssues).toHaveLength(1);
   });

@@ -1,4 +1,59 @@
-# Cargo Run v0.6.4 — Task 06.4 handoff
+# Cargo Run v0.7.0 — Task 07 handoff
+
+## Task 07 implementation
+
+The existing Electron/React/Zustand/SQLite workflow is retained. The Dashboard now offers objective-ID-specific Pending/Done pickup and delivery reminders, bulk pickup by location, and concise contract progress. Physical quantity controls stay in Manifest/Details. Contract cards keep their original aligned Details/Edit/Abandon footer; the clearly labeled quick completion action sits above it. Single-objective location cards no longer stretch to the height of adjacent multi-objective cards.
+
+### Data model and schema 9
+
+- Optional `CargoObjective.checklist` contains independent pickedUp/delivered booleans, per-field revision tokens and delivery source (Player/Recorded). Missing state defaults to Pending; migration does not rewrite legacy objective payloads or frozen run snapshots.
+- `objective_checklist_activity` stores before/after/source with a contract FK and historical objective ID, following the existing cargo-audit pattern because domain saves rebuild the objective table. `checklist_requests` stores hashed request IDs for deduplication. Updates validate persistent objective identity, active state, expected checklist stamp and whole-batch atomicity.
+- Recorded full delivery can auto-mark delivery Done. Partial deliveries do not. Cargo audit snapshots retain before/after checklist state. Physical undo restores an automatic mark only if its delivery revision still matches and no later player choice superseded it; pickup stays independent.
+- OCR target updates spread existing objective state. Explicit mapped consolidation can carry a source checklist when the destination has none. New IDs start Pending. The raw OCR/capture pipeline is unchanged.
+- The additive schema-8 → 9 migration creates these tables and the Off-default `workflow.automation` setting. It retains only pre-existing actionable prompt IDs for later explicit confirmation. Raw mission events and diagnostics are retained regardless. Existing physical SCU, linked images/evidence, favorites/settings, runs and audit rows are not reset.
+- Cleanup previews include checklist audit counts; closed contract deletion cascades those audit rows. Full reset backs up first, clears checklist state/requests with tracking data, keeps workflow/favorites/settings, resets its event boundary and leaves monitoring stopped. Existing retained-cargo blockers/FK checks remain.
+
+### Completion policy
+
+Manual completion accepts any active canonical contract, including a bound MissionId or legacy Log record. It records a Manual lifecycle activity/closure timestamp and preserves checklist flags, delivered/onboard quantities, ship assignment and existing confirmed earnings. Future log events cannot rewrite a manually closed record. There is no automatic payout confirmation. Confirmation dialogs show potential reward and marked-delivery count, warn about outstanding/unknown checklist entries and protect against outside-click dismissal.
+
+Run finalization stays atomic: Finish run only snapshots/carries active records unchanged; Complete selected and finish closes only validated selected active records and then snapshots the run. Revision/run-ID checks reject stale dialogs before partial mutation. Existing API run-only calls remain supported; the current UI always confirms explicitly. Frozen run snapshots remain immutable.
+
+### Automatic completion Beta
+
+The setting is independent from screenshot policy and defaults Off for existing/new profiles. Accepted notifications still drive configured automatic OCR capture; objective identity/content evidence is retained. Supported detailed objective-progress behavior is unchanged. Terminal events are projected into pending log evidence, but they cannot complete/abandon ledger contracts or create eligible Dashboard prompts while Off.
+
+On activation, persist the current maximum event row and activation UTC time. Only newly observed terminal IDs after that boundary with supported event timestamps at/after activation are eligible for automation; unknown-time events require Live receipt. Duplicate/stored/historical notifications do not become newly confirmed closures. Existing eligible unresolved IDs are retained when disabling and can be manually confirmed after re-enabling, but the new boundary prevents automatic replay. Snapshot/resolve IPC hides/refuses lifecycle prompts while Off. Previously verified identity rules remain intact when Beta is enabled.
+
+The pre-upgrade prompt migration preserves actionable issues, not every historical terminal event. This avoids showing old raw evidence as a new prompt against a newly created same-title contract. The bounded raw log/identity evidence remains available under existing diagnostics.
+
+### Files changed
+
+- Models/bridge: `src/types/{workflow,models,tracking,progress,lifecycle,desktop}.ts`, `electron/preload/index.ts`, renderer store and main IPC registration.
+- Main workflow: `electron/main/{checklist,workflow,trackingService,cargoProgress,lifecycle}.ts`, `electron/main/log/reconcile.ts`, OCR review state preservation, database migration and maintenance.
+- UI: LocationStops, ContractCards, ContractDetails, new ChecklistToggle/CompleteContractDialog, FinishRunDialog, LifecycleHistory, Dashboard/Manifest, CargoWorkflow settings, LocalDataManagement audit label and shared CSS.
+- Tests: new `tests/workflow.test.ts` and `tests/workflow-desktop.cjs`; existing legacy unit/native automation tests explicitly opt into Beta with deterministic fixture epochs via `tests/helpers/beta{.ts,-desktop.cjs}`. Schema assertions and deliberate old-completion-replay expectations were updated. Image recovery now checks persisted checklist state; automatic capture explicitly verifies Beta remains Off.
+- Version metadata/package scripts, README and this handoff. No new application dependency, installer, repository commit or live profile mutation was introduced.
+
+### Validation
+
+**Passed on Windows with v0.7.0 artifacts:** `npm run typecheck`, `npm run lint`, `npm test` (**385 tests / 28 files**, including 17 new Task 07 cases), `npm run build` (native host, main/preload/renderer) and `git diff --check`.
+
+**14 Windows/Electron workflows passed**, each run as `node tests/<name>.cjs`: `workflow-desktop`, `scan-ux-desktop`, `automatic-import-desktop`, `ocr-recovery-desktop`, `lifecycle-desktop`, `reliability-desktop`, `cargo-progress-desktop`, `data-management-desktop`, `ocr-review-desktop`, `tracking-desktop`, `polish-desktop`, `alignment-desktop`, `desktop` and `automatic-desktop`. Historical console version labels identify each suite's original scope, not the artifacts used. The new workflow suite verifies a known MissionId remains Active after a monitored completion with Beta Off, then closes explicitly through the dialog. Native saved-image reprocessing preserves checklist state plus recorded cargo; automatic screenshot/OCR capture runs with Beta Off. Layouts, card footer alignment, restart, cleanup, backup and FK integrity passed.
+
+**Attempted but could not complete:** `node tests/ocr-desktop.cjs` twice stopped at its owned-window focus guard because Windows reported another foreground application. The guard was retained; keys were not sent to that other application. Stable-foreground standalone shortcut verification remains a manual/environmental check. Automatic native capture/offline OCR and the other image-recovery workflows passed. No real Star Citizen session or in-game callback delivery was tested.
+
+The new tests cover Scenarios A–J, including default-Off verified completion/abandonment, pre-upgrade unresolved issues, independent physical records, bulk IDs, stale-batch rollback, recorded-delivery undo, OCR/state identity, manual warnings, both run modes, migration/restart and backed-up cleanup. Existing lifecycle regressions remain enabled under explicit Beta opt-in.
+
+Owned native test profiles/captures/backups/screenshots are under ignored work/ or temporary directories. No user's live database, stored screenshot or Game.log was modified. Real Star Citizen gameplay and in-game shortcut delivery remain unexecuted.
+
+### Exact gameplay handoff / limits
+
+Follow README's v0.7.0 numbered checklist: closed-app backup; verify Off-default upgrade; accept/capture; mark reminders and compare unchanged physical SCU; exercise shared-location rows/bulk pickup and a partial/full Manifest delivery; explicitly complete with/without outstanding entries; test run-only versus selected finalization; reprocess/restart; optionally opt into Beta before new events; verify no historical replay or capture-policy coupling. Check minimum/standard/maximized layouts, and use a disposable profile for reset testing.
+
+Reminder states are user reports, not authoritative game cargo or payout. Closed reminder history stays read-only; physical retained cargo still requires explicit unloading/correction. Beta needs supported unambiguous identity/timestamp evidence and does not bypass prior matching safeguards. Older schema-8 apps cannot open schema 9: rollback requires restoring the pre-upgrade closed-app backup rather than downgrading in place.
+
+Prior handoff sections below remain as architecture/history notes; v0.7.0 policies above supersede their automatic-completion defaults.
 
 ## Task 06.4 — root causes and rules
 

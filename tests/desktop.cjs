@@ -294,7 +294,7 @@ async function choose(query, name) {
     await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await page.getByRole("button", { name: "Finish Run", exact: true }).click();
     await page
-      .getByRole("button", { name: "Confirm & finish run", exact: true })
+      .getByRole("button", { name: "Finish run only", exact: true })
       .click();
     await page
       .getByRole("heading", { name: "Contract History", exact: true })

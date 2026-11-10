@@ -27,6 +27,7 @@ export interface CargoObjective {
   destination: string;
   quantitySCU: number;
   deliveredSCU: number;
+  checklist?: import("./workflow").ObjectiveChecklist;
   loadedSCU?: number;
   loadedShipId?: string | null;
   loadEvidence?: "Manual" | "Unknown";
@@ -55,6 +56,7 @@ export interface Contract {
     }
   >;
   completedAt?: string;
+  manualClosure?: { kind: "Completed" | "Abandoned"; at: string };
   associationDiagnostics?: {
     decision: "Pending" | "Verified";
     reason: string;

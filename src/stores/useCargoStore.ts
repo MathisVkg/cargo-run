@@ -24,7 +24,14 @@ interface RendererState extends AppSnapshot {
   ): Promise<void>;
   saveContract(draft: ContractDraft, id?: string): Promise<void>;
   abandonContract(id: string): Promise<void>;
-  finishRun(): Promise<void>;
+  finishRun(
+    input?: import("../types/workflow").FinishRunRequest,
+  ): Promise<void>;
+  completeContract(id: string): Promise<void>;
+  checklist(input: import("../types/workflow").ChecklistRequest): Promise<void>;
+  setWorkflow(
+    input: import("../types/workflow").WorkflowPreferences,
+  ): Promise<void>;
   clearSampleData(): Promise<void>;
   loadSamples(): Promise<void>;
   chooseLog(): Promise<void>;
@@ -34,6 +41,7 @@ interface RendererState extends AppSnapshot {
   dismissError(): void;
 }
 const initial: AppSnapshot = {
+  workflow: { automaticCompletion: false },
   preferences: {
     navigationMode: "expanded",
     dashboardView: "location",
@@ -109,7 +117,10 @@ export const cargoStore = createStore<RendererState>(() => ({
   saveContract: (draft, id) =>
     call(() => window.cargoRun.saveContract({ draft, id })),
   abandonContract: (id) => quiet(() => window.cargoRun.abandonContract(id)),
-  finishRun: () => call(() => window.cargoRun.finishRun()),
+  completeContract: (id) => call(() => window.cargoRun.completeContract(id)),
+  checklist: (input) => call(() => window.cargoRun.checklist(input)),
+  setWorkflow: (input) => call(() => window.cargoRun.setWorkflow(input)),
+  finishRun: (input) => call(() => window.cargoRun.finishRun(input)),
   clearSampleData: () => quiet(() => window.cargoRun.removeSamples()),
   loadSamples: () => quiet(() => window.cargoRun.loadSamples()),
   chooseLog: () => quiet(() => window.cargoRun.chooseLog()),

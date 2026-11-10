@@ -41,6 +41,7 @@ async function launch() {
   await page
     .getByRole("heading", { name: "Cargo Operations", exact: true })
     .waitFor();
+  await require("./helpers/beta-desktop.cjs")(page);
 }
 const state = () => page.evaluate(() => window.cargoRun.getState());
 async function until(check) {
@@ -181,7 +182,7 @@ function pending(id) {
     await nav("Dashboard");
     await page.getByRole("button", { name: "Finish Run", exact: true }).click();
     await page
-      .getByRole("button", { name: "Confirm & finish run", exact: true })
+      .getByRole("button", { name: "Finish run only", exact: true })
       .click();
     await page
       .getByRole("heading", { name: "Contract History", exact: true })

@@ -1,3 +1,4 @@
+import { checklist } from "../../src/types/workflow";
 import { inventoryActions, canUndoInventory } from "../../src/types/progress";
 import { randomUUID, createHash } from "node:crypto";
 import type { CargoDatabase } from "./storage/database";
@@ -38,7 +39,39 @@ export function saveActivity(
   id: string = randomUUID(),
   undoOf?: string,
 ) {
+  if (
+    next.deliveredSCU >= next.quantitySCU &&
+    next.quantitySCU > 0 &&
+    previous.deliveredSCU < previous.quantitySCU
+  ) {
+    const before = checklist(next);
+    if (!before.delivered) {
+      next.checklist = {
+        ...before,
+        delivered: true,
+        deliverySource: "Recorded",
+        deliveryRevision: randomUUID(),
+      };
+      db.db
+        .prepare(
+          "INSERT INTO objective_checklist_activity(id,contract_id,objective_id,payload) VALUES(?,?,?,?)",
+        )
+        .run(
+          randomUUID(),
+          c.id,
+          next.id,
+          JSON.stringify({
+            at: new Date().toISOString(),
+            source: "Recorded delivery",
+            before,
+            after: next.checklist,
+          }),
+        );
+    }
+  }
   const a: CargoActivity = {
+    previousChecklist: checklist(previous),
+    nextChecklist: checklist(next),
     id,
     contractId: c.id,
     objectiveId: next.id,
@@ -163,6 +196,18 @@ export function applyProgress(
         throw Error(
           "Closed cargo cannot restore onboard quantities or change delivery totals through undo.",
         );
+      if (
+        a.nextChecklist &&
+        a.previousChecklist &&
+        checklist(o).deliverySource === "Recorded" &&
+        checklist(o).deliveryRevision === a.nextChecklist.deliveryRevision
+      )
+        o.checklist = {
+          ...checklist(o),
+          delivered: a.previousChecklist.delivered,
+          deliverySource: a.previousChecklist.deliverySource,
+          deliveryRevision: randomUUID(),
+        };
       o.loadedSCU = a.previous.loaded;
       o.deliveredSCU = a.previous.delivered;
       o.loadedShipId = a.previous.shipId;

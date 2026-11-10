@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect } from "vitest";
 import { randomUUID } from "node:crypto";
 import { readFileSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join, resolve, sep } from "node:path";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { CaptureRepository } from "../electron/main/ocr/repository";
 import { extractContract } from "../electron/main/ocr/parser";
 import { notification, missionA, missionB } from "./fixtures/log";
@@ -456,7 +456,7 @@ describe("operational automatic OCR importing", () => {
     expect(new CaptureRepository(restored.database).get(c.id)).not.toBeNull();
     expect(
       restored.database.db.prepare("PRAGMA user_version").get()?.user_version,
-    ).toBe(8);
+    ).toBe(9);
   });
 });
 describe("late identity and unknown timing", () => {

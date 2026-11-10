@@ -9,7 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { CaptureRepository } from "../electron/main/ocr/repository";
 import { OcrQueue } from "../electron/main/ocr/queue";
 import { extractContract } from "../electron/main/ocr/parser";

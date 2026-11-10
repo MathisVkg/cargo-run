@@ -309,9 +309,11 @@ function associate(
 export function reconcileTerminalIdentities(
   db: CargoDatabase,
   cs: Contract[],
+  allowed: (event: MissionEvent) => boolean = () => true,
 ): Contract[] {
   let next = cs;
   for (const e of terminalEvents(db)) {
+    if (!allowed(e)) continue;
     if (
       (db.getSetting<string[]>("tracking.archivedMissions") ?? []).includes(
         e.missionId,

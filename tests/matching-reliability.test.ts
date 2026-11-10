@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { CaptureRepository } from "../electron/main/ocr/repository";
 import { extractContract } from "../electron/main/ocr/parser";
 import { notification } from "./fixtures/log";

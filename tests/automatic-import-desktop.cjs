@@ -40,6 +40,7 @@ async function launch() {
   await page
     .getByRole("heading", { name: "Cargo Operations", exact: true })
     .waitFor();
+  await require("./helpers/beta-desktop.cjs")(page);
   await page.waitForFunction(
     () => !document.body.textContent.includes("Loading saved operations"),
   );

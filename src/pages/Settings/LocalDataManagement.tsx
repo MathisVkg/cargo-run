@@ -228,7 +228,7 @@ export function LocalDataManagement() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Links / review audits removed</dt>
+                  <dt>Links / review and checklist audits removed</dt>
                   <dd>
                     {preview.links} / {preview.audits}
                   </dd>

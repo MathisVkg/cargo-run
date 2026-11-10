@@ -10,7 +10,7 @@ import {
   readFileSync,
 } from "node:fs";
 import { join, resolve, sep, basename } from "node:path";
-import { TrackingService } from "../electron/main/trackingService";
+import { TrackingService } from "./helpers/beta";
 import { CargoDatabase } from "../electron/main/storage/database";
 import {
   readLogChunk,

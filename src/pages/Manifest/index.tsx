@@ -1,3 +1,4 @@
+import { ChecklistToggle } from "../../components/cargo/ChecklistToggle";
 import { ProgressControls } from "../../components/cargo/ProgressControls";
 import { loaded, awaitingPickup } from "../../types/progress";
 import { recordedOnboard } from "../../stores/selectors";
@@ -55,6 +56,11 @@ export default function Manifest() {
         title="Cargo Manifest"
         description="A cargo checklist of required quantities and recorded delivery progress."
       />
+      <p className="form-note">
+        Checklist marks are player reminders. Recorded cargo is a separate
+        quantity record; marking Done never loads or delivers recorded SCU.
+        Contract requirements stay unchanged.
+      </p>
       <div className="stats-grid manifest-stats">
         <StatCard
           label="Total Planned SCU"
@@ -185,7 +191,10 @@ export default function Manifest() {
                         <td>
                           {o ? (
                             <>
-                              {progressLabel(c, o)}
+                              <ChecklistToggle objective={o} kind={kind} />
+                              <span className="form-note">
+                                Recorded cargo: {progressLabel(c, o)}
+                              </span>
                               <ProgressControls
                                 contract={c}
                                 objective={o}
