@@ -128,8 +128,6 @@ export function ContractDetails({
                   </div>
                 </dl>
               </section>
-              <LifecycleHistory contract={contract} />
-              <CargoActivityPanel contract={contract} />
               <section aria-label="Cargo objectives">
                 <h2>Cargo Objectives</h2>
                 {!contract.cargoObjectives.length ? (
@@ -161,22 +159,25 @@ export function ContractDetails({
                             </td>
                             <td>
                               {number(loaded(o))} / {number(awaitingPickup(o))}
-                              <p className="form-note">Checklist reminders</p>
-                              <ChecklistToggle
-                                objective={o}
-                                kind="pickup"
-                                disabled={contract.status !== "Active"}
-                              />
-                              <ChecklistToggle
-                                objective={o}
-                                kind="delivery"
-                                disabled={contract.status !== "Active"}
-                              />
-                              <ProgressControls
-                                contract={contract}
-                                objective={o}
-                                kind="delivery"
-                              />
+                              <details className="objective-tools">
+                                <summary>Cargo & checklist actions</summary>
+                                <p className="form-note">Checklist reminders</p>
+                                <ChecklistToggle
+                                  objective={o}
+                                  kind="pickup"
+                                  disabled={contract.status !== "Active"}
+                                />
+                                <ChecklistToggle
+                                  objective={o}
+                                  kind="delivery"
+                                  disabled={contract.status !== "Active"}
+                                />
+                                <ProgressControls
+                                  contract={contract}
+                                  objective={o}
+                                  kind="delivery"
+                                />
+                              </details>
                             </td>
                             <td className="align-right numeric">
                               {number(o.deliveredSCU)}
@@ -191,6 +192,11 @@ export function ContractDetails({
                   </div>
                 )}
               </section>
+              <details className="contract-activity-disclosure">
+                <summary>Activity &amp; lifecycle history</summary>
+                <LifecycleHistory contract={contract} />
+                <CargoActivityPanel contract={contract} />
+              </details>
               <section aria-label="Contract evidence">
                 <h2>Evidence</h2>
                 <p className="form-note">

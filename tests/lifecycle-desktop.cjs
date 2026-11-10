@@ -376,6 +376,7 @@ async function cargo(c, action, q) {
     await page
       .getByRole("button", { name: "Details for " + first.name, exact: true })
       .click();
+    await page.locator(".contract-activity-disclosure > summary").click();
     await page
       .getByRole("heading", { name: "Mission Lifecycle", exact: true })
       .waitFor();

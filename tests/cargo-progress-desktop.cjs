@@ -53,7 +53,13 @@ async function row(id, kind) {
   const section = page
     .locator(".manifest-section")
     .filter({ has: page.getByRole("heading", { name: kind, exact: true }) });
-  return section.locator('[data-objective-id="' + id + '"]');
+  const row = section.locator('tr[data-objective-id="' + id + '"]');
+  const toggle = row.getByRole("button", { name: /^Cargo actions for / });
+  if ((await toggle.getAttribute("aria-expanded")) !== "true")
+    await toggle.click();
+  return section.locator(
+    '.cargo-progress-control[data-objective-id="' + id + '"]',
+  );
 }
 async function record(control, action, quantity) {
   await control.locator("summary").click();
@@ -218,6 +224,7 @@ async function record(control, action, quantity) {
     await page
       .getByRole("button", { name: "Details for Separate Quartz", exact: true })
       .click();
+    await page.locator(".contract-activity-disclosure > summary").click();
     await page
       .getByRole("heading", { name: "Cargo Activity", exact: true })
       .waitFor();

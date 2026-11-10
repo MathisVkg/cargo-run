@@ -1,4 +1,32 @@
-# Cargo Run v0.7.0 — Task 07 handoff
+# Cargo Run v0.7.1 — Task 07.1 handoff
+
+## Task 07.1 scope
+
+Renderer-only UI refinement; no main-process services, schema migration, OCR/matching, lifecycle defaults, cargo quantities, earned aUEC, evidence identity or capture policy changes. Version metadata is 0.7.1; database remains schema 9. No live profile/captures/Game.log was changed.
+
+Shared components refined: `LocationStops`, `ChecklistToggle`, `ContractCards`, `ContractDetails`, `StatCard` and existing native `Overlay`. New shared `InfoTip` and `Pagination`; local `ManifestRow` isolates advanced row state. Industrial Graphite tokens stay in the existing global stylesheet/Tailwind theme, with shared control sizes, focus, radii and deliberate narrow-card footer stacking.
+
+Dashboard uses pickup/delivery cards from the supplied direction, including per-objective route lines, contract count, required SCU, progress, bulk pickup/undo and independent green checked states. Duplicate allocations remain separate IDs. Manifest presents seven aligned columns, per-row expanders, independent Collection/Delivery disclosures and unchanged retained cargo controls. Contract completion/source and actions now share one footer. Details puts cargo tools and lifecycle/cargo audit behind disclosures and keeps header/footer outside internal scroll. OCR issue actions share a sticky footer.
+
+History renders 25 ledger/closed-run records at a time through shared pagination; full snapshots are still loaded under the existing architecture. Scan History uses compact thumbnails and separate Advanced/destructive regions. Settings splits Cargo Workflow and Experimental Automation into compact cards, discloses optional Game.log Monitoring and long shortcut help, and keeps all existing data-management safeguards. No empty General/appearance section or unavailable preference was invented.
+
+## Verification
+
+- `npm run typecheck`, `npm run lint`, `npm test`: **385 tests / 28 files**.
+- `npm run build`: native Windows host and production main/preload/renderer.
+- **15 isolated Windows/Electron suites:** `ui-refinement-desktop`, `workflow-desktop`, `cargo-progress-desktop`, `alignment-desktop`, `polish-desktop`, `scan-ux-desktop`, `data-management-desktop`, `reliability-desktop`, `ocr-review-desktop`, `automatic-import-desktop`, `ocr-recovery-desktop`, `lifecycle-desktop`, `tracking-desktop`, `desktop`, `automatic-desktop` (each `node tests/<name>.cjs`). Legacy console version labels identify the suite's original scope. Legacy tests now open the explicit monitoring/audit/row disclosures; business assertions remain.
+- Bulk pickup plus Undo all and physical/checklist independence, partial/full load/delivery/undo/corrections, closed cargo/ship safeguards, explicit manual completion, both Finish Run modes, OCR preservation/recovery, focused review/evidence, cleanup/backup/reset, restart/FK, navigation preferences and modal safeguards covered.
+- New deterministic synthetic UI suite: generated image + imported/needs-review observations, shared identical allocations, retained cargo on a completed contract, no physical/earnings changes from navigation, bounded ledger/filter reset, overflow checks and requested page screenshots. It creates owned `work/ui-refinement-*` profiles and writes `work/ui-v071/` artifacts.
+- Requested viewports executed: 1100 × 700 resolves to **1100 × 702** under the existing Windows minimum and 150% DPI; **1280 × 800**, **1440 × 900**, maximized **2560 × 1392** (3840 × 2160 display). No minimum-size override.
+- Rendered Dashboard/location/delivery/contract modes, compact/expanded/retained Manifest, contract cards/footers, Details/evidence, History, scans/review, Settings and compact navigation were actually inspected. Evidence thumbnails retain the whole image; modal actions remain reachable.
+
+[Full visual report, generated screenshot links, deliberate reference differences and exact manual steps](docs/ui-v071-validation.md). Use `npm run test:ui:desktop` to reproduce screenshots.
+
+Limitations: client-side bounded rendering does not replace full snapshot loading; expanded run snapshots are not virtualized. Done rows retain a clearly labeled green Undo button rather than an unlabeled checkbox. Narrow multi-stop views use vertical scrolling. Actual Star Citizen gameplay/physical shortcut delivery was not retested; the backend is unchanged. No installer, repository commit or publication is included.
+
+The following Task 07 and older notes are historical. This v0.7.1 section takes precedence for presentation and Settings organization.
+
+## Historical release: Cargo Run v0.7.0 — Task 07 handoff
 
 ## Task 07 implementation
 

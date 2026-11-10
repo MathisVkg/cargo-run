@@ -174,15 +174,18 @@ export function ShortcutControls({
             </p>
           )}
           {!state.recording && hint && <p className="form-note">{hint}</p>}
-          <p className="form-note">
-            Electron suppresses repeated callbacks until one second of quiet.
-            Very quick separate presses may also be ignored; this is not
-            guaranteed physical key-release detection. Standalone F8/F9 and
-            Ctrl/Alt combinations are supported. The configured key is reserved
-            by the Electron backend while enabled. Raw Input only observes it.
-            Recording pauses capture until Save, Cancel, focus loss, or a
-            45-second timeout.
-          </p>
+          <details className="shortcut-help">
+            <summary>Shortcut behavior &amp; limitations</summary>
+            <p className="form-note">
+              Electron suppresses repeated callbacks until one second of quiet.
+              Very quick separate presses may also be ignored; this is not
+              guaranteed physical key-release detection. Standalone F8/F9 and
+              Ctrl/Alt combinations are supported. The configured key is
+              reserved by the Electron backend while enabled. Raw Input only
+              observes it. Recording pauses capture until Save, Cancel, focus
+              loss, or a 45-second timeout.
+            </p>
+          </details>
           <label className="checkbox-label">
             <input
               type="checkbox"

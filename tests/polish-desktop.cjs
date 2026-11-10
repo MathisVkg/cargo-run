@@ -192,7 +192,7 @@ async function close(name) {
           exact: true,
         }),
       });
-    assert.match(await everus.innerText(), /7\s*SCU required/);
+    assert.match(await everus.innerText(), /7\s*SCU/);
     assert(
       !/awaiting pickup|Objective allocations/.test(await everus.innerText()),
     );

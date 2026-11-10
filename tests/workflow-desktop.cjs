@@ -223,8 +223,8 @@ async function physical(id, action, quantity) {
       .click();
     const pickup = section("Pickup Stops");
     assert.equal(await pickup.locator(".stop-card").count(), 1);
-    assert.match(await pickup.innerText(), /3 associated contracts/);
-    assert.equal(await pickup.locator("tbody tr").count(), 4);
+    assert.match(await pickup.innerText(), /3 contracts/);
+    assert.equal(await pickup.locator(".stop-cargo-row").count(), 4);
     s = await state();
     let shared = s.contracts.filter((c) => c.status === "Active"),
       target = shared[0].cargoObjectives[0];
@@ -253,6 +253,27 @@ async function physical(id, action, quantity) {
       path: "work/workflow-locations-v070.png",
       animations: "disabled",
     });
+    await pickup.getByRole("button", { name: "Undo all", exact: true }).click();
+    await until(async () =>
+      (await state()).contracts
+        .filter((c) => c.status === "Active")
+        .every((c) => c.cargoObjectives.every((o) => !o.checklist?.pickedUp)),
+    );
+    assert(
+      (await state()).contracts.every((c) =>
+        c.cargoObjectives.every(
+          (o) => (o.loadedSCU ?? 0) === 0 && o.deliveredSCU === 0,
+        ),
+      ),
+    );
+    await pickup
+      .getByRole("button", { name: "Mark all picked up", exact: true })
+      .click();
+    await until(async () =>
+      (await state()).contracts
+        .filter((c) => c.status === "Active")
+        .every((c) => c.cargoObjectives.every((o) => o.checklist?.pickedUp)),
+    );
     await physical(target.id, "Load", 5);
     await page
       .getByRole("button", { name: "By Contract", exact: true })

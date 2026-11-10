@@ -228,6 +228,7 @@ function note(text, mission, obj) {
       ].join("\n") + "\n",
     );
     await nav("Settings");
+    await page.locator(".monitoring-settings > summary").click();
     await app.evaluate(({ dialog }, file) => {
       dialog.showOpenDialog = async () => ({
         canceled: false,

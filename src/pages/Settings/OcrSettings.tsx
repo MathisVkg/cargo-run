@@ -98,7 +98,7 @@ export function OcrSettings({
   return (
     <section className="panel setting-card ocr-settings">
       <div className="monitor-heading">
-        <h2>OCR &amp; Capture</h2>
+        <h2>Screenshot &amp; OCR</h2>
         <Badge tone={state.engine.available ? "green" : "red"}>
           {state.engine.available ? "Engine available" : "Engine unavailable"}
         </Badge>
@@ -173,8 +173,8 @@ export function OcrSettings({
       </div>
       {state.policy.autoSourceOverride && (
         <p className="notice warning">
-          Automatic capture uses a preserved source override. Review it in
-          Advanced &amp; Diagnostics.
+          Automatic capture uses a preserved source override. Review it in About
+          &amp; Diagnostics.
         </p>
       )}
       <div className="monitor-buttons">

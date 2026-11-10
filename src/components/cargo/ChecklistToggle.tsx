@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { useRef, useState } from "react";
 import type { CargoObjective } from "../../types/models";
 import { checklist, checklistStamp } from "../../types/workflow";
@@ -21,9 +22,8 @@ export function ChecklistToggle({
       : checklist(objective).delivered;
   return (
     <div className="checklist-action">
-      <span className="checklist-state">{done ? "Done" : "Pending"}</span>
       <button
-        className={"button small " + (done ? "checklist-done" : "")}
+        className={"button small " + (done ? "checklist-done" : "primary")}
         aria-pressed={done}
         aria-label={
           (done ? "Undo " : "Mark ") +
@@ -50,7 +50,7 @@ export function ChecklistToggle({
                 },
               ],
             });
-            setMessage("Checklist updated");
+            setMessage("");
           } catch (e) {
             setMessage(String(e));
           } finally {
@@ -59,8 +59,9 @@ export function ChecklistToggle({
           }
         }}
       >
+        {done && <Check size={15} aria-hidden="true" />}
         {done
-          ? "Undo"
+          ? "Done · Undo"
           : kind === "pickup"
             ? "Mark picked up"
             : "Mark delivered"}

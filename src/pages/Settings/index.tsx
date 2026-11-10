@@ -26,12 +26,15 @@ export default function Settings() {
       />
       <div className="settings-grid">
         <OcrSettings />
-        <LogMonitoring />
+        <details className="panel setting-card monitoring-settings">
+          <summary>Game.log Monitoring</summary>
+          <LogMonitoring />
+        </details>
         <section className="panel setting-card">
           <div className="setting-icon">
             <Rocket size={21} />
           </div>
-          <h2>Ships</h2>
+          <h2>Ship &amp; Fleet</h2>
           <p>Capacity updates across your current operations.</p>
           <ShipSelector />
           <p className="form-note">
@@ -45,7 +48,7 @@ export default function Settings() {
           <div className="setting-icon">
             <Database size={21} />
           </div>
-          <h2>Storage &amp; Data</h2>
+          <h2>Storage &amp; Captures</h2>
           <OcrSettings section="storage" />
           <p>
             Contracts, objectives, runs, ship selection, monitoring
@@ -82,7 +85,7 @@ export default function Settings() {
         <CargoWorkflow />
         <LocalDataManagement />
         <details className="panel setting-card advanced-panel">
-          <summary>Advanced &amp; Diagnostics</summary>
+          <summary>About &amp; Diagnostics</summary>
           <OcrSettings section="advanced" />
           <LogMonitoring diagnosticsOnly />
         </details>
@@ -92,7 +95,7 @@ export default function Settings() {
           </div>
           <div>
             <h2>
-              Cargo Run <Badge>0.7.0</Badge>
+              Cargo Run <Badge>0.7.1</Badge>
             </h2>
             <p>Fleet Operations 2.0 · Local OCR and optional Game.log</p>
             <p className="form-note">

@@ -55,10 +55,6 @@ export default function Dashboard() {
         </button>
       </PageHeader>
       <LifecycleIssues />
-      <p className="form-note">
-        Mark pickup and delivery reminders here, or use Manifest to record SCU
-        when needed.
-      </p>
       <div className="stats-grid operations-stats">
         <StatCard
           label="Active Contracts"
@@ -68,12 +64,13 @@ export default function Dashboard() {
         />
         <StatCard
           label="Potential Rewards"
+          hint="Full potential payouts counted once. Unknown rewards are excluded; this is not confirmed earnings."
           value={
             <>
               {number(stats.potential)} <span className="stat-unit">aUEC</span>
             </>
           }
-          detail="Full payouts counted once · unknown rewards excluded"
+          detail="Potential payout · active contracts"
           icon={<Wallet size={18} />}
         />
         <StatCard
@@ -93,6 +90,7 @@ export default function Dashboard() {
         />
         <StatCard
           label="Recorded Onboard"
+          hint="Recorded cargo on the selected ship. Unrecorded inventory is unknown. Checklist marks do not move cargo or confirm earnings."
           value={
             <>
               {number(onboard)} / {ship ? number(capacity) : "—"}{" "}
@@ -100,10 +98,7 @@ export default function Dashboard() {
             </>
           }
           detail={
-            (ship?.name ?? "Saved ship unavailable") +
-            " · " +
-            number(Math.max(0, capacity - onboard)) +
-            " SCU recorded available"
+            number(Math.max(0, capacity - onboard)) + " SCU recorded available"
           }
           icon={<Rocket size={18} />}
         >
@@ -132,10 +127,6 @@ export default function Dashboard() {
           </p>
         </StatCard>
       </div>
-      <p className="planning-note">
-        Recorded onboard reflects explicit records; unrecorded inventory is
-        unknown. Checklist marks are reminders, not cargo movement.
-      </p>
       {plan.over && (
         <div className="notice warning" role="status">
           Planned cargo exceeds selected capacity by{" "}

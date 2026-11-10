@@ -1,7 +1,7 @@
 {
   "name": "cargo-run",
   "productName": "Cargo Run",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "Cargo Run — a Windows cargo hauling companion for Star Citizen",
   "author": "Cargo Run",
@@ -31,7 +31,8 @@
     "test:recovery:desktop": "npm run build && node tests/ocr-recovery-desktop.cjs",
     "test:reliability:desktop": "npm run build && node tests/reliability-desktop.cjs",
     "test:scan-ux:desktop": "npm run build && node tests/scan-ux-desktop.cjs",
-    "test:workflow:desktop": "npm run build && node tests/workflow-desktop.cjs"
+    "test:workflow:desktop": "npm run build && node tests/workflow-desktop.cjs",
+    "test:ui:desktop": "npm run build && node tests/ui-refinement-desktop.cjs"
   },
   "dependencies": {
     "@tesseract.js-data/eng": "^1.0.0",

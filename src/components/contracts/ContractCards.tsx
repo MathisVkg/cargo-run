@@ -1,7 +1,7 @@
 import { checklistProgress } from "../../types/workflow";
 import { CompleteContractDialog } from "./CompleteContractDialog";
 import { useState } from "react";
-import { FileCheck2, Pencil, Ban } from "lucide-react";
+import { Pencil, Ban } from "lucide-react";
 import type { Contract } from "../../types/models";
 import {
   contractSCU,
@@ -45,11 +45,7 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
               ...new Set(
                 objectives.map((o) => o.commodity || "Unknown commodity"),
               ),
-            ],
-            hasEvidence =
-              Object.values(c.fieldProvenance ?? {}).some((p) => p.captureId) ||
-              c.sources?.includes("OCR") ||
-              c.source === "OCR";
+            ];
           return (
             <article
               className="panel contract-card"
@@ -70,10 +66,6 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
                   {number(outstandingSCU(c))} remaining
                 </span>
               </div>
-              <p className="cargo-card-progress">
-                {checklistProgress(c).done} / {checklistProgress(c).total}{" "}
-                deliveries marked done
-              </p>
               <p className="commodity-summary">{commodities.join(" · ")}</p>
               <dl className="contract-locations">
                 <div>
@@ -92,25 +84,21 @@ export function ContractCards({ contracts }: { contracts: Contract[] }) {
                   </dd>
                 </div>
               </dl>
-              <button
-                className="button small complete-contract-quick"
-                aria-label={"Complete contract " + c.name}
-                onClick={() => setComplete(c)}
-              >
-                Complete contract
-              </button>
+              <p className="cargo-card-progress">
+                {checklistProgress(c).done} / {checklistProgress(c).total}{" "}
+                deliveries marked done
+              </p>
               <footer className="contract-card-footer">
                 <div className="contract-card-footer__metadata">
+                  <button
+                    className="button small complete-contract-quick"
+                    aria-label={"Complete contract " + c.name}
+                    onClick={() => setComplete(c)}
+                  >
+                    Complete contract
+                  </button>
+
                   <Badge>{(c.sources ?? [c.source]).join(" + ")}</Badge>
-                  {hasEvidence && (
-                    <span
-                      className="contract-card-evidence"
-                      title="OCR association recorded; inspect details for available evidence"
-                    >
-                      <FileCheck2 size={16} aria-hidden="true" />
-                      <span>Evidence</span>
-                    </span>
-                  )}
                 </div>
                 <div className="contract-card-footer__actions">
                   <button

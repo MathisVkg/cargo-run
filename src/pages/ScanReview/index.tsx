@@ -287,7 +287,7 @@ export default function ScanReview() {
                     )}
                   </details>
                   <button
-                    className="text-button"
+                    className="text-button danger-text scan-delete"
                     disabled={busy || processing}
                     onClick={() => setDeleting(c.id)}
                   >

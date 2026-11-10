@@ -1,8 +1,8 @@
 import { ChecklistToggle } from "../../components/cargo/ChecklistToggle";
 import { ProgressControls } from "../../components/cargo/ProgressControls";
-import { loaded, awaitingPickup } from "../../types/progress";
+import { loaded } from "../../types/progress";
 import { recordedOnboard } from "../../stores/selectors";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import {
   Container,
   MapPin,
@@ -22,7 +22,7 @@ import {
 import { number } from "../../utils/format";
 import { PageHeader, StatCard, EmptyState } from "../../components/ui";
 import { ContractDetails } from "../../components/contracts/ContractDetails";
-import type { Contract } from "../../types/models";
+import type { CargoObjective, Contract } from "../../types/models";
 export default function Manifest() {
   const contracts = useCargoStore((s) => s.contracts),
     shipId = useCargoStore((s) => s.selectedShipId),
@@ -56,11 +56,6 @@ export default function Manifest() {
         title="Cargo Manifest"
         description="A cargo checklist of required quantities and recorded delivery progress."
       />
-      <p className="form-note">
-        Checklist marks are player reminders. Recorded cargo is a separate
-        quantity record; marking Done never loads or delivers recorded SCU.
-        Contract requirements stay unchanged.
-      </p>
       <div className="stats-grid manifest-stats">
         <StatCard
           label="Total Planned SCU"
@@ -96,9 +91,8 @@ export default function Manifest() {
       <p className="planning-note">
         Recorded onboard: {number(recordedOnboard(contracts, shipId))} /{" "}
         {number(ships.find((s) => s.id === shipId)?.cargoCapacitySCU ?? 0)} SCU
-        on selected ship. Unconfirmed loads are not verified empty. Individual
-        allocations below retain objective identity; no grouped quantity is
-        applied automatically.
+        on selected ship. Expand an objective to record cargo or update its
+        checklist.
       </p>
       {!data.active.length && (
         <EmptyState
@@ -107,18 +101,24 @@ export default function Manifest() {
         />
       )}
       {(["pickup", "delivery"] as const).map((kind) => (
-        <section className="manifest-section" key={kind}>
-          <h2>
-            {kind === "pickup" ? (
-              <>
-                <ArrowUpFromLine size={18} /> Collection
-              </>
-            ) : (
-              <>
-                <ArrowDownToLine size={18} /> Delivery
-              </>
-            )}
-          </h2>
+        <details
+          className="manifest-section manifest-disclosure"
+          key={kind}
+          open
+        >
+          <summary>
+            <h2>
+              {kind === "pickup" ? (
+                <>
+                  <ArrowUpFromLine size={18} /> Collection
+                </>
+              ) : (
+                <>
+                  <ArrowDownToLine size={18} /> Delivery
+                </>
+              )}
+            </h2>
+          </summary>
           {(kind === "pickup" ? data.pickups : data.deliveries).map((g) => (
             <section className="panel manifest-group" key={g.destination}>
               <div className="panel-heading">
@@ -138,81 +138,28 @@ export default function Manifest() {
                       </th>
                       <th className="align-right">Required</th>
                       <th className="align-right">
-                        {kind === "pickup" ? "Awaiting pickup" : "Onboard"}
-                      </th>
-                      <th className="align-right">
-                        {kind === "pickup" ? "Loaded" : "Delivered"}
+                        {kind === "pickup" ? "Onboard" : "Delivered"}
                       </th>
                       <th className="align-right">Remaining</th>
-                      <th>Progress / actions</th>
+                      <th>Progress</th>
                     </tr>
                   </thead>
                   <tbody>
                     {g.rows.map(({ contract: c, objective: o }) => (
-                      <tr key={c.id + ":" + (o?.id ?? "unknown")}>
-                        <td>
-                          <strong>{o?.commodity ?? "Unknown cargo"}</strong>
-                        </td>
-                        <td>
-                          <button
-                            className="text-button"
-                            onClick={() => setDetail(c)}
-                          >
-                            {c.name}
-                          </button>
-                        </td>
-                        <td>
-                          {kind === "pickup"
-                            ? o?.destination || "Unresolved Destination"
-                            : o?.pickupLocation || "Unknown pickup"}
-                        </td>
-                        <td className="align-right numeric">
-                          {o ? number(o.quantitySCU) : "—"}
-                        </td>
-                        <td className="align-right numeric">
-                          {o
-                            ? number(
-                                kind === "pickup"
-                                  ? awaitingPickup(o)
-                                  : loaded(o),
-                              )
-                            : "—"}
-                        </td>
-                        <td className="align-right numeric">
-                          {o
-                            ? number(
-                                kind === "pickup" ? loaded(o) : o.deliveredSCU,
-                              )
-                            : "—"}
-                        </td>
-                        <td className="align-right numeric">
-                          {o ? number(remainingSCU(o)) : "—"}
-                        </td>
-                        <td>
-                          {o ? (
-                            <>
-                              <ChecklistToggle objective={o} kind={kind} />
-                              <span className="form-note">
-                                Recorded cargo: {progressLabel(c, o)}
-                              </span>
-                              <ProgressControls
-                                contract={c}
-                                objective={o}
-                                kind={kind}
-                              />
-                            </>
-                          ) : (
-                            "Awaiting objectives"
-                          )}
-                        </td>
-                      </tr>
+                      <ManifestRow
+                        key={c.id + ":" + (o?.id ?? "unknown")}
+                        contract={c}
+                        objective={o}
+                        kind={kind}
+                        onDetails={() => setDetail(c)}
+                      />
                     ))}
                   </tbody>
                 </table>
               </div>
             </section>
           ))}
-        </section>
+        </details>
       ))}
       <section
         className="manifest-section"
@@ -257,5 +204,82 @@ export default function Manifest() {
       </section>
       <ContractDetails contract={detail} onClose={() => setDetail(null)} />
     </>
+  );
+}
+
+function ManifestRow({
+  contract: c,
+  objective: o,
+  kind,
+  onDetails,
+}: {
+  contract: Contract;
+  objective?: CargoObjective | null;
+  kind: "pickup" | "delivery";
+  onDetails(): void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const id = "cargo-" + kind + "-" + (o?.id ?? c.id);
+  return (
+    <Fragment>
+      <tr data-objective-id={o?.id}>
+        <td>
+          <strong>{o?.commodity || "Unknown cargo"}</strong>
+        </td>
+        <td>
+          <button className="text-button" onClick={onDetails}>
+            {c.name}
+          </button>
+        </td>
+        <td>
+          {(kind === "pickup" ? o?.destination : o?.pickupLocation) ||
+            "Unknown location"}
+        </td>
+        <td className="numeric align-right">
+          {o ? number(o.quantitySCU) : "—"}
+        </td>
+        <td className="numeric align-right">
+          {o ? number(kind === "pickup" ? loaded(o) : o.deliveredSCU) : "—"}
+        </td>
+        <td className="numeric align-right">
+          {o ? number(remainingSCU(o)) : "—"}
+        </td>
+        <td>
+          {o ? (
+            <button
+              className="button small objective-expand"
+              aria-label={"Cargo actions for " + o.commodity + " " + o.id}
+              aria-expanded={expanded}
+              aria-controls={id}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {progressLabel(c, o)}{" "}
+              <span aria-hidden="true">{expanded ? "−" : "+"}</span>
+            </button>
+          ) : (
+            "Awaiting objectives"
+          )}
+        </td>
+      </tr>
+      {expanded && o && (
+        <tr className="objective-detail-row">
+          <td colSpan={7}>
+            <div className="objective-detail-content" id={id}>
+              <div>
+                <h4>
+                  {kind === "pickup" ? "Pickup reminder" : "Delivery reminder"}
+                </h4>
+                <ChecklistToggle objective={o} kind={kind} />
+                <p className="form-note">Checklist only · no cargo movement</p>
+              </div>
+              <div>
+                <h4>Recorded cargo</h4>
+                <ProgressControls contract={c} objective={o} kind={kind} />
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </Fragment>
   );
 }

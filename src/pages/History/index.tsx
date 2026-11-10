@@ -12,13 +12,24 @@ import {
 import { useCargoStore } from "../../stores/useCargoStore";
 import { contractSCU, historyStats } from "../../stores/selectors";
 import { date, money, number } from "../../utils/format";
-import { PageHeader, StatCard, Badge, EmptyState } from "../../components/ui";
+import {
+  PageHeader,
+  StatCard,
+  Badge,
+  EmptyState,
+  Pagination,
+} from "../../components/ui";
 export default function History() {
   const contracts = useCargoStore((s) => s.contracts);
   const runs = useCargoStore((s) => s.runs);
   const [detail, setDetail] = useState<Contract | null>(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
+  const [page, setPage] = useState(0);
+  const pageSize = 25;
+  const [runPage, setRunPage] = useState(0),
+    runPages = Math.max(1, Math.ceil(runs.length / 25)),
+    currentRunPage = Math.min(runPage, runPages - 1);
   const stats = historyStats(contracts);
   const query = search.trim().toLowerCase();
   const filtered = contracts.filter(
@@ -34,6 +45,8 @@ export default function History() {
         ]),
       ].some((value) => value.toLowerCase().includes(query)),
   );
+  const lastPage = Math.max(0, Math.ceil(filtered.length / pageSize) - 1),
+    currentPage = Math.min(page, lastPage);
   return (
     <>
       <ContractDetails contract={detail} onClose={() => setDetail(null)} />
@@ -85,13 +98,19 @@ export default function History() {
                 aria-label="Search history"
                 placeholder="Search contracts or destinations…"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(0);
+                }}
               />
             </div>
             <select
               aria-label="Filter by status"
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => {
+                setStatus(e.target.value);
+                setPage(0);
+              }}
             >
               {["All", "Active", "Completed", "Abandoned"].map((s) => (
                 <option key={s} value={s}>
@@ -116,66 +135,70 @@ export default function History() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <strong>{c.name}</strong>
-                      <button
-                        className="text-button"
-                        aria-label={"Details for " + c.name}
-                        onClick={() => setDetail(c)}
-                      >
-                        Details / evidence
-                      </button>
-                      {c.dataOrigin === "Sample" && (
-                        <small className="sample-tag">SAMPLE DATA</small>
-                      )}
-                    </td>
-                    <td>
-                      {[
-                        ...new Set(c.cargoObjectives.map((o) => o.destination)),
-                      ].join(", ") || "Unresolved Destination"}
-                    </td>
-                    <td className="numeric align-right">
-                      {c.cargoObjectives.length
-                        ? number(contractSCU(c))
-                        : "Unknown"}
-                    </td>
-                    <td className="numeric align-right">
-                      {money(c.payout)}
-                      <small>
-                        {money(
-                          c.status === "Completed" ? c.confirmedEarnings : 0,
-                        )}{" "}
-                        earned
-                      </small>
-                    </td>
-                    <td>
-                      <Badge
-                        tone={
-                          c.status === "Completed"
-                            ? "green"
-                            : c.status === "Abandoned"
-                              ? "red"
-                              : "neutral"
-                        }
-                      >
-                        {c.status}
-                      </Badge>
-                    </td>
-                    <td>{(c.sources ?? [c.source]).join(" + ")}</td>
-                    <td className="date-cell">
-                      {date(c.completedAt ?? c.acceptedAt)}
-                      <small>
-                        {c.completedAt
-                          ? c.status === "Abandoned"
-                            ? "Abandoned"
-                            : "Completed"
-                          : "Accepted"}
-                      </small>
-                    </td>
-                  </tr>
-                ))}
+                {filtered
+                  .slice(currentPage * pageSize, (currentPage + 1) * pageSize)
+                  .map((c) => (
+                    <tr key={c.id}>
+                      <td>
+                        <strong>{c.name}</strong>
+                        <button
+                          className="text-button"
+                          aria-label={"Details for " + c.name}
+                          onClick={() => setDetail(c)}
+                        >
+                          Details / evidence
+                        </button>
+                        {c.dataOrigin === "Sample" && (
+                          <small className="sample-tag">SAMPLE DATA</small>
+                        )}
+                      </td>
+                      <td>
+                        {[
+                          ...new Set(
+                            c.cargoObjectives.map((o) => o.destination),
+                          ),
+                        ].join(", ") || "Unresolved Destination"}
+                      </td>
+                      <td className="numeric align-right">
+                        {c.cargoObjectives.length
+                          ? number(contractSCU(c))
+                          : "Unknown"}
+                      </td>
+                      <td className="numeric align-right">
+                        {money(c.payout)}
+                        <small>
+                          {money(
+                            c.status === "Completed" ? c.confirmedEarnings : 0,
+                          )}{" "}
+                          earned
+                        </small>
+                      </td>
+                      <td>
+                        <Badge
+                          tone={
+                            c.status === "Completed"
+                              ? "green"
+                              : c.status === "Abandoned"
+                                ? "red"
+                                : "neutral"
+                          }
+                        >
+                          {c.status}
+                        </Badge>
+                      </td>
+                      <td>{(c.sources ?? [c.source]).join(" + ")}</td>
+                      <td className="date-cell">
+                        {date(c.completedAt ?? c.acceptedAt)}
+                        <small>
+                          {c.completedAt
+                            ? c.status === "Abandoned"
+                              ? "Abandoned"
+                              : "Completed"
+                            : "Accepted"}
+                        </small>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
           </div>
@@ -186,8 +209,16 @@ export default function History() {
           />
         )}
         <div className="panel-footer">
-          {filtered.length} of {contracts.length} unique contracts · SQLite
-          storage
+          <span>
+            {filtered.length} of {contracts.length} unique contracts · SQLite
+            storage
+          </span>
+          <Pagination
+            page={currentPage}
+            pages={lastPage + 1}
+            onChange={setPage}
+            label="Ledger pagination"
+          />
         </div>
       </section>
       <section className="panel closed-runs">
@@ -204,49 +235,62 @@ export default function History() {
           </div>
         </div>
         {runs.length ? (
-          runs.map((run) => (
-            <details className="run-record" key={run.id}>
-              <summary>
-                <ChevronDown size={16} />
-                <strong>Run {run.id.slice(0, 8).toUpperCase()}</strong>
-                <Badge tone="green">Finished</Badge>
-                <span>{run.contractIds.length} contracts</span>
-                <time>{date(run.finishedAt!)}</time>
-              </summary>
-              <div className="run-detail">
-                <p>
-                  Started {date(run.startedAt)} · Immutable snapshot at closure
-                </p>
-                {run.contractSnapshots.map((c) => (
-                  <div className="run-contract" key={c.id}>
-                    <span>
-                      {c.name}
-                      {c.dataOrigin === "Sample" && (
-                        <span className="sample-tag">SAMPLE</span>
-                      )}
-                    </span>
-                    <span>{number(contractSCU(c))} SCU</span>
-                    <Badge
-                      tone={
-                        c.status === "Active"
-                          ? "neutral"
-                          : c.status === "Completed"
-                            ? "green"
-                            : "red"
-                      }
-                    >
-                      {c.status}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </details>
-          ))
+          runs
+            .slice(currentRunPage * 25, (currentRunPage + 1) * 25)
+            .map((run) => (
+              <details className="run-record" key={run.id}>
+                <summary>
+                  <ChevronDown size={16} />
+                  <strong>Run {run.id.slice(0, 8).toUpperCase()}</strong>
+                  <Badge tone="green">Finished</Badge>
+                  <span>{run.contractIds.length} contracts</span>
+                  <time>{date(run.finishedAt!)}</time>
+                </summary>
+                <div className="run-detail">
+                  <p>
+                    Started {date(run.startedAt)} · Immutable snapshot at
+                    closure
+                  </p>
+                  {run.contractSnapshots.map((c) => (
+                    <div className="run-contract" key={c.id}>
+                      <span>
+                        {c.name}
+                        {c.dataOrigin === "Sample" && (
+                          <span className="sample-tag">SAMPLE</span>
+                        )}
+                      </span>
+                      <span>{number(contractSCU(c))} SCU</span>
+                      <Badge
+                        tone={
+                          c.status === "Active"
+                            ? "neutral"
+                            : c.status === "Completed"
+                              ? "green"
+                              : "red"
+                        }
+                      >
+                        {c.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            ))
         ) : (
           <EmptyState
             title="No closed runs yet"
             description="Finish a run from the Dashboard to save its contract snapshot here."
           />
+        )}
+        {runPages > 1 && (
+          <div className="panel-footer">
+            <Pagination
+              page={currentRunPage}
+              pages={runPages}
+              onChange={setRunPage}
+              label="Closed run pagination"
+            />
+          </div>
         )}
       </section>
     </>

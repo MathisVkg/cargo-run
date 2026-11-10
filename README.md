@@ -1,4 +1,20 @@
-# Cargo Run 0.7.0 — Fleet Operations 2.0
+# Cargo Run 0.7.1 — Fleet Operations 2.0
+
+## UI refinement (v0.7.1)
+
+Dashboard pickup/delivery tables are now compact graphite stop cards with prominent locations, SCU/route lines, objective-specific actions and checked Undo states. Pickup stops support Mark all picked up / Undo all; checklist marks still do not change physical cargo, earnings or contract status.
+
+Manifest keeps detailed cargo operations behind per-objective Progress expanders, with independently collapsible Collection/Delivery sections and retained inventory access. Contracts and Dashboard By Contract share an aligned completion/source/Details/Edit/Abandon footer. Details keeps a centered, internally scrolling modal with a fixed action footer, evidence thumbnails and disclosed cargo/audit controls.
+
+History adds 25-record client-side pages for the ledger and closed-run list. Scan cards, review actions, destructive actions, summary metrics, modal spacing and Settings sections share the existing Industrial Graphite tokens. Experimental completion remains Off by default; schema 9 and all recognition, matching, cargo and earnings logic are unchanged.
+
+Validation: TypeScript, lint, **385 unit tests / 28 files**, production build and **15 isolated Windows/Electron suites**. Actual viewport checks: **1100 × 702** for the requested 1100 × 700 minimum (existing Windows/DPI behavior), **1280 × 800**, **1440 × 900**, and maximized **2560 × 1392**. Rendered synthetic screenshots were inspected; live user data was untouched.
+
+See [UI validation, representative screenshots and exact manual checks](docs/ui-v071-validation.md). Run `npm run test:ui:desktop` to build and regenerate the synthetic screenshot set. No in-game shortcut claim is made by this UI task.
+
+The following release notes describe earlier behavior; the v0.7.1 section above takes precedence for presentation and Settings organization.
+
+## Historical release: Cargo Run 0.7.0 — Fleet Operations 2.0
 
 ## Manual-first cargo workflow (v0.7.0)
 

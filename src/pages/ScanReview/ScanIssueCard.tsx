@@ -336,16 +336,18 @@ export function ScanIssueCard({
           shown here.
         </label>
       )}
-      <button
-        className="button primary"
-        disabled={busy}
-        onClick={() => void submit()}
-      >
-        Confirm correction
-      </button>
-      <button className="button" disabled={busy} onClick={onClose}>
-        Cancel
-      </button>
+      <div className="issue-actions">
+        <button
+          className="button primary"
+          disabled={busy}
+          onClick={() => void submit()}
+        >
+          Confirm correction
+        </button>
+        <button className="button" disabled={busy} onClick={onClose}>
+          Cancel
+        </button>
+      </div>
       {error && (
         <p className="form-error" role="alert">
           {error}

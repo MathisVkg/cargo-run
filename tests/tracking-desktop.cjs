@@ -102,6 +102,7 @@ function pending(id) {
     await page.evaluate(() => window.cargoRun.selectShip("hull-c"));
     await until((s) => s.selectedShipId === "hull-c");
     await nav("Settings");
+    await page.locator(".monitoring-settings > summary").click();
     await app.evaluate(({ dialog }, file) => {
       dialog.showOpenDialog = async () => ({
         canceled: false,
@@ -147,6 +148,7 @@ function pending(id) {
     assert.equal(pending(B).status, "Completed");
     assert.equal((await state()).contracts.length, 1);
     await nav("Settings");
+    await page.locator(".monitoring-settings > summary").click();
     for (let i = 0; i < 2; i++) {
       await page
         .getByRole("button", { name: "Import existing history", exact: true })

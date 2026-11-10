@@ -5,12 +5,12 @@
   --color-cargo-accent: var(--accent);
 }
 :root {
-  --bg: #181a1d;
-  --surface: #23272b;
-  --panel: #333b42;
+  --bg: #15191e;
+  --surface: #23282e;
+  --panel: #323a42;
   --accent: #613dc1;
   --accent-hover: #7956d8;
-  --accent-light: #a994f0;
+  --accent-light: #a78bfa;
   --text: #f2f1e9;
   --muted: #a2b1bd;
   --success: #8bb79b;
@@ -3139,49 +3139,600 @@ h3 {
   align-self: center;
 }
 
-/* Lightweight checklist actions are independent of recorded SCU controls. */
+/* Shared compact operational components. */
+.panel,
+.stat-card {
+  border-radius: 10px;
+}
+.stat-card {
+  min-height: 112px;
+  padding: 16px;
+}
+.stat-top {
+  margin-bottom: 8px;
+}
+.stat-top > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.stat-value {
+  margin-bottom: 6px;
+}
+.stat-detail {
+  font-size: 12px;
+}
+.operations-stats .stat-card {
+  min-height: 136px;
+}
+.operations-stats .stat-detail {
+  margin-top: 8px;
+}
+.capacity-detail {
+  margin-top: 5px;
+  font-size: 11px;
+}
+.info-tip {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+  color: var(--muted);
+}
+.info-tip:focus-visible {
+  outline: 2px solid var(--accent-light);
+  outline-offset: 3px;
+}
+.info-tip-text {
+  display: none;
+  position: absolute;
+  z-index: 5;
+  top: 23px;
+  left: -35px;
+  width: 230px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+.info-tip:hover .info-tip-text,
+.info-tip:focus .info-tip-text {
+  display: block;
+}
 .stop-grid {
   align-items: start;
+  gap: 16px;
 }
-.stop-card-footer {
+.stop-card {
+  background: var(--surface);
+  padding: 18px;
+  border-radius: 16px;
+}
+.stop-eyebrow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 16px;
+  margin-bottom: 14px;
 }
-.stop-checklist {
-  table-layout: auto;
+.stop-eyebrow > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
 }
-.stop-checklist td {
-  vertical-align: top;
+.stop-eyebrow svg {
+  color: var(--accent-light);
+}
+.stop-eyebrow .badge {
+  font-size: 11px;
+  border-radius: 20px;
+  padding: 3px 8px;
+}
+.stop-card-title {
+  align-items: baseline;
+  margin-bottom: 8px;
+}
+.stop-card-title h3 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.stop-card-title small {
+  font-size: 12px;
+}
+.stop-cargo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 0;
+}
+.stop-cargo-row + .stop-cargo-row {
+  border-top: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+.stop-cargo-description {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.stop-cargo-description > strong {
+  font-size: 15px;
+  font-weight: 600;
+}
+.stop-cargo-description p {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 .checklist-contract {
   display: block;
-  color: var(--muted);
-  margin-top: 4px;
-  font-size: 11px;
-  max-width: 28ch;
+  font-size: 12px;
+  margin-top: 5px;
+  text-align: left;
 }
 .checklist-action {
   display: flex;
   flex-direction: column;
   gap: 4px;
   align-items: flex-start;
+  flex-shrink: 0;
+}
+.checklist-action .button {
+  min-height: 36px;
+  padding: 8px 12px;
+  white-space: nowrap;
 }
 .checklist-action small {
-  font-size: 11px;
-  max-width: 30ch;
+  max-width: 28ch;
+  white-space: normal;
 }
 .checklist-done {
-  border-color: var(--success);
   color: var(--success);
+  border-color: var(--success);
 }
-.cargo-workflow h3 {
-  margin-top: 20px;
+.stop-card-footer {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: grid;
+  gap: 12px;
+  font-size: 12px;
+}
+.stop-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+.stop-progress .button {
+  border-radius: 20px;
+}
+.stop-contract-link {
+  justify-self: start;
+  margin-top: 0;
+}
+.stop-card .associated-contracts {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.associated-contracts summary {
+  color: var(--accent-light);
+  cursor: pointer;
+}
+.associated-contracts ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+}
+.associated-contracts li + li {
+  margin-top: 8px;
+}
+.contract-card {
+  padding: 18px;
+  container-type: inline-size;
+}
+.contract-card h3 {
+  font-size: 16px;
+}
+.contract-card-heading p,
+.contract-locations dd,
+.contract-card-numbers > span {
+  font-size: 12px;
+}
+.contract-locations dt {
+  font-size: 11px;
+}
+.cargo-card-progress {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+.contract-card-footer {
+  flex-wrap: nowrap;
+  gap: 8px;
+  container-type: inline-size;
+}
+.contract-card-footer__metadata {
+  gap: 8px;
+  min-width: 0;
 }
 .complete-contract-quick {
+  margin: 0;
+  flex-shrink: 0;
+}
+.contract-card-footer__actions {
+  gap: 4px;
+}
+.contract-card-footer__actions > button {
+  font-size: 12px;
+}
+.manifest-stats .stat-card {
+  min-height: 104px;
+}
+.manifest-stats .stat-top {
+  font-size: 12px;
+}
+.manifest-disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+.manifest-disclosure > summary::before {
+  content: "›";
+  font-size: 20px;
+  color: var(--muted);
+  transform: rotate(0);
+}
+.manifest-disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+.manifest-disclosure > summary h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.manifest-group .cargo-table {
+  font-size: 12px;
+  min-width: 740px;
+  width: 100%;
+  table-layout: fixed;
+}
+.manifest-group .cargo-table th {
+  font-size: 11px;
+  padding: 12px;
+}
+.manifest-group .cargo-table td {
+  padding: 12px;
+  vertical-align: middle;
+}
+.manifest-group .cargo-table th:nth-child(1) {
+  width: 15%;
+}
+.manifest-group .cargo-table th:nth-child(2),
+.manifest-group .cargo-table th:nth-child(3) {
+  width: 20%;
+}
+.manifest-group .cargo-table th:nth-child(4),
+.manifest-group .cargo-table th:nth-child(5),
+.manifest-group .cargo-table th:nth-child(6) {
+  width: 9%;
+}
+.manifest-group .cargo-table th:nth-child(7) {
+  width: 18%;
+}
+.objective-expand {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+}
+.objective-detail-row > td {
+  background: var(--surface);
+}
+.objective-detail-content {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 2fr;
+  gap: 24px;
+  padding: 4px;
+}
+.objective-detail-content h4 {
+  margin: 0 0 12px;
+  font-weight: 600;
+}
+.objective-detail-content .cargo-progress-control {
+  max-width: none;
+}
+.objective-tools > summary {
+  margin-top: 6px;
+  color: var(--accent-light);
+  cursor: pointer;
+  font-size: 12px;
+}
+.objective-tools .checklist-action {
+  margin: 10px 0;
+}
+.details-objectives td {
+  vertical-align: top;
+}
+.details-overview {
+  gap: 12px;
+}
+.details-stats {
+  gap: 10px;
+}
+.details-evidence {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.evidence-record {
+  padding: 14px;
+  border-radius: 8px;
+}
+.evidence-record .screenshot-preview img {
+  max-height: 150px;
+  object-fit: contain;
+}
+.details-evidence .screenshot-preview > span {
+  position: static;
+  border: 0;
+  background: transparent;
+}
+.overlay-dialog.center {
+  border-radius: 12px;
+}
+.dialog-heading {
+  gap: 20px;
+}
+.dialog-actions {
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dialog-actions .button {
+  min-height: 36px;
+}
+.history-table {
+  table-layout: fixed;
+  min-width: 850px;
+}
+.history-table th:first-child {
+  width: 25%;
+}
+.history-table th:nth-child(2) {
+  width: 20%;
+}
+.history-table td {
+  padding: 14px 16px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  vertical-align: middle;
+}
+.history-table td small {
+  font-size: 12px;
+  color: var(--muted);
+}
+.panel-footer:has(.pagination) {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.scan-history-entry {
+  overflow: visible;
+  border-radius: 10px;
+}
+.scan-history-summary {
+  padding: 16px 18px;
+  gap: 16px;
+}
+.scan-history-text h2 {
+  font-size: 15px;
+}
+.scan-history-text p {
+  line-height: 1.5;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.scan-history-thumb,
+.scan-history-summary .capture-placeholder {
+  width: 112px;
+  height: 72px;
+}
+.scan-history-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scan-secondary-actions {
+  margin: 0;
+  padding: 0 18px 10px;
+  align-items: center;
+  gap: 12px;
+}
+.scan-delete {
+  font-size: 12px;
+  padding: 8px 0;
   align-self: flex-start;
-  margin: 12px 0;
+}
+.settings-grid {
+  gap: 16px;
+  align-items: start;
+}
+.setting-card {
+  padding: 20px;
+  min-height: 0;
+}
+.setting-card > p {
+  max-width: 90ch;
+}
+.setting-card > h2 {
+  margin-bottom: 10px;
+}
+.setting-card > summary {
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+}
+.monitoring-settings > .setting-card {
+  border: 0;
+  background: transparent;
+  padding: 16px 0 0;
+}
+.setting-card.cargo-workflow,
+.setting-card.experimental-settings {
+  padding: 20px;
+}
+.cargo-workflow p {
+  margin-bottom: 0;
+}
+.experimental-settings .checkbox-label {
+  margin-top: 12px;
+}
+.local-data-management {
+  border-color: var(--warning);
+}
+@media (min-width: 1450px) {
+  .settings-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .settings-grid > .ocr-settings,
+  .settings-grid > .local-data-management,
+  .settings-grid > .advanced-panel,
+  .settings-grid > .app-info {
+    grid-column: 1 / -1;
+  }
+}
+@container (max-width: 360px) {
+  .contract-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .contract-card-footer__metadata {
+    justify-content: space-between;
+  }
+  .contract-card-footer__actions {
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 1199px) {
+  .stats-grid.operations-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .operations-stats .stat-card {
+    min-height: 126px;
+  }
+  .stop-cargo-row {
+    gap: 12px;
+  }
+}
+@media (max-width: 900px) {
+  .stop-grid,
+  .contract-cards {
+    grid-template-columns: 1fr;
+  }
+  .manifest-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .stats-grid.operations-stats,
+  .manifest-stats {
+    grid-template-columns: 1fr;
+  }
+  .stop-cargo-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .objective-detail-content {
+    grid-template-columns: 1fr;
+  }
+  .panel-footer:has(.pagination) {
+    flex-direction: column;
+  }
+}
+
+.scan-advanced {
+  padding: 0;
+  border-top: 0;
+}
+
+.operations-stats .stat-card {
+  min-height: 114px;
+  padding: 14px;
+}
+.operations-stats .stat-top {
+  margin-bottom: 5px;
+}
+.operations-stats .stat-value {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.operations-stats .stat-detail {
+  margin-top: 5px;
+  font-size: 11px;
+}
+.operations-stats .capacity-detail {
+  font-size: 10px;
+  margin-top: 4px;
+}
+.operations-stats .capacity-track {
+  margin-top: 5px;
+}
+.stop-cargo-row {
+  padding: 10px 0;
+}
+.contract-activity-disclosure {
+  margin: 0 0 22px;
+}
+.contract-activity-disclosure > summary,
+.shortcut-help > summary {
+  cursor: pointer;
+  color: var(--accent-light);
+}
+.contract-activity-disclosure > section {
+  margin-top: 18px;
+}
+.shortcut-help {
+  margin: 10px 0;
+}
+.settings-grid > .monitoring-settings {
+  grid-column: 1 / -1;
+}
+@media (max-width: 1199px) {
+  .operations-stats .stat-card {
+    min-height: 108px;
+    padding: 12px;
+  }
+}
+
+.text-button {
+  padding: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.checklist-contract {
+  color: var(--muted);
+}
+.issue-actions {
+  position: sticky;
+  bottom: -24px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 14px 0;
+  margin-top: 8px;
+  background: var(--surface);
 }
