@@ -1,3 +1,4 @@
+import { numericConfidenceFloor } from "./quantity";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { OcrResult } from "../../../src/types/ocr";
@@ -79,7 +80,7 @@ export class OfflineTesseract implements OcrProvider {
           {},
           { text: true, blocks: true },
         );
-        const lines = (result.data.blocks ?? [])
+        const lines: OcrResult["lines"] = (result.data.blocks ?? [])
           .flatMap((b) => b.paragraphs.flatMap((p) => p.lines))
           .map((l, i) => ({
             id: "line-" + i,
@@ -112,6 +113,68 @@ export class OfflineTesseract implements OcrProvider {
                 ? l.confidence
                 : null,
           }));
+        // Re-read a bounded numeric region from pixels, rather than counting two
+        // representations of the same low-confidence token as independent evidence.
+        let checked = 0;
+        for (const line of lines) {
+          if (!/\bDeliver\b/i.test(line.text) || !/\bSCU\b/i.test(line.text))
+            continue;
+          const word = line.words?.find(
+            (w) =>
+              /^\d+(?:,\d{3})*(?:\.\d+)?[/⁄／]\d+(?:,\d{3})*(?:\.\d+)?$/.test(
+                w.text,
+              ) &&
+              w.confidence !== null &&
+              w.confidence < numericConfidenceFloor,
+          );
+          if (!word || checked++ >= 8) continue;
+          const padding = Math.max(2, Math.round(word.box.height * 0.15));
+          const box = {
+            x: Math.max(0, word.box.x - padding),
+            y: Math.max(0, word.box.y - padding),
+            width: Math.min(
+              width - Math.max(0, word.box.x - padding),
+              word.box.width + padding * 2,
+            ),
+            height: Math.min(
+              height - Math.max(0, word.box.y - padding),
+              word.box.height + padding * 2,
+            ),
+          };
+          await worker.setParameters({
+            tessedit_pageseg_mode: PSM.SINGLE_LINE,
+          });
+          try {
+            const check = await worker.recognize(
+              image,
+              {
+                rectangle: {
+                  left: box.x,
+                  top: box.y,
+                  width: box.width,
+                  height: box.height,
+                },
+              },
+              { text: true },
+            );
+            line.quantityCheck = {
+              text: check.data.text.trim(),
+              confidence: check.data.confidence,
+              box,
+            };
+          } catch (e) {
+            line.quantityCheck = {
+              text: "",
+              confidence: 0,
+              box,
+              error: String(e).slice(0, 200),
+            };
+          } finally {
+            await worker.setParameters({
+              tessedit_pageseg_mode: PSM.SPARSE_TEXT,
+            });
+          }
+        }
         return {
           provider: this.name,
           language: "eng",

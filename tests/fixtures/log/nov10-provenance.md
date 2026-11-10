@@ -1,0 +1,3 @@
+# November 10 gameplay evidence
+
+Selected actual records were read from the accessible LIVE/Game.log on November 10, 2026; Game(2).log was not present in the checked workspace/Downloads. This current log contains the reported Tin and Aluminium session. Only mission markers, acceptance, supported delivery notifications, objective states and terminal events for those two missions are retained. UUIDs are consistently replaced; player identifiers, coordinates and entity identifiers are removed. Original UTC timestamps, commodity quantities and destination wording remain. Both missions finish within one second; Tin notification omits the OCR destination suffix “on microTech.” No original file was changed.

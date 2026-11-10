@@ -1,3 +1,4 @@
+import { locationIdentity, commodityIdentity } from "../ocr/objectiveEvidence";
 import { createHash } from "node:crypto";
 import type { Contract } from "../../../src/types/models";
 import type { MissionEvent } from "../../../src/types/tracking";
@@ -79,8 +80,9 @@ export function applyMissionEvent(
   if (!previous) {
     const candidates = existing.cargoObjectives.filter(
       (o) =>
-        o.commodity === event.commodity &&
-        o.destination === event.destination &&
+        commodityIdentity(o.commodity) ===
+          commodityIdentity(event.commodity ?? "") &&
+        locationIdentity(o.destination, event.destination ?? "") &&
         o.quantitySCU === event.quantitySCU &&
         (!event.objectiveId ||
           !o.externalObjectiveId ||
@@ -104,8 +106,17 @@ export function applyMissionEvent(
     id: previous?.id ?? existing.id + ":" + externalId,
     externalObjectiveId: externalId,
     contractId: existing.id,
-    commodity: event.commodity!,
-    destination: event.destination!,
+    commodity:
+      previous &&
+      commodityIdentity(previous.commodity) ===
+        commodityIdentity(event.commodity ?? "")
+        ? previous.commodity
+        : event.commodity!,
+    destination:
+      previous &&
+      locationIdentity(previous.destination, event.destination ?? "")
+        ? previous.destination
+        : event.destination!,
     pickupLocation: previous?.pickupLocation ?? "",
     quantitySCU: event.quantitySCU!,
     deliveredSCU: Math.max(previous?.deliveredSCU ?? 0, event.deliveredSCU!),

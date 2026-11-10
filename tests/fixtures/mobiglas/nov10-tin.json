@@ -1,0 +1,1742 @@
+{
+  "provenance": "Genuine saved November 10, 2026 OCR, sanitized to contract-pane/action lines. Original text, word boxes and confidence preserved; player/wallet/navigation removed. Captured image processed at 3200x1800.",
+  "capturedAt": "2026-11-10T14:13:28.618Z",
+  "result": {
+    "provider": "Tesseract 7 · offline English",
+    "language": "eng",
+    "text": "Reward\na 37,250\nContract Deadline\nN/A\nRookie Rank - Direct Small Cargo Haul\nContracted By\nCovalex Independent Contractors\nDETAILS\nPRIMARY OBJECTIVES\nHello,\n< Deliver 0/12 SCU of Tin to Sakura Sun Goldenrod\nWorkcenter on microTech.\nNeed a contractor for a simple cargo haul going from a freight\n¢ Collect Tin from Port Tressler.\nSakura Sun Goldenrod Workcenter on microTech. At most the\nelevator at Port Tressler above microTech to a freight elevator at\ncontainers will be 4 SCU in size.\nAlso, we strongly encourage contractors to bring a handheld\ntractor beam along.\nAny chance you're available to take care of it for us?\nThanks in advance for ensuring prompt service,\nChase Hewitt\nJr. Logistics Coordinator\nCovalex Shipping\n‘Anything you need, anywhere you need it.\"\nCovalex Shipping is a limited liability corporation. To encourage\nABANDON\nTRACK",
+    "lines": [
+      {
+        "id": "line-8",
+        "text": "Reward",
+        "box": {
+          "x": 2175,
+          "y": 332,
+          "width": 92,
+          "height": 20
+        },
+        "words": [
+          {
+            "text": "Reward",
+            "box": {
+              "x": 2175,
+              "y": 332,
+              "width": 92,
+              "height": 20
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-9",
+        "text": "a 37,250",
+        "box": {
+          "x": 2774,
+          "y": 332,
+          "width": 116,
+          "height": 23
+        },
+        "words": [
+          {
+            "text": "a",
+            "box": {
+              "x": 2774,
+              "y": 335,
+              "width": 16,
+              "height": 16
+            },
+            "confidence": 20
+          },
+          {
+            "text": "37,250",
+            "box": {
+              "x": 2802,
+              "y": 332,
+              "width": 88,
+              "height": 23
+            },
+            "confidence": 94
+          }
+        ],
+        "confidence": 57
+      },
+      {
+        "id": "line-12",
+        "text": "Contract Deadline",
+        "box": {
+          "x": 2172,
+          "y": 370,
+          "width": 217,
+          "height": 20
+        },
+        "words": [
+          {
+            "text": "Contract",
+            "box": {
+              "x": 2172,
+              "y": 370,
+              "width": 107,
+              "height": 20
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Deadline",
+            "box": {
+              "x": 2288,
+              "y": 370,
+              "width": 101,
+              "height": 20
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-13",
+        "text": "N/A",
+        "box": {
+          "x": 2835,
+          "y": 372,
+          "width": 50,
+          "height": 20
+        },
+        "words": [
+          {
+            "text": "N/A",
+            "box": {
+              "x": 2835,
+              "y": 372,
+              "width": 50,
+              "height": 20
+            },
+            "confidence": 80
+          }
+        ],
+        "confidence": 80
+      },
+      {
+        "id": "line-14",
+        "text": "Rookie Rank - Direct Small Cargo Haul",
+        "box": {
+          "x": 1144,
+          "y": 366,
+          "width": 721,
+          "height": 55
+        },
+        "words": [
+          {
+            "text": "Rookie",
+            "box": {
+              "x": 1144,
+              "y": 366,
+              "width": 126,
+              "height": 43
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Rank",
+            "box": {
+              "x": 1286,
+              "y": 367,
+              "width": 91,
+              "height": 42
+            },
+            "confidence": 93
+          },
+          {
+            "text": "-",
+            "box": {
+              "x": 1390,
+              "y": 388,
+              "width": 16,
+              "height": 5
+            },
+            "confidence": 91
+          },
+          {
+            "text": "Direct",
+            "box": {
+              "x": 1421,
+              "y": 366,
+              "width": 112,
+              "height": 43
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Small",
+            "box": {
+              "x": 1547,
+              "y": 367,
+              "width": 100,
+              "height": 42
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Cargo",
+            "box": {
+              "x": 1663,
+              "y": 367,
+              "width": 107,
+              "height": 54
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Haul",
+            "box": {
+              "x": 1786,
+              "y": 367,
+              "width": 79,
+              "height": 42
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 95
+      },
+      {
+        "id": "line-15",
+        "text": "Contracted By",
+        "box": {
+          "x": 2173,
+          "y": 410,
+          "width": 170,
+          "height": 25
+        },
+        "words": [
+          {
+            "text": "Contracted",
+            "box": {
+              "x": 2173,
+              "y": 410,
+              "width": 133,
+              "height": 20
+            },
+            "confidence": 96
+          },
+          {
+            "text": "By",
+            "box": {
+              "x": 2316,
+              "y": 411,
+              "width": 27,
+              "height": 24
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-16",
+        "text": "Covalex Independent Contractors",
+        "box": {
+          "x": 2467,
+          "y": 410,
+          "width": 415,
+          "height": 25
+        },
+        "words": [
+          {
+            "text": "Covalex",
+            "box": {
+              "x": 2467,
+              "y": 410,
+              "width": 94,
+              "height": 20
+            },
+            "confidence": 91
+          },
+          {
+            "text": "Independent",
+            "box": {
+              "x": 2570,
+              "y": 410,
+              "width": 152,
+              "height": 25
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Contractors",
+            "box": {
+              "x": 2731,
+              "y": 410,
+              "width": 151,
+              "height": 20
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 94
+      },
+      {
+        "id": "line-22",
+        "text": "DETAILS",
+        "box": {
+          "x": 1145,
+          "y": 528,
+          "width": 165,
+          "height": 28
+        },
+        "words": [
+          {
+            "text": "DETAILS",
+            "box": {
+              "x": 1145,
+              "y": 528,
+              "width": 165,
+              "height": 28
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-23",
+        "text": "PRIMARY OBJECTIVES",
+        "box": {
+          "x": 2050,
+          "y": 528,
+          "width": 431,
+          "height": 28
+        },
+        "words": [
+          {
+            "text": "PRIMARY",
+            "box": {
+              "x": 2050,
+              "y": 528,
+              "width": 174,
+              "height": 28
+            },
+            "confidence": 96
+          },
+          {
+            "text": "OBJECTIVES",
+            "box": {
+              "x": 2242,
+              "y": 528,
+              "width": 239,
+              "height": 28
+            },
+            "confidence": 95
+          }
+        ],
+        "confidence": 95
+      },
+      {
+        "id": "line-24",
+        "text": "Hello,",
+        "box": {
+          "x": 1145,
+          "y": 594,
+          "width": 57,
+          "height": 21
+        },
+        "words": [
+          {
+            "text": "Hello,",
+            "box": {
+              "x": 1145,
+              "y": 594,
+              "width": 57,
+              "height": 21
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-25",
+        "text": "< Deliver 0/12 SCU of Tin to Sakura Sun Goldenrod",
+        "box": {
+          "x": 2048,
+          "y": 593,
+          "width": 680,
+          "height": 24
+        },
+        "words": [
+          {
+            "text": "<",
+            "box": {
+              "x": 2048,
+              "y": 593,
+              "width": 23,
+              "height": 24
+            },
+            "confidence": 50
+          },
+          {
+            "text": "Deliver",
+            "box": {
+              "x": 2091,
+              "y": 594,
+              "width": 90,
+              "height": 21
+            },
+            "confidence": 96
+          },
+          {
+            "text": "0/12",
+            "box": {
+              "x": 2190,
+              "y": 594,
+              "width": 61,
+              "height": 21
+            },
+            "confidence": 69
+          },
+          {
+            "text": "SCU",
+            "box": {
+              "x": 2261,
+              "y": 594,
+              "width": 52,
+              "height": 21
+            },
+            "confidence": 90
+          },
+          {
+            "text": "of",
+            "box": {
+              "x": 2322,
+              "y": 594,
+              "width": 26,
+              "height": 21
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Tin",
+            "box": {
+              "x": 2356,
+              "y": 594,
+              "width": 38,
+              "height": 20
+            },
+            "confidence": 96
+          },
+          {
+            "text": "to",
+            "box": {
+              "x": 2402,
+              "y": 594,
+              "width": 26,
+              "height": 21
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Sakura",
+            "box": {
+              "x": 2438,
+              "y": 594,
+              "width": 91,
+              "height": 21
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Sun",
+            "box": {
+              "x": 2539,
+              "y": 594,
+              "width": 47,
+              "height": 21
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Goldenrod",
+            "box": {
+              "x": 2597,
+              "y": 594,
+              "width": 131,
+              "height": 21
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 88
+      },
+      {
+        "id": "line-26",
+        "text": "Workcenter on microTech.",
+        "box": {
+          "x": 2090,
+          "y": 626,
+          "width": 345,
+          "height": 21
+        },
+        "words": [
+          {
+            "text": "Workcenter",
+            "box": {
+              "x": 2090,
+              "y": 626,
+              "width": 154,
+              "height": 21
+            },
+            "confidence": 91
+          },
+          {
+            "text": "on",
+            "box": {
+              "x": 2253,
+              "y": 631,
+              "width": 29,
+              "height": 16
+            },
+            "confidence": 93
+          },
+          {
+            "text": "microTech.",
+            "box": {
+              "x": 2292,
+              "y": 626,
+              "width": 143,
+              "height": 21
+            },
+            "confidence": 91
+          }
+        ],
+        "confidence": 92
+      },
+      {
+        "id": "line-27",
+        "text": "Need a contractor for a simple cargo haul going from a freight",
+        "box": {
+          "x": 1146,
+          "y": 650,
+          "width": 687,
+          "height": 23
+        },
+        "words": [
+          {
+            "text": "Need",
+            "box": {
+              "x": 1146,
+              "y": 651,
+              "width": 52,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "a",
+            "box": {
+              "x": 1206,
+              "y": 655,
+              "width": 12,
+              "height": 14
+            },
+            "confidence": 96
+          },
+          {
+            "text": "contractor",
+            "box": {
+              "x": 1226,
+              "y": 651,
+              "width": 119,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "for",
+            "box": {
+              "x": 1353,
+              "y": 650,
+              "width": 33,
+              "height": 19
+            },
+            "confidence": 96
+          },
+          {
+            "text": "a",
+            "box": {
+              "x": 1393,
+              "y": 655,
+              "width": 12,
+              "height": 14
+            },
+            "confidence": 96
+          },
+          {
+            "text": "simple",
+            "box": {
+              "x": 1413,
+              "y": 650,
+              "width": 69,
+              "height": 23
+            },
+            "confidence": 96
+          },
+          {
+            "text": "cargo",
+            "box": {
+              "x": 1490,
+              "y": 655,
+              "width": 62,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "haul",
+            "box": {
+              "x": 1562,
+              "y": 650,
+              "width": 42,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "going",
+            "box": {
+              "x": 1613,
+              "y": 650,
+              "width": 57,
+              "height": 23
+            },
+            "confidence": 96
+          },
+          {
+            "text": "from",
+            "box": {
+              "x": 1678,
+              "y": 650,
+              "width": 52,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "a",
+            "box": {
+              "x": 1739,
+              "y": 655,
+              "width": 10,
+              "height": 13
+            },
+            "confidence": 96
+          },
+          {
+            "text": "freight",
+            "box": {
+              "x": 1758,
+              "y": 650,
+              "width": 75,
+              "height": 23
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-28",
+        "text": "¢ Collect Tin from Port Tressler.",
+        "box": {
+          "x": 2096,
+          "y": 671,
+          "width": 433,
+          "height": 23
+        },
+        "words": [
+          {
+            "text": "¢",
+            "box": {
+              "x": 2096,
+              "y": 677,
+              "width": 17,
+              "height": 17
+            },
+            "confidence": 73
+          },
+          {
+            "text": "Collect",
+            "box": {
+              "x": 2133,
+              "y": 671,
+              "width": 88,
+              "height": 21
+            },
+            "confidence": 95
+          },
+          {
+            "text": "Tin",
+            "box": {
+              "x": 2229,
+              "y": 671,
+              "width": 37,
+              "height": 21
+            },
+            "confidence": 95
+          },
+          {
+            "text": "from",
+            "box": {
+              "x": 2275,
+              "y": 671,
+              "width": 62,
+              "height": 21
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Port",
+            "box": {
+              "x": 2348,
+              "y": 671,
+              "width": 55,
+              "height": 21
+            },
+            "confidence": 93
+          },
+          {
+            "text": "Tressler.",
+            "box": {
+              "x": 2411,
+              "y": 671,
+              "width": 118,
+              "height": 21
+            },
+            "confidence": 90
+          }
+        ],
+        "confidence": 90
+      },
+      {
+        "id": "line-29",
+        "text": "Sakura Sun Goldenrod Workcenter on microTech. At most the",
+        "box": {
+          "x": 1146,
+          "y": 706,
+          "width": 676,
+          "height": 19
+        },
+        "words": [
+          {
+            "text": "Sakura",
+            "box": {
+              "x": 1146,
+              "y": 707,
+              "width": 76,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Sun",
+            "box": {
+              "x": 1231,
+              "y": 707,
+              "width": 39,
+              "height": 18
+            },
+            "confidence": 95
+          },
+          {
+            "text": "Goldenrod",
+            "box": {
+              "x": 1279,
+              "y": 706,
+              "width": 111,
+              "height": 19
+            },
+            "confidence": 93
+          },
+          {
+            "text": "Workcenter",
+            "box": {
+              "x": 1398,
+              "y": 706,
+              "width": 129,
+              "height": 19
+            },
+            "confidence": 91
+          },
+          {
+            "text": "on",
+            "box": {
+              "x": 1535,
+              "y": 711,
+              "width": 24,
+              "height": 14
+            },
+            "confidence": 93
+          },
+          {
+            "text": "microTech.",
+            "box": {
+              "x": 1568,
+              "y": 706,
+              "width": 119,
+              "height": 18
+            },
+            "confidence": 90
+          },
+          {
+            "text": "At",
+            "box": {
+              "x": 1695,
+              "y": 706,
+              "width": 24,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "most",
+            "box": {
+              "x": 1727,
+              "y": 706,
+              "width": 53,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "the",
+            "box": {
+              "x": 1787,
+              "y": 706,
+              "width": 35,
+              "height": 18
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 94
+      },
+      {
+        "id": "line-30",
+        "text": "elevator at Port Tressler above microTech to a freight elevator at",
+        "box": {
+          "x": 1146,
+          "y": 678,
+          "width": 723,
+          "height": 23
+        },
+        "words": [
+          {
+            "text": "elevator",
+            "box": {
+              "x": 1146,
+              "y": 679,
+              "width": 89,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "at",
+            "box": {
+              "x": 1243,
+              "y": 678,
+              "width": 21,
+              "height": 19
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Port",
+            "box": {
+              "x": 1272,
+              "y": 678,
+              "width": 47,
+              "height": 19
+            },
+            "confidence": 93
+          },
+          {
+            "text": "Tressler",
+            "box": {
+              "x": 1326,
+              "y": 678,
+              "width": 94,
+              "height": 19
+            },
+            "confidence": 92
+          },
+          {
+            "text": "above",
+            "box": {
+              "x": 1427,
+              "y": 678,
+              "width": 63,
+              "height": 19
+            },
+            "confidence": 93
+          },
+          {
+            "text": "microTech",
+            "box": {
+              "x": 1499,
+              "y": 678,
+              "width": 113,
+              "height": 19
+            },
+            "confidence": 92
+          },
+          {
+            "text": "to",
+            "box": {
+              "x": 1620,
+              "y": 678,
+              "width": 21,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "a",
+            "box": {
+              "x": 1649,
+              "y": 683,
+              "width": 11,
+              "height": 13
+            },
+            "confidence": 95
+          },
+          {
+            "text": "freight",
+            "box": {
+              "x": 1668,
+              "y": 678,
+              "width": 75,
+              "height": 23
+            },
+            "confidence": 95
+          },
+          {
+            "text": "elevator",
+            "box": {
+              "x": 1751,
+              "y": 678,
+              "width": 89,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "at",
+            "box": {
+              "x": 1848,
+              "y": 678,
+              "width": 21,
+              "height": 18
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 95
+      },
+      {
+        "id": "line-31",
+        "text": "containers will be 4 SCU in size.",
+        "box": {
+          "x": 1146,
+          "y": 734,
+          "width": 345,
+          "height": 19
+        },
+        "words": [
+          {
+            "text": "containers",
+            "box": {
+              "x": 1146,
+              "y": 734,
+              "width": 117,
+              "height": 19
+            },
+            "confidence": 96
+          },
+          {
+            "text": "will",
+            "box": {
+              "x": 1271,
+              "y": 734,
+              "width": 34,
+              "height": 19
+            },
+            "confidence": 96
+          },
+          {
+            "text": "be",
+            "box": {
+              "x": 1314,
+              "y": 735,
+              "width": 24,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "4",
+            "box": {
+              "x": 1346,
+              "y": 735,
+              "width": 13,
+              "height": 17
+            },
+            "confidence": 93
+          },
+          {
+            "text": "SCU",
+            "box": {
+              "x": 1367,
+              "y": 734,
+              "width": 42,
+              "height": 19
+            },
+            "confidence": 93
+          },
+          {
+            "text": "in",
+            "box": {
+              "x": 1419,
+              "y": 734,
+              "width": 16,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "size.",
+            "box": {
+              "x": 1444,
+              "y": 734,
+              "width": 47,
+              "height": 18
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 95
+      },
+      {
+        "id": "line-32",
+        "text": "Also, we strongly encourage contractors to bring a handheld",
+        "box": {
+          "x": 1145,
+          "y": 790,
+          "width": 669,
+          "height": 23
+        },
+        "words": [
+          {
+            "text": "Also,",
+            "box": {
+              "x": 1145,
+              "y": 791,
+              "width": 51,
+              "height": 20
+            },
+            "confidence": 96
+          },
+          {
+            "text": "we",
+            "box": {
+              "x": 1205,
+              "y": 795,
+              "width": 30,
+              "height": 13
+            },
+            "confidence": 95
+          },
+          {
+            "text": "strongly",
+            "box": {
+              "x": 1243,
+              "y": 790,
+              "width": 91,
+              "height": 23
+            },
+            "confidence": 95
+          },
+          {
+            "text": "encourage",
+            "box": {
+              "x": 1342,
+              "y": 795,
+              "width": 115,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "contractors",
+            "box": {
+              "x": 1466,
+              "y": 790,
+              "width": 131,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "to",
+            "box": {
+              "x": 1605,
+              "y": 790,
+              "width": 20,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "bring",
+            "box": {
+              "x": 1635,
+              "y": 790,
+              "width": 55,
+              "height": 23
+            },
+            "confidence": 96
+          },
+          {
+            "text": "a",
+            "box": {
+              "x": 1698,
+              "y": 794,
+              "width": 12,
+              "height": 14
+            },
+            "confidence": 96
+          },
+          {
+            "text": "handheld",
+            "box": {
+              "x": 1718,
+              "y": 790,
+              "width": 96,
+              "height": 18
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-33",
+        "text": "tractor beam along.",
+        "box": {
+          "x": 1145,
+          "y": 818,
+          "width": 217,
+          "height": 23
+        },
+        "words": [
+          {
+            "text": "tractor",
+            "box": {
+              "x": 1145,
+              "y": 818,
+              "width": 80,
+              "height": 19
+            },
+            "confidence": 95
+          },
+          {
+            "text": "beam",
+            "box": {
+              "x": 1233,
+              "y": 818,
+              "width": 57,
+              "height": 19
+            },
+            "confidence": 96
+          },
+          {
+            "text": "along.",
+            "box": {
+              "x": 1299,
+              "y": 818,
+              "width": 63,
+              "height": 23
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-34",
+        "text": "Any chance you're available to take care of it for us?",
+        "box": {
+          "x": 1144,
+          "y": 873,
+          "width": 579,
+          "height": 24
+        },
+        "words": [
+          {
+            "text": "Any",
+            "box": {
+              "x": 1144,
+              "y": 875,
+              "width": 40,
+              "height": 22
+            },
+            "confidence": 95
+          },
+          {
+            "text": "chance",
+            "box": {
+              "x": 1192,
+              "y": 875,
+              "width": 76,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "you're",
+            "box": {
+              "x": 1276,
+              "y": 873,
+              "width": 68,
+              "height": 24
+            },
+            "confidence": 79
+          },
+          {
+            "text": "available",
+            "box": {
+              "x": 1352,
+              "y": 874,
+              "width": 93,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "to",
+            "box": {
+              "x": 1453,
+              "y": 874,
+              "width": 21,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "take",
+            "box": {
+              "x": 1482,
+              "y": 874,
+              "width": 46,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "care",
+            "box": {
+              "x": 1537,
+              "y": 878,
+              "width": 48,
+              "height": 14
+            },
+            "confidence": 96
+          },
+          {
+            "text": "of",
+            "box": {
+              "x": 1594,
+              "y": 873,
+              "width": 21,
+              "height": 19
+            },
+            "confidence": 94
+          },
+          {
+            "text": "it",
+            "box": {
+              "x": 1623,
+              "y": 873,
+              "width": 13,
+              "height": 18
+            },
+            "confidence": 94
+          },
+          {
+            "text": "for",
+            "box": {
+              "x": 1643,
+              "y": 873,
+              "width": 34,
+              "height": 19
+            },
+            "confidence": 96
+          },
+          {
+            "text": "us?",
+            "box": {
+              "x": 1685,
+              "y": 873,
+              "width": 38,
+              "height": 19
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 94
+      },
+      {
+        "id": "line-35",
+        "text": "Thanks in advance for ensuring prompt service,",
+        "box": {
+          "x": 1143,
+          "y": 929,
+          "width": 527,
+          "height": 24
+        },
+        "words": [
+          {
+            "text": "Thanks",
+            "box": {
+              "x": 1143,
+              "y": 930,
+              "width": 77,
+              "height": 19
+            },
+            "confidence": 95
+          },
+          {
+            "text": "in",
+            "box": {
+              "x": 1229,
+              "y": 930,
+              "width": 17,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "advance",
+            "box": {
+              "x": 1254,
+              "y": 930,
+              "width": 90,
+              "height": 19
+            },
+            "confidence": 96
+          },
+          {
+            "text": "for",
+            "box": {
+              "x": 1352,
+              "y": 930,
+              "width": 33,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "ensuring",
+            "box": {
+              "x": 1393,
+              "y": 930,
+              "width": 95,
+              "height": 23
+            },
+            "confidence": 96
+          },
+          {
+            "text": "prompt",
+            "box": {
+              "x": 1498,
+              "y": 929,
+              "width": 79,
+              "height": 24
+            },
+            "confidence": 96
+          },
+          {
+            "text": "service,",
+            "box": {
+              "x": 1585,
+              "y": 929,
+              "width": 85,
+              "height": 21
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-36",
+        "text": "Chase Hewitt",
+        "box": {
+          "x": 1143,
+          "y": 986,
+          "width": 145,
+          "height": 19
+        },
+        "words": [
+          {
+            "text": "Chase",
+            "box": {
+              "x": 1143,
+              "y": 987,
+              "width": 66,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Hewitt",
+            "box": {
+              "x": 1217,
+              "y": 986,
+              "width": 71,
+              "height": 19
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-37",
+        "text": "Jr. Logistics Coordinator",
+        "box": {
+          "x": 1142,
+          "y": 1014,
+          "width": 277,
+          "height": 24
+        },
+        "words": [
+          {
+            "text": "Jr.",
+            "box": {
+              "x": 1142,
+              "y": 1015,
+              "width": 29,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Logistics",
+            "box": {
+              "x": 1180,
+              "y": 1014,
+              "width": 98,
+              "height": 24
+            },
+            "confidence": 96
+          },
+          {
+            "text": "Coordinator",
+            "box": {
+              "x": 1287,
+              "y": 1014,
+              "width": 132,
+              "height": 19
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-38",
+        "text": "Covalex Shipping",
+        "box": {
+          "x": 1142,
+          "y": 1043,
+          "width": 184,
+          "height": 23
+        },
+        "words": [
+          {
+            "text": "Covalex",
+            "box": {
+              "x": 1142,
+              "y": 1043,
+              "width": 82,
+              "height": 19
+            },
+            "confidence": 92
+          },
+          {
+            "text": "Shipping",
+            "box": {
+              "x": 1233,
+              "y": 1043,
+              "width": 93,
+              "height": 23
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 94
+      },
+      {
+        "id": "line-39",
+        "text": "‘Anything you need, anywhere you need it.\"",
+        "box": {
+          "x": 1142,
+          "y": 1069,
+          "width": 468,
+          "height": 26
+        },
+        "words": [
+          {
+            "text": "‘Anything",
+            "box": {
+              "x": 1142,
+              "y": 1070,
+              "width": 100,
+              "height": 25
+            },
+            "confidence": 65
+          },
+          {
+            "text": "you",
+            "box": {
+              "x": 1251,
+              "y": 1076,
+              "width": 37,
+              "height": 19
+            },
+            "confidence": 96
+          },
+          {
+            "text": "need,",
+            "box": {
+              "x": 1296,
+              "y": 1071,
+              "width": 58,
+              "height": 21
+            },
+            "confidence": 96
+          },
+          {
+            "text": "anywhere",
+            "box": {
+              "x": 1362,
+              "y": 1071,
+              "width": 108,
+              "height": 23
+            },
+            "confidence": 96
+          },
+          {
+            "text": "you",
+            "box": {
+              "x": 1478,
+              "y": 1076,
+              "width": 37,
+              "height": 18
+            },
+            "confidence": 96
+          },
+          {
+            "text": "need",
+            "box": {
+              "x": 1524,
+              "y": 1070,
+              "width": 51,
+              "height": 19
+            },
+            "confidence": 95
+          },
+          {
+            "text": "it.\"",
+            "box": {
+              "x": 1584,
+              "y": 1069,
+              "width": 26,
+              "height": 20
+            },
+            "confidence": 59
+          }
+        ],
+        "confidence": 86
+      },
+      {
+        "id": "line-40",
+        "text": "Covalex Shipping is a limited liability corporation. To encourage",
+        "box": {
+          "x": 1131,
+          "y": 1302,
+          "width": 713,
+          "height": 23
+        },
+        "words": [
+          {
+            "text": "Covalex",
+            "box": {
+              "x": 1131,
+              "y": 1304,
+              "width": 85,
+              "height": 20
+            },
+            "confidence": 92
+          },
+          {
+            "text": "Shipping",
+            "box": {
+              "x": 1224,
+              "y": 1304,
+              "width": 96,
+              "height": 21
+            },
+            "confidence": 94
+          },
+          {
+            "text": "is",
+            "box": {
+              "x": 1329,
+              "y": 1303,
+              "width": 17,
+              "height": 20
+            },
+            "confidence": 96
+          },
+          {
+            "text": "a",
+            "box": {
+              "x": 1355,
+              "y": 1308,
+              "width": 12,
+              "height": 15
+            },
+            "confidence": 96
+          },
+          {
+            "text": "limited",
+            "box": {
+              "x": 1376,
+              "y": 1303,
+              "width": 73,
+              "height": 20
+            },
+            "confidence": 95
+          },
+          {
+            "text": "liability",
+            "box": {
+              "x": 1458,
+              "y": 1303,
+              "width": 78,
+              "height": 21
+            },
+            "confidence": 94
+          },
+          {
+            "text": "corporation.",
+            "box": {
+              "x": 1543,
+              "y": 1302,
+              "width": 140,
+              "height": 22
+            },
+            "confidence": 96
+          },
+          {
+            "text": "To",
+            "box": {
+              "x": 1691,
+              "y": 1302,
+              "width": 26,
+              "height": 20
+            },
+            "confidence": 96
+          },
+          {
+            "text": "encourage",
+            "box": {
+              "x": 1725,
+              "y": 1306,
+              "width": 119,
+              "height": 17
+            },
+            "confidence": 88
+          }
+        ],
+        "confidence": 94
+      },
+      {
+        "id": "line-42",
+        "text": "ABANDON",
+        "box": {
+          "x": 1110,
+          "y": 1426,
+          "width": 147,
+          "height": 22
+        },
+        "words": [
+          {
+            "text": "ABANDON",
+            "box": {
+              "x": 1110,
+              "y": 1426,
+              "width": 147,
+              "height": 22
+            },
+            "confidence": 96
+          }
+        ],
+        "confidence": 96
+      },
+      {
+        "id": "line-43",
+        "text": "TRACK",
+        "box": {
+          "x": 2848,
+          "y": 1418,
+          "width": 101,
+          "height": 21
+        },
+        "words": [
+          {
+            "text": "TRACK",
+            "box": {
+              "x": 2848,
+              "y": 1418,
+              "width": 101,
+              "height": 21
+            },
+            "confidence": 95
+          }
+        ],
+        "confidence": 95
+      }
+    ],
+    "width": 3200,
+    "height": 1800,
+    "durationMs": 2338
+  },
+  "regionalRecognition": {
+    "provenance": "Actual separate pixel-region recognition on the original saved screenshot, resized with Electron nativeImage to 3200 pixels using best quality, November 10, 2026. Original full-screen token confidence 69; isolated numeric region confidence 95. Not a copy of the structured/parser value.",
+    "lineId": "line-25",
+    "quantityCheck": {
+      "text": "0/12",
+      "confidence": 95,
+      "box": {
+        "x": 2187,
+        "y": 591,
+        "width": 67,
+        "height": 27
+      }
+    }
+  }
+}

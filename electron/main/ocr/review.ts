@@ -838,6 +838,8 @@ export function planReview(
     idempotent: false,
     moveFrom: source?.id,
     audit: {
+      previousScanOutcome: review.capture.importResult,
+      previousRecovery: review.capture.recovery,
       authorization: mode,
       confirmation: {
         accepted: input.acceptedConfirmed,

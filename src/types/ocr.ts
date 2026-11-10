@@ -11,6 +11,12 @@ export interface OcrLine {
   box: Rect;
   confidence: number | null;
   words?: { text: string; box: Rect; confidence: number | null }[];
+  quantityCheck?: {
+    text: string;
+    box: Rect;
+    confidence: number;
+    error?: string;
+  };
 }
 export interface OcrResult {
   provider: string;
@@ -35,6 +41,12 @@ export interface Field<T> {
   evidence: Evidence | null;
 }
 export interface ScanObjective {
+  quantityEvidence?: {
+    source: "Objective OCR" | "Region OCR" | "Log objective";
+    code?: "NumericConfidence" | "Conflict" | "Invalid" | "Validated";
+    reason: string;
+    evidenceIds?: string[];
+  };
   commodity: Field<string>;
   pickup: Field<string>;
   destination: Field<string>;

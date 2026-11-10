@@ -481,7 +481,7 @@ describe("shortcut lifecycle diagnostics and recording", () => {
     expect(fixed.observation?.objectives).toHaveLength(2);
     expect(fixed.result).toEqual(observedAluminumFixture());
     expect(fixed.screenshot).toBe(r.screenshot);
-    expect(fixed.observation?.parserVersion).toBe("0.4.2");
+    expect(fixed.observation?.parserVersion).toBe("0.4.3");
     expect(fixed.attempts).toBe(r.attempts);
     expect(s.order).toHaveLength(1);
     expect(

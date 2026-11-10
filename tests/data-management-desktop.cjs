@@ -223,16 +223,12 @@ function exists(dir, file) {
     assert.match(await entry.innerText(), /Imported/);
     assert.equal(
       await entry
-        .getByRole("button", { name: "Resolve issue", exact: true })
+        .getByRole("button", { name: "Review issue", exact: true })
         .count(),
       0,
     );
-    await entry
-      .getByRole("button", { name: "Edit details / Advanced", exact: true })
-      .click();
-    await entry
-      .getByText("OCR evidence and diagnostics", { exact: true })
-      .click();
+    await entry.getByText("Advanced", { exact: true }).click();
+    await entry.getByText("Inspect raw OCR evidence", { exact: true }).click();
     assert.match(
       await entry.locator(".ocr-raw").last().innerText(),
       /title-only mission/,

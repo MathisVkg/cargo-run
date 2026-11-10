@@ -3077,3 +3077,64 @@ h3 {
   opacity: 0.45;
   cursor: default;
 }
+
+/* Focused scan and lifecycle review, using existing graphite/purple tokens. */
+.scan-secondary-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.scan-secondary-actions > .scan-advanced {
+  flex: 1;
+  min-width: 0;
+}
+.scan-advanced > summary {
+  cursor: pointer;
+  color: var(--muted);
+  padding: 8px 0;
+}
+.scan-advanced .monitor-buttons {
+  margin: 12px 0;
+}
+.objective-evidence {
+  margin: 12px 0;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.objective-evidence svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+  background: #171c20;
+}
+.objective-evidence figcaption {
+  font-size: 12px;
+  margin-top: 8px;
+  overflow-wrap: anywhere;
+}
+.objective-evidence blockquote {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.compact-scan-issue {
+  padding: 24px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.lifecycle-issues article + article {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+.lifecycle-issues article > details {
+  margin-top: 12px;
+}
+.scan-primary-actions {
+  align-self: center;
+}

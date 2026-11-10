@@ -243,12 +243,8 @@ async function run() {
       .locator(".scan-history-entry")
       .filter({ hasText: "Frontier Supply" })
       .first();
-    await usable
-      .getByRole("button", { name: "Edit details / Advanced", exact: true })
-      .click();
-    await usable
-      .getByText("OCR evidence and diagnostics", { exact: true })
-      .click();
+    await usable.getByText("Advanced", { exact: true }).click();
+    await usable.getByText("Inspect raw OCR evidence", { exact: true }).click();
     assert.ok((await usable.innerText()).includes("Frontier Supply"));
     const imageWorks = await usable
       .locator(".scan-history-thumb img")
@@ -280,7 +276,7 @@ async function run() {
     assert.equal(
       (await state()).captures.find((c) => c.id === selected.id).observation
         .parserVersion,
-      "0.4.1",
+      "0.4.3",
     );
     const before = (await state()).captures;
     await app.close();

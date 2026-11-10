@@ -158,7 +158,10 @@ function note(text, mission, obj) {
       .waitFor();
     const first = page.locator('[data-capture-id="' + ids[0] + '"]');
     assert.match(await first.innerText(), /Imported/);
-    assert.match(await first.innerText(), /Dashboard and Manifest updated/);
+    assert.match(
+      await first.innerText(),
+      /Dashboard and Manifest are up to date/,
+    );
     assert.equal(
       await page
         .getByRole("button", { name: "Check changes", exact: true })
@@ -172,15 +175,17 @@ function note(text, mission, obj) {
     assert.equal((await state()).contracts.length, 2);
     await reparse(ids[1]);
     const duplicate = page.locator('[data-capture-id="' + ids[1] + '"]');
-    assert.match(await duplicate.innerText(), /Ambiguous match/);
+    assert.match(await duplicate.innerText(), /Needs review/);
     await duplicate
-      .getByRole("button", { name: "Resolve issue", exact: true })
+      .getByRole("button", { name: "Review issue", exact: true })
       .click();
-    await duplicate
+    await page
+      .getByRole("dialog", { name: "Review scan", exact: true })
       .getByRole("button", { name: /Rookie Rank.*8 SCU.*OCR/ })
       .click();
-    await duplicate
-      .getByRole("button", { name: "Save corrected scan", exact: true })
+    await page
+      .getByRole("dialog", { name: "Review scan", exact: true })
+      .getByRole("button", { name: "Confirm correction", exact: true })
       .click();
     await duplicate.getByText("Updated", { exact: true }).waitFor();
     assert.equal((await state()).contracts.length, 2);
@@ -252,32 +257,39 @@ function note(text, mission, obj) {
     assert.match(await multiCard.innerText(), /Updated|Imported/);
     assert.equal(
       await multiCard
-        .getByRole("button", { name: "Resolve issue", exact: true })
+        .getByRole("button", { name: "Review issue", exact: true })
         .count(),
       0,
     );
     await reparse(ids[3]);
     const correction = page.locator('[data-capture-id="' + ids[3] + '"]');
     await correction
-      .getByRole("button", { name: "Resolve issue", exact: true })
+      .getByRole("button", { name: "Review issue", exact: true })
       .click();
-    await correction
+    await page
+      .getByRole("dialog", { name: "Review scan", exact: true })
       .getByRole("button", { name: /Rookie Rank.*8 SCU.*OCR/ })
       .click();
-    await correction
+    await page
+      .getByRole("dialog", { name: "Review scan", exact: true })
       .getByLabel("Correct pickupLocation 1", { exact: true })
       .fill("NB Int. Spaceport");
     assert.equal(
-      await correction
+      await page
+        .getByRole("dialog", { name: "Review scan", exact: true })
         .locator(
           ".compact-scan-issue input:not([type=checkbox]):not([type=radio])",
         )
         .count(),
       1,
     );
-    await correction.getByLabel(/I checked the full objective list/).check();
-    await correction
-      .getByRole("button", { name: "Save corrected scan", exact: true })
+    await page
+      .getByRole("dialog", { name: "Review scan", exact: true })
+      .getByLabel(/I checked the full objective list/)
+      .check();
+    await page
+      .getByRole("dialog", { name: "Review scan", exact: true })
+      .getByRole("button", { name: "Confirm correction", exact: true })
       .click();
     await correction.getByText("Updated", { exact: true }).waitFor();
     assert.equal(await correction.locator(".compact-scan-issue").count(), 0);

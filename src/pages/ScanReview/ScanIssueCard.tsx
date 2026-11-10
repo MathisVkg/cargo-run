@@ -1,8 +1,15 @@
+import { ObjectiveEvidence } from "../../components/ocr/ObjectiveEvidence";
 import { useEffect, useState } from "react";
 import type { CaptureRecord } from "../../types/ocr";
 import type { ScanIssue, ResolveScan, ReviewedDraft } from "../../types/review";
 import { useOcrStore } from "../../stores/useOcrStore";
-export function ScanIssueCard({ capture }: { capture: CaptureRecord }) {
+export function ScanIssueCard({
+  capture,
+  onClose,
+}: {
+  capture: CaptureRecord;
+  onClose: () => void;
+}) {
   const [issue, setIssue] = useState<ScanIssue | null>(null),
     [draft, setDraft] = useState<ReviewedDraft | null>(null),
     [target, setTarget] = useState<string | undefined>(),
@@ -52,7 +59,10 @@ export function ScanIssueCard({ capture }: { capture: CaptureRecord }) {
     try {
       const r = await window.cargoRun.resolveScan(payload());
       await refresh();
-      if (r && ["Imported", "Updated"].includes(r.status)) return;
+      if (r && ["Imported", "Updated"].includes(r.status)) {
+        onClose();
+        return;
+      }
       const next = await window.cargoRun.scanIssue(payload());
       setIssue(next);
       setError(r?.message ?? "Review this scan.");
@@ -71,7 +81,32 @@ export function ScanIssueCard({ capture }: { capture: CaptureRecord }) {
     });
   return (
     <div className="compact-scan-issue">
-      <p>{issue.outcome.message}</p>
+      {capture.observation?.objectives.some(
+        (o) =>
+          o.requiredSCU.state === "Ambiguous" ||
+          o.deliveredSCU.state === "Ambiguous",
+      ) ? (
+        <>
+          <h3>Check cargo quantity</h3>
+          {capture.observation.objectives.map(
+            (o, i) =>
+              (o.requiredSCU.state === "Ambiguous" ||
+                o.deliveredSCU.state === "Ambiguous") && (
+                <div key={i}>
+                  <p>
+                    Cargo Run detected{" "}
+                    {o.requiredSCU.value ?? "an unreadable quantity"} SCU for{" "}
+                    {o.commodity.value ?? "cargo"} (objective {i + 1}) but
+                    couldn't confirm it reliably.
+                  </p>
+                  <ObjectiveEvidence capture={capture} index={i} />
+                </div>
+              ),
+          )}
+        </>
+      ) : (
+        <p>{issue.outcome.message}</p>
+      )}
       {(issue.review.targets.length > 0 ||
         issue.outcome.message.includes("already closed") ||
         capture.historyRemoved) && (
@@ -306,14 +341,10 @@ export function ScanIssueCard({ capture }: { capture: CaptureRecord }) {
         disabled={busy}
         onClick={() => void submit()}
       >
-        Save corrected scan
+        Confirm correction
       </button>
-      <button
-        className="button"
-        disabled={busy}
-        onClick={() => void load(target)}
-      >
-        Cancel changes
+      <button className="button" disabled={busy} onClick={onClose}>
+        Cancel
       </button>
       {error && (
         <p className="form-error" role="alert">

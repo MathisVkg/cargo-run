@@ -1,3 +1,4 @@
+import { locationIdentity, commodityIdentity } from "./ocr/objectiveEvidence";
 import { createHash } from "node:crypto";
 import type { CargoDatabase } from "./storage/database";
 import type { Contract } from "../../src/types/models";
@@ -93,12 +94,12 @@ function objectiveAgreement(c: Contract, p: Contract, ids = false) {
   return c.cargoObjectives.every((o) => {
     const rows = p.cargoObjectives.filter(
       (r) =>
-        norm(r.commodity) === norm(o.commodity) &&
-        norm(r.destination) === norm(o.destination) &&
+        commodityIdentity(r.commodity) === commodityIdentity(o.commodity) &&
+        locationIdentity(r.destination, o.destination) &&
         r.quantitySCU === o.quantitySCU &&
         (!r.pickupLocation ||
           !o.pickupLocation ||
-          norm(r.pickupLocation) === norm(o.pickupLocation)) &&
+          locationIdentity(r.pickupLocation, o.pickupLocation)) &&
         (!ids ||
           (!!o.externalObjectiveId &&
             !o.externalObjectiveId.startsWith("fallback-") &&
@@ -277,6 +278,14 @@ function associate(
     missionId: e.missionId,
     sources: [...new Set([...(c.sources ?? [c.source]), "Log" as const])],
     missionAssociation: { source, at: new Date().toISOString(), eventId: e.id },
+    associationDiagnostics: {
+      decision: "Verified" as const,
+      reason:
+        source === "User confirmed"
+          ? "Explicitly confirmed by the user."
+          : "Unique objective identifiers and cargo evidence agree.",
+      candidateMissionIds: [e.missionId],
+    },
   };
   const linked = cs.map((c) => (c.id === id ? next : c)),
     after = applyMissionEvent(linked, e).contracts;

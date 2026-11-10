@@ -1,3 +1,4 @@
+import { corroborateQuantities } from "./ocr/objectiveEvidence";
 import { reconcileAcceptedMissions } from "./association";
 import {
   retainReward,
@@ -414,14 +415,21 @@ export class TrackingService {
   }
   processScan(captureId: string, resolution?: unknown) {
     const options = resolution ? this.scanOptions(resolution) : { captureId };
-    const repo = new CaptureRepository(this.database),
-      c = repo.get(captureId);
+    const repo = new CaptureRepository(this.database);
+    let c = repo.get(captureId);
     if (!c?.observation) return null;
     if (
       resolution &&
       options.observationHash !== versionOf([c.result, c.observation])
     )
       throw Error("OCR changed; reload this issue.");
+    if (!resolution) {
+      const checked = corroborateQuantities(this.database, c);
+      if (checked !== c) {
+        repo.put(checked);
+        c = checked;
+      }
+    }
     if (
       !resolution &&
       c.importResult?.processedHash === versionOf([c.result, c.observation]) &&
@@ -889,7 +897,19 @@ export class TrackingService {
       // New log identity evidence can make a previously local association ambiguous.
       // This only inspects saved observations; it never captures or scans the game.
       const repo = new CaptureRepository(this.database);
-      for (const c of repo.list())
+      for (const c of repo.list()) {
+        if (
+          c.importResult?.status === "Pending corrections" &&
+          c.observation?.objectives.some(
+            (o) => o.quantityEvidence?.code === "NumericConfidence",
+          )
+        ) {
+          try {
+            this.processScan(c.id);
+          } catch {
+            /* Retain the issue if enrichment fails. */
+          }
+        }
         if (
           c.observation &&
           c.evidenceLink &&
@@ -913,6 +933,7 @@ export class TrackingService {
             /* Evidence issues cannot invalidate committed mission events. */
           }
         }
+      }
       this.publish();
     }
     for (const event of accepted) {

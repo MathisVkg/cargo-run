@@ -1,3 +1,4 @@
+import { establishCoverage } from "./coverage";
 import type { CargoDatabase } from "../storage/database";
 import type { DomainSnapshot } from "../../../src/types/tracking";
 import type { CaptureRecord } from "../../../src/types/ocr";
@@ -190,6 +191,14 @@ export function inspectScan(
     status: ScanOutcome["status"] = "Pending corrections";
   const coverageEstablished =
     c.observation!.coverage?.state === "Established" ||
+    (c.observation!.objectives.some(
+      (r) =>
+        r.requiredSCU.state === "Ambiguous" ||
+        r.deliveredSCU.state === "Ambiguous",
+    ) &&
+      c.result &&
+      establishCoverage(c.result, c.observation!, true).state ===
+        "Established") ||
     (!!selected?.missionId &&
       state.contracts.some((c) => c.id === selected.id) &&
       selected.cargoObjectives.length > 0 &&

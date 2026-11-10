@@ -162,14 +162,26 @@ async function cargo(action, q) {
     await nav("Scan History");
     const entry = page.locator('[data-capture-id="' + id + '"]');
     await entry
-      .getByRole("button", { name: "Resolve issue", exact: true })
+      .getByRole("button", { name: "Review issue", exact: true })
       .waitFor();
+    await entry.locator(".scan-advanced > summary").click();
     await entry
       .getByRole("button", { name: "Reprocess saved OCR", exact: true })
       .click();
     await entry
-      .getByText(/Offline OCR is recognizing|queued for offline OCR/)
+      .locator("p.form-note")
+      .filter({ hasText: /Offline OCR is recognizing|queued for offline OCR/ })
       .waitFor();
+    assert(
+      await entry
+        .getByRole("button", { name: "Processing…", exact: true })
+        .isDisabled(),
+    );
+    assert(
+      await entry
+        .getByRole("button", { name: "Reprocess saved OCR", exact: true })
+        .isDisabled(),
+    );
     await page.screenshot({
       path: "work/ocr-recovery-processing-v062.png",
       animations: "disabled",
@@ -218,7 +230,10 @@ async function cargo(action, q) {
     );
     c = (await ocr()).captures[0];
     assert.equal(c.recovery.status, "Unchanged");
-    await entry.getByText(/same information was extracted/).waitFor();
+    await entry
+      .locator("p.form-note")
+      .filter({ hasText: /same information was extracted/ })
+      .waitFor();
     assert.deepEqual(
       JSON.parse(JSON.stringify((await state()).contracts[0].cargoObjectives)),
       before,

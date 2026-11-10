@@ -141,4 +141,48 @@ describe("Validated cargo progress quantities", () => {
       [5, "Recognized"],
     ]);
   });
+  it.each([3, 9, 10, 12, 15, 25, 31, 125, 715])(
+    "accepts corroborated %i SCU without a digit-count rule",
+    (required) => {
+      const r = change(
+          "Deliver 0/" + required + " SCU of Agricultural Supplies to Port",
+        ),
+        l = r.lines.find((l) => /Deliver/.test(l.text))!;
+      l.words = [{ text: "0/" + required, box: l.box, confidence: 69 }];
+      l.quantityCheck = { text: "0/" + required, box: l.box, confidence: 95 };
+      const row = parse(r).objectives[0];
+      expect(row.requiredSCU).toMatchObject({
+        value: required,
+        state: "Recognized",
+      });
+      expect(row.deliveredSCU.value).toBe(0);
+      expect(row.quantityEvidence?.source).toBe("Region OCR");
+    },
+  );
+  it("retains 715 versus 15 disagreement and does not treat a cloned string as independent proof", () => {
+    const r = change("Deliver 0/715 SCU of Agricultural Supplies to Port"),
+      l = r.lines.find((l) => /Deliver/.test(l.text))!;
+    l.words = [{ text: "0/715", box: l.box, confidence: 69 }];
+    // A separately recognized crop disagrees: neither value may import automatically.
+    l.quantityCheck = { text: "0/15", box: l.box, confidence: 96 };
+    expect(parse(r).objectives[0].requiredSCU.state).toBe("Ambiguous");
+    delete l.quantityCheck;
+    r.text = l.text;
+    expect(parse(r).objectives[0].requiredSCU.state).toBe("Ambiguous");
+  });
+
+  it("keeps inconsistent word/line evidence ambiguous even when a regional pass agrees with the line", () => {
+    const r = change("Deliver 0/15 SCU of Agricultural Supplies to Port"),
+      l = r.lines.find((l) => /Deliver/.test(l.text))!;
+    l.words = [{ text: "0/715", box: l.box, confidence: 69 }];
+    l.quantityCheck = { text: "0/15", box: l.box, confidence: 95 };
+    expect(parse(r).objectives[0].requiredSCU.state).toBe("Ambiguous");
+  });
+  it("does not accept a second uncertain reading as independent confirmation", () => {
+    const r = change("Deliver 0/12 SCU of Agricultural Supplies to Port"),
+      l = r.lines.find((l) => /Deliver/.test(l.text))!;
+    l.words = [{ text: "0/12", box: l.box, confidence: 69 }];
+    l.quantityCheck = { text: "0/12", box: l.box, confidence: 60 };
+    expect(parse(r).objectives[0].requiredSCU.state).toBe("Ambiguous");
+  });
 });

@@ -2,42 +2,36 @@ import { useState } from "react";
 import { Camera, Trash2 } from "lucide-react";
 import { PageHeader, Badge, EmptyState } from "../../components/ui";
 import { Overlay } from "../../components/ui/Overlay";
+import { ContractDetails } from "../../components/contracts/ContractDetails";
 import { captureImage, useOcrStore } from "../../stores/useOcrStore";
 import { useCargoStore } from "../../stores/useCargoStore";
-import {
-  reviewCaptures,
-  failedAutomaticAttempt,
-} from "../../utils/captureReview";
+import { reviewCaptures, scanPresentation } from "../../utils/captureReview";
 import { date, money, number } from "../../utils/format";
 import { ContractReview } from "./ContractReview";
 import { ScanIssueCard } from "./ScanIssueCard";
 export default function ScanReview() {
-  const {
-      state,
-      busy,
-      error,
-      capture,
-      reparse,
-      reprocess,
-      retry,
-      remove,
-      clear,
-    } = useOcrStore((s) => s),
+  const { state, busy, error, capture, reparse, reprocess, remove, clear } =
+    useOcrStore((s) => s);
+  const contracts = useCargoStore((s) => s.contracts),
     setPage = useCargoStore((s) => s.setPage);
   const [filter, setFilter] = useState("All"),
     [editing, setEditing] = useState<string | null>(null),
-    [advanced, setAdvanced] = useState<string | null>(null),
+    [detailed, setDetailed] = useState<string | null>(null),
     [large, setLarge] = useState<string | null>(null),
     [confirm, setConfirm] = useState(false),
+    [deleting, setDeleting] = useState<string | null>(null),
+    [viewing, setViewing] = useState<string | null>(null),
+    [expanded, setExpanded] = useState<Record<string, boolean>>({}),
     [missing, setMissing] = useState<Set<string>>(new Set());
   const rows = reviewCaptures(state?.captures ?? []),
-    selected = state?.captures.find((c) => c.id === large);
+    selected = state?.captures.find((c) => c.id === large),
+    review = state?.captures.find((c) => c.id === editing);
   return (
     <>
       <PageHeader
         eyebrow="CARGO / SCANS"
         title="Scan History & Issues"
-        description="Valid accepted contracts import automatically. Resolve only the scans that need attention."
+        description="Accepted contracts import automatically. Review only the scans that need attention."
       >
         <button
           className="button"
@@ -57,7 +51,14 @@ export default function ScanReview() {
         </button>
       </PageHeader>
       <div className="monitor-buttons scan-filters">
-        {["All", "Imported", "Updated", "Issues", "Failed"].map((f) => (
+        {[
+          "All",
+          "Imported",
+          "Updated",
+          "Needs review",
+          "Processing",
+          "Failed",
+        ].map((f) => (
           <button
             key={f}
             className={"button " + (filter === f ? "primary" : "")}
@@ -86,30 +87,34 @@ export default function ScanReview() {
       <div className="scan-history">
         {rows
           .filter(
-            (c) =>
-              filter === "All" ||
-              (filter === "Issues" &&
-                !["Imported", "Updated", "Failed"].includes(
-                  c.importResult?.status ??
-                    (c.status === "Failed" ? "Failed" : ""),
-                )) ||
-              filter ===
-                (c.importResult?.status ??
-                  (c.status === "Failed" ? "Failed" : "")),
+            (c) => filter === "All" || scanPresentation(c).status === filter,
           )
           .map((c) => {
-            const outcome = c.importResult,
-              status = ["Captured", "Processing"].includes(c.status)
-                ? "OCR processing"
-                : (outcome?.status ??
-                  (c.status === "Failed"
-                    ? "Failed"
-                    : c.evidenceLink
-                      ? "Updated"
-                      : "Pending corrections")),
-              success = status === "Imported" || status === "Updated";
+            const { status, message } = scanPresentation(c),
+              success = status === "Imported" || status === "Updated",
+              processing = status === "Processing";
             const image = !!c.screenshot && !missing.has(c.id),
-              o = c.observation;
+              o = c.observation,
+              contractId =
+                c.importResult?.contractId ?? c.evidenceLink?.contractId;
+            const linked = success
+              ? contracts.find((t) => t.id === contractId)
+              : undefined;
+            const cargoText = linked
+              ? linked.cargoObjectives
+                  .map(
+                    (r) => r.commodity + " · " + number(r.quantitySCU) + " SCU",
+                  )
+                  .join("; ")
+              : o?.objectives
+                  .map(
+                    (r) =>
+                      (r.commodity.value ?? "Cargo") +
+                      " · " +
+                      number(r.requiredSCU.value ?? 0) +
+                      " SCU",
+                  )
+                  .join("; ");
             return (
               <section
                 className="panel scan-history-entry"
@@ -135,17 +140,15 @@ export default function ScanReview() {
                     </span>
                   )}
                   <div className="scan-history-text">
-                    <h2>{o?.title.value ?? "Capture " + date(c.capturedAt)}</h2>
+                    <h2>
+                      {linked?.name ??
+                        o?.title.value ??
+                        "Capture " + date(c.capturedAt)}
+                    </h2>
                     <p>
-                      {o
-                        ? number(
-                            o.objectives.reduce(
-                              (n, r) => n + (r.requiredSCU.value ?? 0),
-                              0,
-                            ),
-                          ) + " SCU"
-                        : c.status}{" "}
-                      · {money(o?.reward.value ?? null)} · {date(c.capturedAt)}
+                      {cargoText ?? "Recognition pending"} ·{" "}
+                      {money(linked?.payout ?? o?.reward.value ?? null)} ·{" "}
+                      {date(c.capturedAt)}
                     </p>
                     <Badge
                       tone={
@@ -158,143 +161,162 @@ export default function ScanReview() {
                     >
                       {status}
                     </Badge>
-                    <p
-                      role={
-                        c.recovery?.status === "Failed" ? "alert" : "status"
-                      }
-                      className={
-                        c.recovery?.status === "Failed"
-                          ? "form-error"
-                          : undefined
-                      }
-                    >
-                      {c.recovery?.message ??
-                        (success
-                          ? "Dashboard and Manifest updated."
-                          : (outcome?.message ??
-                            c.error ??
-                            "Reprocess saved OCR to import this earlier scan."))}
-                    </p>
-                    {failedAutomaticAttempt(c) && (
-                      <small>
-                        {
-                          state!.captures.filter(
-                            (p) =>
-                              p.trigger?.requestId === c.trigger?.requestId,
-                          ).length
-                        }{" "}
-                        capture attempts · {c.validationMessage ?? c.error}
-                      </small>
-                    )}
+                    <p role="status">{message}</p>
                   </div>
-                  <div className="monitor-buttons">
-                    {!success && o && (
+                  <div className="monitor-buttons scan-primary-actions">
+                    {success && (
+                      <button
+                        className="button"
+                        disabled={!contracts.some((t) => t.id === contractId)}
+                        onClick={() => setViewing(contractId ?? null)}
+                      >
+                        View contract
+                      </button>
+                    )}
+                    {status === "Needs review" && o && (
                       <button
                         className="button primary"
-                        onClick={() => {
-                          setEditing(editing === c.id ? null : c.id);
-                          setAdvanced(null);
-                        }}
-                      >
-                        Resolve issue
-                      </button>
-                    )}
-                    <button
-                      className="button"
-                      disabled={!o}
-                      onClick={() => {
-                        setAdvanced(advanced === c.id ? null : c.id);
-                        setEditing(null);
-                      }}
-                    >
-                      Edit details / Advanced
-                    </button>
-                    {(c.result || c.screenshot) && (
-                      <button
-                        className="button"
-                        disabled={
-                          busy || ["Captured", "Processing"].includes(c.status)
-                        }
-                        onClick={() => {
-                          setEditing(null);
-                          void reprocess(c.id);
-                        }}
-                      >
-                        Reprocess saved OCR
-                      </button>
-                    )}
-                    {c.result && (
-                      <button
-                        className="text-button"
-                        disabled={
-                          busy || ["Captured", "Processing"].includes(c.status)
-                        }
-                        title="Rerun structured extraction from saved text; this does not recognize the screenshot again."
-                        onClick={() => {
-                          setEditing(null);
-                          void reparse(c.id);
-                        }}
-                      >
-                        Re-extract saved text
-                      </button>
-                    )}
-                    {c.status === "Failed" && image && (
-                      <button
-                        className="button"
                         disabled={busy}
-                        onClick={() => void retry(c.id)}
+                        onClick={() => setEditing(c.id)}
                       >
-                        Retry OCR
+                        Review issue
                       </button>
                     )}
-                    {!image && (
+                    {status === "Failed" && (
                       <button
-                        className="button"
-                        disabled={busy || !state?.captureAvailable}
-                        onClick={() => void capture()}
+                        className="button primary"
+                        disabled={busy || !image}
+                        onClick={() => void reprocess(c.id)}
                       >
-                        Retry capture
+                        Retry recognition
                       </button>
                     )}
-                    <button
-                      className="button"
-                      disabled={busy}
-                      onClick={() => void remove(c.id)}
-                    >
-                      Delete capture
-                    </button>
+                    {processing && (
+                      <button className="button" disabled>
+                        Processing…
+                      </button>
+                    )}
+                    {status === "Failed" && !image && (
+                      <small>Saved screenshot unavailable.</small>
+                    )}
                   </div>
                 </div>
-                {editing === c.id && o && !success && (
-                  <ScanIssueCard capture={c} />
-                )}
-                {advanced === c.id && o && (
-                  <div className="scan-advanced">
-                    <ContractReview capture={c} />
-                    <details>
-                      <summary>OCR evidence and diagnostics</summary>
-                      <pre className="ocr-raw">
-                        {JSON.stringify(
-                          {
-                            recovery: c.recovery,
-                            originalRecognition: c.originalRecognition,
-                            recognitionHistory: c.recognitionHistory,
-                            result: c.result,
-                            observation: o,
-                            trigger: c.trigger,
-                            importResult: outcome,
-                          },
-                          null,
-                          2,
+                <div className="scan-secondary-actions">
+                  <details
+                    className="scan-advanced"
+                    open={expanded[c.id] ?? false}
+                    onToggle={(e) => {
+                      const open = e.currentTarget.open;
+                      setExpanded((v) =>
+                        v[c.id] === open ? v : { ...v, [c.id]: open },
+                      );
+                    }}
+                  >
+                    <summary>Advanced</summary>
+                    {expanded[c.id] && (
+                      <>
+                        <div className="monitor-buttons">
+                          {(c.result || c.screenshot) && (
+                            <button
+                              className="button"
+                              disabled={busy || processing || !image}
+                              onClick={() => {
+                                setEditing(null);
+                                void reprocess(c.id);
+                              }}
+                            >
+                              Reprocess saved OCR
+                            </button>
+                          )}
+                          {c.result && (
+                            <button
+                              className="button"
+                              disabled={busy || processing}
+                              onClick={() => {
+                                setEditing(null);
+                                void reparse(c.id);
+                              }}
+                            >
+                              Re-extract saved text
+                            </button>
+                          )}
+                          <button
+                            className="button"
+                            disabled={!o || processing}
+                            onClick={() =>
+                              setDetailed(detailed === c.id ? null : c.id)
+                            }
+                          >
+                            Detailed field editing
+                          </button>
+                        </div>
+                        {c.recovery && (
+                          <p
+                            className="form-note"
+                            role={
+                              c.recovery.status === "Failed"
+                                ? "alert"
+                                : undefined
+                            }
+                          >
+                            Last recognition attempt: {c.recovery.message}
+                          </p>
                         )}
-                      </pre>
-                    </details>
-                  </div>
-                )}
+                        {detailed === c.id && o && (
+                          <ContractReview capture={c} />
+                        )}
+                        <details>
+                          <summary>Inspect raw OCR evidence</summary>
+                          <pre className="ocr-raw">
+                            {JSON.stringify(
+                              {
+                                recovery: c.recovery,
+                                originalRecognition: c.originalRecognition,
+                                recognitionHistory: c.recognitionHistory,
+                                result: c.result,
+                                observation: o,
+                                trigger: c.trigger,
+                                importResult: c.importResult,
+                              },
+                              null,
+                              2,
+                            )}
+                          </pre>
+                        </details>
+                      </>
+                    )}
+                  </details>
+                  <button
+                    className="text-button"
+                    disabled={busy || processing}
+                    onClick={() => setDeleting(c.id)}
+                  >
+                    Delete capture
+                  </button>
+                </div>
               </section>
             );
           })}
       </div>
+      <Overlay
+        open={!!review}
+        onClose={() => setEditing(null)}
+        title="Review scan"
+        subtitle="CHECK RECOGNIZED DETAILS"
+        side="center"
+      >
+        {review && (
+          <ScanIssueCard
+            key={review.id}
+            capture={review}
+            onClose={() => setEditing(null)}
+          />
+        )}
+      </Overlay>
+      <ContractDetails
+        contract={contracts.find((c) => c.id === viewing) ?? null}
+        onClose={() => setViewing(null)}
+      />
       <Overlay
         open={!!large}
         onClose={() => setLarge(null)}
@@ -309,32 +331,47 @@ export default function ScanReview() {
         )}
       </Overlay>
       <Overlay
-        open={confirm}
-        onClose={() => setConfirm(false)}
-        title="Clear stored captures?"
+        open={confirm || !!deleting}
+        onClose={() => {
+          setConfirm(false);
+          setDeleting(null);
+        }}
+        title={deleting ? "Delete this capture?" : "Clear stored captures?"}
         subtitle="SCREENSHOTS"
         side="center"
       >
         <div className="dialog-body">
           <p>
-            Delete screenshot files and capture records? Contracts and linked
-            text evidence remain.
+            Delete{" "}
+            {deleting
+              ? "this screenshot and its capture record"
+              : "screenshot files and capture records"}
+            ? Contracts, linked text evidence and correction history remain.
           </p>
         </div>
         <div className="dialog-actions">
-          <button className="button" onClick={() => setConfirm(false)}>
+          <button
+            className="button"
+            onClick={() => {
+              setConfirm(false);
+              setDeleting(null);
+            }}
+          >
             Cancel
           </button>
           <button
             className="button danger"
+            disabled={busy}
             onClick={() => {
+              const id = deleting;
               setConfirm(false);
+              setDeleting(null);
               setEditing(null);
-              setAdvanced(null);
-              void clear();
+              if (id) void remove(id);
+              else void clear();
             }}
           >
-            Confirm clear captures
+            {deleting ? "Confirm delete capture" : "Confirm clear captures"}
           </button>
         </div>
       </Overlay>

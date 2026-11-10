@@ -14,7 +14,7 @@ let app, page;
 const errors = [],
   ids = [randomUUID(), randomUUID(), randomUUID()],
   missions = [randomUUID(), randomUUID(), randomUUID()];
-const time = "2026-11-02T19:30:00.000Z";
+const time = new Date(Date.now() - 5000).toISOString();
 async function launch() {
   app = await _electron.launch({
     args: [path.resolve("out/main/index.js")],
@@ -160,7 +160,7 @@ async function cargo(c, action, q) {
         ids[i],
         JSON.stringify({
           id: ids[i],
-          capturedAt: "2026-11-02T19:00:00.000Z",
+          capturedAt: new Date(Date.now() - 1800000).toISOString(),
           source: "Manual",
           status: "Processed",
           displayId: "fixture",
@@ -257,12 +257,14 @@ async function cargo(c, action, q) {
     const panel = page.getByRole("region", {
       name: "Mission lifecycle reconciliation",
     });
-    await panel.locator("> details > summary").click();
+    await panel
+      .getByRole("button", { name: "Choose another contract", exact: true })
+      .click();
     await panel
       .getByLabel("Tracked contract for " + missions[0], { exact: true })
       .selectOption(first.id);
     const apply = panel.getByRole("button", {
-      name: "Associate and apply completion",
+      name: "Confirm match",
       exact: true,
     });
     assert(await apply.isDisabled());

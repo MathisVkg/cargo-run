@@ -90,6 +90,7 @@ let app;
       .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name: /^Scan History/ })
       .click();
+    await page.locator(".scan-advanced > summary").first().click();
     await page
       .getByRole("button", { name: "Re-extract saved text", exact: true })
       .click();

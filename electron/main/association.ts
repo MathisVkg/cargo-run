@@ -1,3 +1,4 @@
+import { locationIdentity, commodityIdentity } from "./ocr/objectiveEvidence";
 import type { CargoDatabase } from "./storage/database";
 import type { Contract } from "../../src/types/models";
 import type { ContractObservation } from "../../src/types/ocr";
@@ -20,12 +21,12 @@ function exactRows(a: Contract, b: Contract, ids = false) {
     a.cargoObjectives.every((o) => {
       const matches = b.cargoObjectives.filter(
         (r) =>
-          norm(o.commodity) === norm(r.commodity) &&
-          norm(o.destination) === norm(r.destination) &&
+          commodityIdentity(o.commodity) === commodityIdentity(r.commodity) &&
+          locationIdentity(o.destination, r.destination) &&
           o.quantitySCU === r.quantitySCU &&
           (!o.pickupLocation ||
             !r.pickupLocation ||
-            norm(o.pickupLocation) === norm(r.pickupLocation)) &&
+            locationIdentity(o.pickupLocation, r.pickupLocation)) &&
           (!ids ||
             (!!o.externalObjectiveId &&
               !o.externalObjectiveId.startsWith("fallback-") &&
@@ -158,7 +159,15 @@ export function reconcileAcceptedMissions(
           );
           continue;
         }
-        const evidenceIds = [String(accepted.id)];
+        const evidenceIds = [
+          String(accepted.id),
+          ...db.db
+            .prepare(
+              "SELECT id FROM mission_events WHERE mission_id=? AND kind='Objective' LIMIT 100",
+            )
+            .all(p.missionId)
+            .map((r) => String(r.id)),
+        ];
         let proof: Proof | null = null;
         if (exactRows(c, p, true))
           proof = {
@@ -227,6 +236,15 @@ export function reconcileAcceptedMissions(
             !archived.has(other.missionId!) &&
             norm(other.name) === norm(c.name) &&
             alive(other, capture.at) &&
+            // Known incompatible quantities/destinations contradict a context match.
+            (proof!.source !== "Acceptance context" ||
+              !other.cargoObjectives.length ||
+              exactRows(c, other)) &&
+            // Unknown historical titles cannot own this bounded acceptance context.
+            // Complete matching objective evidence remains a competitor regardless of age.
+            (!!other.cargoObjectives.length ||
+              (other.acceptedAt &&
+                capture.at - Date.parse(other.acceptedAt) <= 600000)) &&
             (proof!.source === "ObjectiveIds"
               ? exactRows(c, other, true)
               : proof!.source === "Objective details"

@@ -152,6 +152,9 @@ async function progress(action, quantity) {
     );
     await nav("Scan History");
     await page
+      .locator('[data-capture-id="' + captureId + '"] .scan-advanced > summary')
+      .click();
+    await page
       .locator('[data-capture-id="' + captureId + '"]')
       .getByRole("button", { name: "Re-extract saved text", exact: true })
       .click();

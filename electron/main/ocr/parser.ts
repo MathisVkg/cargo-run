@@ -623,6 +623,11 @@ export function extractContract(
         "A delivery quantity is uncertain (missing progress separator, low confidence, or invalid total); review its evidence.",
       );
     objectives.push({
+      quantityEvidence: {
+        source: quantity.source,
+        reason: quantity.reason,
+        code: quantity.code,
+      },
       commodity: field(commodity || null, p.lines, "Primary Objectives"),
       destination: field(
         destination || null,
@@ -671,7 +676,14 @@ export function extractContract(
         rows.reduce((n, r) => n + (r.requiredSCU.value ?? 0), 0) - total,
       ) > 0.000001
     ) {
-      for (const r of rows) r.requiredSCU.state = "Ambiguous";
+      for (const r of rows) {
+        r.requiredSCU.state = "Ambiguous";
+        r.quantityEvidence = {
+          source: "Objective OCR",
+          code: "Conflict",
+          reason: "Delivery and collection quantities disagree.",
+        };
+      }
       warnings.push(
         "Delivery and collection quantities disagree; confirm the objective totals against the screenshot.",
       );
@@ -700,7 +712,7 @@ export function extractContract(
   if (!objectives.length)
     warnings.push("No validated visible delivery objectives were extracted.");
   const observation: ContractObservation = {
-    parserVersion: "0.4.2",
+    parserVersion: "0.4.3",
     captureId,
     capturedAt,
     acceptanceTimestamp: null,

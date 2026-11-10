@@ -184,11 +184,9 @@ function accept(n) {
       .locator(".scan-history-entry")
       .filter({ hasText: "Frontier Supply" })
       .first();
+    await observed.getByText("Advanced", { exact: true }).click();
     await observed
-      .getByRole("button", { name: "Edit details / Advanced", exact: true })
-      .click();
-    await observed
-      .getByText("OCR evidence and diagnostics", { exact: true })
+      .getByText("Inspect raw OCR evidence", { exact: true })
       .click();
     assert.match(
       await observed.locator(".ocr-raw").last().innerText(),

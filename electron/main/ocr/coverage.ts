@@ -4,7 +4,14 @@ const norm = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
-export function establishCoverage(result: OcrResult, o: ContractObservation) {
+export function establishCoverage(
+  result: OcrResult,
+  o: ContractObservation,
+  quantitiesReviewed = false,
+) {
+  const quantities = new Set<object>(
+    o.objectives.flatMap((r) => [r.requiredSCU, r.deliveredSCU]),
+  );
   const fields = o.objectives.flatMap((r) => [
     r.commodity,
     r.pickup,
@@ -15,7 +22,11 @@ export function establishCoverage(result: OcrResult, o: ContractObservation) {
   const invalid =
     !o.objectives.length ||
     fields.some(
-      (f) => f.value === null || f.state !== "Recognized" || !f.evidence?.box,
+      (f) =>
+        f.value === null ||
+        (f.state !== "Recognized" &&
+          !(quantitiesReviewed && quantities.has(f))) ||
+        !f.evidence?.box,
     );
   const clipping =
     /\b(?:SCROLL|MORE OBJECTIVES|CONTINUED)\b/i.test(result.text) ||
