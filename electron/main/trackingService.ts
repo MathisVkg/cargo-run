@@ -175,15 +175,17 @@ export class TrackingService {
     };
   }
   snapshot(): AppSnapshot {
+    const domain = this.domain(),
+      automation = workflow(this.database);
     return {
-      ...this.domain(),
-      contracts: this.domain().contracts.filter((c) => !c.supersededBy),
+      ...domain,
+      contracts: domain.contracts.filter((c) => !c.supersededBy),
       workflow: {
-        automaticCompletion: workflow(this.database).automaticCompletion,
+        automaticCompletion: automation.automaticCompletion,
       },
-      lifecycleIssues: workflow(this.database).automaticCompletion
-        ? lifecycleIssues(this.database, this.domain().contracts).filter((i) =>
-            workflow(this.database).eligibleIds.includes(i.eventId),
+      lifecycleIssues: automation.automaticCompletion
+        ? lifecycleIssues(this.database, domain.contracts).filter((i) =>
+            automation.eligibleIds.includes(i.eventId),
           )
         : [],
       preferences: structuredClone(this.preferences),
@@ -203,7 +205,7 @@ export class TrackingService {
           .filter(
             (p) =>
               p.status === "Active" &&
-              !this.domain().contracts.some((c) => c.missionId === p.missionId),
+              !domain.contracts.some((c) => c.missionId === p.missionId),
           ).length,
         events: this.database.diagnostics(),
       },

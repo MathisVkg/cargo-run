@@ -89,7 +89,7 @@ export default function Settings() {
         <details className="settings-section">
           <summary>About &amp; Diagnostics</summary>
           <div className="settings-section-body">
-            <h2>Cargo Run 0.8.0</h2>
+            <h2>Cargo Run 0.8.1</h2>
             <p>
               Local Windows companion · SQLite · offline OCR. Independent
               application, not affiliated with Cloud Imperium Games.

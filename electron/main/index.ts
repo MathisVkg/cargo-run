@@ -6,11 +6,13 @@ import {
   dialog,
   protocol,
 } from "electron";
+import { startupMark } from "./startup";
 import { LocalDataManager } from "./storage/maintenance";
 import { join } from "node:path";
 import { TrackingService } from "./trackingService";
 import { createOcrQueue, registerCaptureProtocol } from "./ocr/integration";
 import type { OcrQueue } from "./ocr/queue";
+startupMark("main-module-loaded");
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "cargo-capture",
@@ -21,6 +23,7 @@ let ocr: OcrQueue;
 let service: TrackingService;
 let trackingQueue: Promise<unknown> = Promise.resolve();
 let quitting = false;
+let servicesReady: Promise<void> = Promise.resolve();
 let maintenance: LocalDataManager;
 let maintenanceEpoch = 0;
 
@@ -33,6 +36,7 @@ const isTrusted = (event: Electron.IpcMainInvokeEvent): boolean => {
   );
 };
 function createWindow(): void {
+  startupMark("window-creation-start");
   mainWindow = new BrowserWindow({
     title: "Cargo Run",
     width: 1440,
@@ -63,7 +67,11 @@ function createWindow(): void {
   win.webContents.on("did-start-loading", () => {
     if (ocr) ocr.endShortcutRecording();
   });
-  win.once("ready-to-show", () => win.show());
+  win.once("ready-to-show", () => {
+    win.show();
+    startupMark("window-visible");
+  });
+  win.webContents.once("did-finish-load", () => startupMark("renderer-loaded"));
   win.on("maximize", () => win.webContents.send("window:maximized", true));
   win.on("unmaximize", () => win.webContents.send("window:maximized", false));
   win.on("closed", () => {
@@ -82,20 +90,20 @@ function createWindow(): void {
 }
 app.setName("Cargo Run");
 app.setAppUserModelId("com.cargorun.desktop");
-if (
-  !app.isPackaged &&
-  process.env.NODE_ENV === "test" &&
-  process.env.CARGO_RUN_TEST_USER_DATA
-)
+if (!app.isPackaged && process.env.CARGO_RUN_TEST_USER_DATA)
   app.setPath("userData", process.env.CARGO_RUN_TEST_USER_DATA);
 if (!app.requestSingleInstanceLock()) app.quit();
 else
   app
     .whenReady()
     .then(async () => {
+      startupMark("electron-ready");
+      const trackingStarted = performance.now();
       service = new TrackingService(
         join(app.getPath("userData"), "cargo-run.sqlite"),
       );
+      startupMark("tracking-loaded", trackingStarted);
+      const ocrStarted = performance.now();
       ocr = createOcrQueue(service.database);
       const connectOcr = () => {
         ocr.onRecognized = (id) => service.processScan(id);
@@ -126,7 +134,7 @@ else
           },
         },
       );
-      await ocr.initialize();
+
       service.onChange = (state) => {
         ocr.refreshEvidence();
         if (mainWindow && !mainWindow.isDestroyed())
@@ -137,8 +145,12 @@ else
         action: (payload: unknown) => unknown,
         serial = false,
       ): void => {
-        ipcMain.handle(channel, (event, payload: unknown) => {
+        ipcMain.handle(channel, async (event, payload: unknown) => {
           if (!isTrusted(event)) throw new Error("Untrusted Cargo Run request");
+          // Snapshots can render immediately; mutations wait for recovery, shortcut
+          // registration and monitoring so deferred startup cannot race user actions.
+          if (!["cargo:getState", "ocr:state", "data:stats"].includes(channel))
+            await servicesReady;
           if (
             maintenance.busy &&
             !["cargo:getState", "ocr:state", "data:stats"].includes(channel)
@@ -229,7 +241,12 @@ else
       register("ocr:delete", (id) => ocr.delete(id));
       register("ocr:clear", () => ocr.clear());
       register("ocr:displays", () => ocr.refreshDisplays());
-      register("cargo:getState", () => service.snapshot());
+      register("cargo:getState", () => {
+        const started = performance.now();
+        const state = service.snapshot();
+        startupMark("initial-data-query", started);
+        return state;
+      });
       register(
         "lifecycle:resolve",
         (input) => service.resolveLifecycle(input),
@@ -265,7 +282,7 @@ else
       register("tracking:start", () => service.start(), true);
       register("tracking:stop", () => service.stop(), true);
       register("tracking:import", () => service.importHistory(), true);
-      await service.resume();
+
       ipcMain.handle("window:command", (event, command: unknown) => {
         if (!isTrusted(event) || !mainWindow)
           throw new Error("Untrusted window request");
@@ -289,6 +306,14 @@ else
         return mainWindow?.isMaximized() ?? false;
       });
       createWindow();
+      servicesReady = (async () => {
+        await ocr.initialize();
+        startupMark("capture-initialized", ocrStarted);
+        const monitorStarted = performance.now();
+        await service.resume();
+        startupMark("monitor-resumed", monitorStarted);
+      })();
+      await servicesReady;
       app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
       });
@@ -312,6 +337,7 @@ app.on("before-quit", (event) => {
   quitting = true;
   void trackingQueue
     .then(async () => {
+      await servicesReady.catch(() => {});
       if (ocr) await ocr.close();
       await service.close();
     })

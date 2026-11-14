@@ -16,6 +16,19 @@ export default defineConfig({
   },
   renderer: {
     root: ".",
+    server: {
+      watch: {
+        ignored: [
+          "**/work/**",
+          "**/backups/**",
+          "**/out/**",
+          "**/dist/**",
+          "**/coverage/**",
+          "**/resources/native/**",
+        ],
+      },
+    },
+    optimizeDeps: { entries: ["src/main.tsx"] },
     plugins: [react(), tailwindcss()],
     build: { rollupOptions: { input: resolve("index.html") } },
   },

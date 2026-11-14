@@ -36,6 +36,12 @@ if (
     { stdio: "inherit", windowsHide: true },
   );
 function tone(name, notes) {
+  const destination = path.join(directory, name + ".wav");
+  if (
+    fs.existsSync(destination) &&
+    fs.statSync(destination).mtimeMs >= fs.statSync(__filename).mtimeMs
+  )
+    return;
   const rate = 22050,
     total = notes.reduce((s, n) => s + n[1], 0),
     count = Math.round((rate * total) / 1000),

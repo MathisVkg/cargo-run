@@ -1,3 +1,7 @@
+const synthetic = process.env.CARGO_RUN_SYNTHETIC_CAPTURE === "1";
+const syntheticCapture = synthetic
+  ? require("./helpers/synthetic-capture.cjs")
+  : null;
 // Real Electron Game.log monitoring, secondary pending projection and persisted manual ledger.
 const { _electron } = require("playwright"),
   assert = require("node:assert/strict"),
@@ -30,7 +34,9 @@ let app, page;
 const errors = [];
 async function launch() {
   app = await _electron.launch({
-    args: [path.resolve("out/main/index.js")],
+    args: [
+      synthetic ? syntheticCapture.entry() : path.resolve("out/main/index.js"),
+    ],
     env,
   });
   page = await app.firstWindow();
@@ -38,10 +44,10 @@ async function launch() {
     BrowserWindow.getAllWindows()[0].setSize(1200, 800),
   );
   page.on("pageerror", (e) => errors.push(e.message));
-  await page
-    .getByRole("heading", { name: "Cargo Operations", exact: true })
-    .waitFor();
-  await require("./helpers/beta-desktop.cjs")(page);
+  await page.getByRole("heading", { name: "Contracts", exact: true }).waitFor();
+  await page.evaluate(() =>
+    window.cargoRun.setWorkflow({ automaticCompletion: true }),
+  );
 }
 const state = () => page.evaluate(() => window.cargoRun.getState());
 async function until(check) {
@@ -54,17 +60,9 @@ async function until(check) {
   throw Error("Tracking condition timed out");
 }
 async function nav(name) {
-  if (
-    await page
-      .getByLabel("Hide navigation", { exact: true })
-      .first()
-      .isVisible()
-  )
-    await page.getByLabel("Hide navigation", { exact: true }).first().click();
-  await page.getByLabel("Open navigation", { exact: true }).click();
   await page
     .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: new RegExp("^" + name) })
+    .getByRole("button", { name, exact: true })
     .click();
 }
 function pending(id) {
@@ -102,7 +100,10 @@ function pending(id) {
     await page.evaluate(() => window.cargoRun.selectShip("hull-c"));
     await until((s) => s.selectedShipId === "hull-c");
     await nav("Settings");
-    await page.locator(".monitoring-settings > summary").click();
+    await page
+      .locator(".settings-section > summary")
+      .filter({ hasText: /^Automation$/ })
+      .click();
     await app.evaluate(({ dialog }, file) => {
       dialog.showOpenDialog = async () => ({
         canceled: false,
@@ -148,7 +149,10 @@ function pending(id) {
     assert.equal(pending(B).status, "Completed");
     assert.equal((await state()).contracts.length, 1);
     await nav("Settings");
-    await page.locator(".monitoring-settings > summary").click();
+    await page
+      .locator(".settings-section > summary")
+      .filter({ hasText: /^Automation$/ })
+      .click();
     for (let i = 0; i < 2; i++) {
       await page
         .getByRole("button", { name: "Import existing history", exact: true })
@@ -165,7 +169,10 @@ function pending(id) {
       'Added notification "Contract Accepted: malformed:" MissionId: [invalid]\n',
     );
     await until((s) => s.tracking.parsingErrors === 1);
-    await page.locator(".advanced-panel > summary").click();
+    await page
+      .locator(".settings-section > summary")
+      .filter({ hasText: /^About & Diagnostics$/ })
+      .click();
     await page.getByLabel("Show parsing failures only").check();
     await page.locator(".diagnostic-event summary").click();
     await page
@@ -181,14 +188,9 @@ function pending(id) {
       .getByRole("button", { name: "Stop monitoring", exact: true })
       .click();
     await until((s) => s.tracking.status === "OFFLINE");
-    await nav("Dashboard");
-    await page.getByRole("button", { name: "Finish Run", exact: true }).click();
-    await page
-      .getByRole("button", { name: "Finish run only", exact: true })
-      .click();
-    await page
-      .getByRole("heading", { name: "Contract History", exact: true })
-      .waitFor();
+    await page.evaluate(() => window.cargoRun.finishRun());
+    await nav("History");
+    await page.getByRole("heading", { name: "History", exact: true }).waitFor();
     const before = JSON.parse(JSON.stringify(await state()));
     assert.equal(before.runs[0].contractSnapshots.length, 1);
     await app.close();

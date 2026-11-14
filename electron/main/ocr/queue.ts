@@ -1,3 +1,4 @@
+import { startupMark } from "../startup";
 import type { InputPrototype } from "./rawInput";
 import {
   recognitionKey,
@@ -68,6 +69,7 @@ export class OcrQueue {
   private captureTail: Promise<void> = Promise.resolve();
   private processor: Promise<void> | null = null;
   private closing = false;
+  private initializing = true;
   private recording = false;
   private recordingLease: ReturnType<typeof setTimeout> | null = null;
   private shortcutDiagnostics: ShortcutDiagnostics;
@@ -195,8 +197,9 @@ export class OcrQueue {
           }
         : undefined);
     return {
+      initializing: this.initializing,
       policy: { ...this.policy },
-      storage: this.retention.usage(),
+      storage: this.retention.usage(captures.length),
       automaticRequests: this.automatic.history().slice(0, 120),
       lastSuccessful,
       revision: this.revision,
@@ -255,28 +258,36 @@ export class OcrQueue {
     this.revision = previous + 1;
   }
   async initialize(maintenance = false) {
-    const records = this.repository.list();
-    for (const record of records)
-      if (record.status === "Processing" || record.status === "Captured") {
-        const ready = record.screenshot && existsSync(this.file(record.id));
-        this.repository.put({
-          ...record,
-          status: ready ? "Captured" : "Failed",
-          error: ready
-            ? "Processing interrupted by application exit; resumed."
-            : "Capture interrupted before a screenshot was saved. Capture this screen again.",
-        });
-      }
-    this.automatic.recover();
-    if (this.policy.cleanupEnabled && !maintenance)
-      this.retention.cleanup(this.policy, this.automatic.protectedIds());
-    this.cleanupTimer = setInterval(() => {
-      if (!this.closing && this.policy.cleanupEnabled) this.cleanup();
-    }, 3600000);
-    await this.refreshDisplays();
-    this.registerShortcut();
-    this.publish();
-    this.kick();
+    this.initializing = true;
+    try {
+      const records = this.repository.list();
+      for (const record of records)
+        if (record.status === "Processing" || record.status === "Captured") {
+          const ready = record.screenshot && existsSync(this.file(record.id));
+          this.repository.put({
+            ...record,
+            status: ready ? "Captured" : "Failed",
+            error: ready
+              ? "Processing interrupted by application exit; resumed."
+              : "Capture interrupted before a screenshot was saved. Capture this screen again.",
+          });
+        }
+      this.automatic.recover();
+      if (this.policy.cleanupEnabled && !maintenance)
+        this.retention.cleanup(this.policy, this.automatic.protectedIds());
+      this.cleanupTimer = setInterval(() => {
+        if (!this.closing && this.policy.cleanupEnabled) this.cleanup();
+      }, 3600000);
+      const started = performance.now();
+      await this.refreshDisplays();
+      startupMark("native-displays-ready", started);
+      this.registerShortcut();
+      this.publish();
+      this.kick();
+    } finally {
+      this.initializing = false;
+      this.publish();
+    }
   }
   async refreshDisplays() {
     try {

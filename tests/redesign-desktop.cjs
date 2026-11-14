@@ -1,3 +1,7 @@
+const synthetic = process.env.CARGO_RUN_SYNTHETIC_CAPTURE === "1";
+const syntheticCapture = synthetic
+  ? require("./helpers/synthetic-capture.cjs")
+  : null;
 const { _electron } = require("playwright"),
   fs = require("node:fs"),
   path = require("node:path"),
@@ -5,6 +9,7 @@ const { _electron } = require("playwright"),
   { DatabaseSync } = require("node:sqlite");
 const { execFileSync } = require("node:child_process");
 if (
+  !synthetic &&
   Number(
     execFileSync(
       "powershell.exe",
@@ -35,7 +40,9 @@ const errors = [],
   viewports = [];
 async function launch() {
   app = await _electron.launch({
-    args: [path.resolve("out/main/index.js")],
+    args: [
+      synthetic ? syntheticCapture.entry() : path.resolve("out/main/index.js"),
+    ],
     env,
   });
   page = await app.firstWindow();
@@ -157,6 +164,27 @@ async function fillEditor(name) {
 (async () => {
   try {
     await launch();
+    const security = await app.evaluate(({ BrowserWindow }) => {
+      const p =
+        BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences();
+      return {
+        isolation: p.contextIsolation,
+        node: p.nodeIntegration,
+        sandbox: p.sandbox,
+        webSecurity: p.webSecurity,
+      };
+    });
+    assert.deepEqual(security, {
+      isolation: true,
+      node: false,
+      sandbox: true,
+      webSecurity: true,
+    });
+    assert.equal(await page.evaluate(() => typeof window.require), "undefined");
+    const bridge = await page.evaluate(() => Object.keys(window.cargoRun));
+    assert(bridge.includes("setPreferences"));
+    assert(!bridge.includes("invoke"));
+    assert(!bridge.includes("query"));
     await size(1440, 900);
     const navItems = await page
       .getByRole("navigation", { name: "Main navigation" })
@@ -651,6 +679,74 @@ async function fillEditor(name) {
     db.close();
     assert.deepEqual(errors, []);
     assert(capturesBeforeSave.length >= 1);
+    await page.evaluate(async () => {
+      for (let i = 0; i < 31; i++) {
+        const s = await window.cargoRun.saveContract({
+          draft: {
+            name: "History page " + i,
+            payout: 0,
+            objectives: [
+              {
+                commodity: "Quartz",
+                pickupLocation: "Everus Harbor",
+                destination: "Orison",
+                quantitySCU: 1,
+              },
+            ],
+          },
+        });
+        await window.cargoRun.completeContract(s.contracts.at(-1).id);
+      }
+    });
+    await nav("History");
+    assert.equal(
+      await page.locator(".contracts-ledger > tbody > tr").count(),
+      25,
+    );
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    assert.equal(
+      await page.locator(".contracts-ledger > tbody > tr").count(),
+      6,
+    );
+    await page
+      .getByLabel("Search history", { exact: true })
+      .fill("History page 30");
+    assert.equal(
+      await page.locator(".contracts-ledger > tbody > tr").count(),
+      1,
+    );
+    assert.match(await page.locator(".pagination").innerText(), /Page 1 of 1/);
+    const parentPid = app.process().pid;
+    const rows = JSON.parse(
+      execFileSync(
+        "powershell.exe",
+        [
+          "-NoProfile",
+          "-Command",
+          "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name | ConvertTo-Json -Compress",
+        ],
+        { encoding: "utf8", windowsHide: true },
+      ),
+    );
+    const pids = rows
+      .filter(
+        (p) => p.ParentProcessId === parentPid && /CaptureHost/.test(p.Name),
+      )
+      .map((p) => p.ProcessId);
+    await app.close();
+    app = null;
+    for (const pid of pids) {
+      let alive = true;
+      for (let i = 0; i < 30 && alive; i++) {
+        try {
+          process.kill(pid, 0);
+          await new Promise((r) => setTimeout(r, 100));
+        } catch {
+          alive = false;
+        }
+      }
+      assert.equal(alive, false, "Native helper must exit with Electron");
+    }
     fs.writeFileSync(
       path.join(output, "viewports.json"),
       JSON.stringify(viewports, null, 2),

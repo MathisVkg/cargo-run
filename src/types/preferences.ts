@@ -1,5 +1,5 @@
 export interface UiPreferences {
-  navigationMode: import("../utils/navigation").NavigationMode;
+  navigationMode: "expanded" | "compact" | "hidden";
   dashboardView: "location" | "contract";
   favoriteShipIds: string[];
   recentShipIds: string[];

@@ -147,9 +147,13 @@ export const cargoStore = createStore<RendererState>(() => ({
   importHistory: () => call(() => window.cargoRun.importHistory()),
   dismissError: () => cargoStore.setState({ actionError: null }),
 }));
+let initialRequest: Promise<AppSnapshot> | null = null;
 export function initializeCargoStore(): () => void {
   const dispose = window.cargoRun.onState(receive);
-  void call(() => window.cargoRun.getState()).catch(() => {});
+  initialRequest ??= window.cargoRun.getState().finally(() => {
+    initialRequest = null;
+  });
+  void call(() => initialRequest!).catch(() => {});
   return dispose;
 }
 export function useCargoStore<T>(selector: (state: RendererState) => T): T {

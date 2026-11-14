@@ -1,5 +1,11 @@
-/* Task 08: four-section gameplay foundation; uses the existing Graphite tokens. */
-html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+/* Four-section application layout; uses the shared Graphite tokens. */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
 .foundation-shell {
   height: 100dvh;
   overflow: hidden;

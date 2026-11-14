@@ -39,7 +39,7 @@ export class CaptureRetention {
     private directory: string,
     private remove: (path: string) => void = unlinkSync,
   ) {}
-  usage() {
+  usage(count = this.repository.list().length) {
     let bytes = 0;
     try {
       for (const name of readdirSync(this.directory)) {
@@ -58,7 +58,7 @@ export class CaptureRetention {
       ].slice(0, 10);
     }
     this.state.bytes = bytes;
-    this.state.count = this.repository.list().length;
+    this.state.count = count;
     return { ...this.state, errors: [...this.state.errors] };
   }
   cleanup(policy: CapturePolicy, protectedIds: Set<string>, now = Date.now()) {

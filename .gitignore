@@ -11,3 +11,16 @@ resources/native/*.wav
 # Sanitized real-format regression evidence only.
 !tests/fixtures/log/nov05-sanitized.log
 !tests/fixtures/log/nov10-sanitized.log
+
+# Local scratch, database and tooling outputs (fixtures remain tracked).
+backups/
+.vite/
+.cache/
+playwright-report/
+test-results/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.tmp
+*.tsbuildinfo

@@ -1,3 +1,7 @@
+const synthetic = process.env.CARGO_RUN_SYNTHETIC_CAPTURE === "1";
+const syntheticCapture = synthetic
+  ? require("./helpers/synthetic-capture.cjs")
+  : null;
 const { _electron } = require("playwright"),
   fs = require("node:fs"),
   path = require("node:path"),
@@ -9,55 +13,62 @@ const folder = fs.mkdtempSync(path.resolve("work/automatic-desktop-")),
   log = path.join(folder, "Game.log"),
   fixtureExe = path.join(folder, "StarCitizen.exe");
 fs.writeFileSync(log, "");
-const existingGame = execFileSync(
-  "powershell.exe",
-  [
-    "-NoProfile",
-    "-Command",
-    "@(Get-Process -Name StarCitizen -ErrorAction SilentlyContinue).Count",
-  ],
-  { encoding: "utf8", windowsHide: true },
-).trim();
-if (Number(existingGame) > 0)
+const existingGame = synthetic
+  ? "0"
+  : execFileSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        "@(Get-Process -Name StarCitizen -ErrorAction SilentlyContinue).Count",
+      ],
+      { encoding: "utf8", windowsHide: true },
+    ).trim();
+if (!synthetic && Number(existingGame) > 0)
   throw Error(
     "This synthetic test requires no real Star Citizen process; no user game process is controlled.",
   );
 // A game-window source keeps this fixture isolated from unrelated foreground content.
-const fixtureSource = path.join(folder, "AutomaticWindowFixture.cs");
-fs.writeFileSync(
-  fixtureSource,
-  fs
-    .readFileSync("tests/native/OcrFixture.cs", "utf8")
-    .replace("TopMost=true", "TopMost=false")
-    .replace(
-      "FormBorderStyle=FormBorderStyle.None",
-      "FormBorderStyle=FormBorderStyle.Sizable",
-    )
-    .replace(
-      "Bounds=Screen.PrimaryScreen.Bounds",
-      "Bounds=new Rectangle(80,80,Screen.PrimaryScreen.WorkingArea.Width-160,Screen.PrimaryScreen.WorkingArea.Height-160)",
-    ),
-);
-execFileSync(
-  path.join(
-    process.env.SystemRoot,
-    "Microsoft.NET/Framework64/v4.0.30319/csc.exe",
-  ),
-  [
-    "/nologo",
-    "/platform:x64",
-    "/target:exe",
-    "/reference:System.Drawing.dll",
-    "/reference:System.Windows.Forms.dll",
-    "/out:" + fixtureExe,
+if (!synthetic) {
+  const fixtureSource = path.join(folder, "AutomaticWindowFixture.cs");
+  fs.writeFileSync(
     fixtureSource,
-  ],
-  { windowsHide: true, stdio: "inherit" },
-);
+    fs
+      .readFileSync("tests/native/OcrFixture.cs", "utf8")
+      .replace("TopMost=true", "TopMost=false")
+      .replace(
+        "FormBorderStyle=FormBorderStyle.None",
+        "FormBorderStyle=FormBorderStyle.Sizable",
+      )
+      .replace(
+        "Bounds=Screen.PrimaryScreen.Bounds",
+        "Bounds=new Rectangle(80,80,Screen.PrimaryScreen.WorkingArea.Width-160,Screen.PrimaryScreen.WorkingArea.Height-160)",
+      ),
+  );
+  execFileSync(
+    path.join(
+      process.env.SystemRoot,
+      "Microsoft.NET/Framework64/v4.0.30319/csc.exe",
+    ),
+    [
+      "/nologo",
+      "/platform:x64",
+      "/target:exe",
+      "/reference:System.Drawing.dll",
+      "/reference:System.Windows.Forms.dll",
+      "/out:" + fixtureExe,
+      fixtureSource,
+    ],
+    { windowsHide: true, stdio: "inherit" },
+  );
+}
 const env = {
   ...process.env,
   NODE_ENV: "test",
   CARGO_RUN_TEST_USER_DATA: path.join(folder, "profile"),
+  ...(synthetic
+    ? { CARGO_RUN_SYNTHETIC_IMAGE: syntheticCapture.imagePath(folder) }
+    : {}),
 };
 delete env.ELECTRON_RUN_AS_NODE;
 let app, page, fixture;
@@ -87,7 +98,11 @@ function accept(n) {
 (async () => {
   try {
     app = await _electron.launch({
-      args: [path.resolve("out/main/index.js")],
+      args: [
+        synthetic
+          ? syntheticCapture.entry()
+          : path.resolve("out/main/index.js"),
+      ],
       env,
     });
     page = await app.firstWindow();
@@ -135,10 +150,12 @@ function accept(n) {
     await app.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows()[0].show(),
     );
-    fixture = spawn(fixtureExe, [], {
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: false,
-    });
+    fixture = synthetic
+      ? syntheticCapture.startFixture(folder)
+      : spawn(fixtureExe, [], {
+          stdio: ["pipe", "pipe", "pipe"],
+          windowsHide: false,
+        });
     createInterface({ input: fixture.stdout }).on("line", (line) =>
       lines.push(line),
     );

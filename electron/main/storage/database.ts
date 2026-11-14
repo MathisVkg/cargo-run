@@ -1,3 +1,4 @@
+import { startupMark } from "../startup";
 import { lifecycleIssues } from "../lifecycle";
 import { applyMissionEvent } from "../log/reconcile";
 import { DatabaseSync } from "node:sqlite";
@@ -21,6 +22,7 @@ type Row = Record<string, unknown>;
 export class CargoDatabase {
   readonly db: DatabaseSync;
   constructor(readonly path: string) {
+    const started = performance.now();
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
     const version = Number(
@@ -124,6 +126,7 @@ export class CargoDatabase {
           });
         this.db.exec("PRAGMA user_version=9");
       });
+    startupMark("sqlite-open-migrate", started);
   }
   private migrateProgress() {
     this.transaction(() => {

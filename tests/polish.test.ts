@@ -1,31 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { navigationModeForWidth } from "../src/utils/navigation";
-import {
-  validatePreferences,
-  defaultPreferences,
-} from "../src/types/preferences";
+import { validatePreferences } from "../src/types/preferences";
 import { TrackingService } from "./helpers/beta";
 import { CargoDatabase } from "../electron/main/storage/database";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 describe("Adaptive navigation preferences", () => {
-  it("constrains the effective layout without changing the wide preference", () => {
-    for (const preference of ["expanded", "compact", "hidden"] as const) {
-      expect(navigationModeForWidth(1099, preference)).toBe("hidden");
-      expect(navigationModeForWidth(1100, preference)).toBe("hidden");
-      expect(navigationModeForWidth(1100, preference, true)).toBe("compact");
-      expect(navigationModeForWidth(1200, preference)).toBe(
-        preference === "hidden" ? "hidden" : "compact",
-      );
-      expect(navigationModeForWidth(1399, preference)).toBe(
-        preference === "hidden" ? "hidden" : "compact",
-      );
-      expect(navigationModeForWidth(1400, preference)).toBe(preference);
-      expect(navigationModeForWidth(1440, preference)).toBe(preference);
-    }
-    expect(defaultPreferences().navigationMode).toBe("expanded");
-  });
   it("validates navigation changes while ignoring undefined optional patches", () => {
     const ids = new Set(["c2"]);
     for (const navigationMode of ["expanded", "compact", "hidden"])

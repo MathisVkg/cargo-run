@@ -885,3 +885,34 @@ describe("shared and explicitly overridden capture methods", () => {
     },
   );
 });
+
+describe("deferred capture initialization", () => {
+  it("exposes initialization until native discovery settles without starting OCR", async () => {
+    const s = setup();
+    let release!: () => void;
+    s.backend.displays = () =>
+      new Promise((resolve) => {
+        release = () => resolve([]);
+      });
+    const pending = s.queue.initialize();
+    expect(s.queue.snapshot().initializing).toBe(true);
+    expect(s.queue.snapshot().registered).toBe(false);
+    release();
+    await pending;
+    expect(s.queue.snapshot().initializing).toBe(false);
+    expect(s.queue.snapshot().registered).toBe(true);
+    expect(s.order).toEqual([]);
+  });
+  it("finishes initialization with a visible native error and can shut down", async () => {
+    const s = setup();
+    s.backend.displays = async () => {
+      throw Error("Discovery fixture unavailable");
+    };
+    await s.queue.initialize();
+    expect(s.queue.snapshot().initializing).toBe(false);
+    expect(s.queue.snapshot().captureError).toContain(
+      "Discovery fixture unavailable",
+    );
+    await s.queue.close();
+  });
+});

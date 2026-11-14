@@ -1,3 +1,4 @@
+import { startupMark } from "../startup";
 import { numericConfidenceFloor } from "./quantity";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -41,6 +42,7 @@ export class OfflineTesseract implements OcrProvider {
     if (this.worker) return this.worker;
     if (!this.available().available) throw Error(this.available().error!);
     const epoch = this.epoch;
+    const started = performance.now();
     this.starting ??= createWorker("eng", OEM.LSTM_ONLY, {
       langPath: this.languagePath,
       workerPath: this.workerPath,
@@ -57,6 +59,7 @@ export class OfflineTesseract implements OcrProvider {
           await worker.terminate();
           throw Error("OCR provider stopped.");
         }
+        startupMark("ocr-worker-ready", started);
         this.worker = worker;
         return worker;
       })

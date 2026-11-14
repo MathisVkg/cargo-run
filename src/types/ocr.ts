@@ -144,6 +144,7 @@ export interface CaptureDisplay {
 }
 import type { ShortcutDiagnostics } from "./shortcut";
 export interface OcrSnapshot {
+  initializing?: boolean;
   lastSuccessful?: {
     backend: "Window" | "Display";
     width: number;

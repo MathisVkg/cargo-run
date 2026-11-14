@@ -1,3 +1,7 @@
+const synthetic = process.env.CARGO_RUN_SYNTHETIC_CAPTURE === "1";
+const syntheticCapture = synthetic
+  ? require("./helpers/synthetic-capture.cjs")
+  : null;
 // Owned synthetic StarCitizen.exe window only. This is not live gameplay.
 const { _electron } = require("playwright"),
   fs = require("node:fs"),
@@ -14,6 +18,7 @@ fs.mkdirSync(output, { recursive: true });
 const env = {
   ...process.env,
   NODE_ENV: "test",
+  CARGO_RUN_STARTUP_METRICS: "1",
   CARGO_RUN_TEST_USER_DATA: profile,
 };
 delete env.ELECTRON_RUN_AS_NODE;
@@ -21,6 +26,7 @@ let app, page, fixture;
 const errors = [],
   lines = [];
 let savedId;
+const metrics = [];
 const state = () => page.evaluate(() => window.cargoRun.getState()),
   ocr = () => page.evaluate(() => window.cargoRun.ocrState());
 async function until(check, timeout = 120000) {
@@ -33,8 +39,21 @@ async function until(check, timeout = 120000) {
 }
 async function launch() {
   app = await _electron.launch({
-    args: [path.resolve("out/main/index.js")],
+    args: [
+      synthetic ? syntheticCapture.entry() : path.resolve("out/main/index.js"),
+    ],
     env,
+  });
+  app.process().stdout.on("data", (chunk) => {
+    for (const line of chunk.toString().split(/\r?\n/)) {
+      const at = line.indexOf("[startup] ");
+      if (at >= 0)
+        try {
+          metrics.push(JSON.parse(line.slice(at + 10)));
+        } catch {
+          /* Chunk may end mid-line. */
+        }
+    }
   });
   page = await app.firstWindow();
   page.on("pageerror", (e) => errors.push(e.message));
@@ -74,46 +93,58 @@ async function save(d) {
 (async () => {
   try {
     // Refuse ambiguous real-game metadata: this test must capture only its owned fixture.
-    const existing = execFileSync(
-      "powershell.exe",
-      [
-        "-NoProfile",
-        "-Command",
-        "@(Get-Process -Name StarCitizen -ErrorAction SilentlyContinue).Count",
-      ],
-      { encoding: "utf8", windowsHide: true },
-    ).trim();
-    if (Number(existing) > 0)
+    const existing = synthetic
+      ? "0"
+      : execFileSync(
+          "powershell.exe",
+          [
+            "-NoProfile",
+            "-Command",
+            "@(Get-Process -Name StarCitizen -ErrorAction SilentlyContinue).Count",
+          ],
+          { encoding: "utf8", windowsHide: true },
+        ).trim();
+    if (!synthetic && Number(existing) > 0)
       throw Error(
         "Close or avoid the real game before this synthetic test; no user game process is controlled.",
       );
-    const source = fs
-        .readFileSync("tests/native/OcrFixture.cs", "utf8")
-        .replace("TopMost=true", "TopMost=false"),
-      cs = path.join(folder, "EditorFixture.cs"),
-      exe = path.join(folder, "StarCitizen.exe");
-    fs.writeFileSync(cs, source);
-    execFileSync(
-      path.join(
-        process.env.SystemRoot,
-        "Microsoft.NET/Framework64/v4.0.30319/csc.exe",
-      ),
-      [
-        "/nologo",
-        "/platform:x64",
-        "/target:exe",
-        "/reference:System.Drawing.dll",
-        "/reference:System.Windows.Forms.dll",
-        "/out:" + exe,
-        cs,
-      ],
-      { windowsHide: true, stdio: "inherit" },
-    );
-    fixture = spawn(exe, [], {
-      stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: false,
-    });
-    createInterface({ input: fixture.stdout }).on("line", (s) => lines.push(s));
+    if (!synthetic) {
+      const source = fs
+          .readFileSync("tests/native/OcrFixture.cs", "utf8")
+          .replace("TopMost=true", "TopMost=false"),
+        cs = path.join(folder, "EditorFixture.cs"),
+        exe = path.join(folder, "StarCitizen.exe");
+      fs.writeFileSync(cs, source);
+      execFileSync(
+        path.join(
+          process.env.SystemRoot,
+          "Microsoft.NET/Framework64/v4.0.30319/csc.exe",
+        ),
+        [
+          "/nologo",
+          "/platform:x64",
+          "/target:exe",
+          "/reference:System.Drawing.dll",
+          "/reference:System.Windows.Forms.dll",
+          "/out:" + exe,
+          cs,
+        ],
+        { windowsHide: true, stdio: "inherit" },
+      );
+      fixture = spawn(exe, [], {
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: false,
+      });
+      createInterface({ input: fixture.stdout }).on("line", (s) =>
+        lines.push(s),
+      );
+    } else {
+      env.CARGO_RUN_SYNTHETIC_IMAGE = syntheticCapture.imagePath(folder);
+      fixture = syntheticCapture.startFixture(folder);
+      createInterface({ input: fixture.stdout }).on("line", (s) =>
+        lines.push(s),
+      );
+    }
     await until(() => lines.includes("READY"), 10000);
     await launch();
     await app.evaluate(({ BrowserWindow }) => {
@@ -130,6 +161,10 @@ async function save(d) {
         allowDisplayFallback: true,
       });
     });
+    assert(
+      !metrics.some((m) => m.stage === "ocr-worker-ready"),
+      "OCR worker must remain lazy before capture",
+    );
     await page.locator(".top-add").click();
     let d = editor();
     await d
@@ -158,6 +193,11 @@ async function save(d) {
     );
     assert.equal(await d.locator(".objective-fields").count(), 4);
     assert(c.result.provider.toLowerCase().includes("tesseract"));
+    assert(metrics.some((m) => m.stage === "ocr-worker-ready"));
+    console.log(
+      "First OCR worker initialization:",
+      JSON.stringify(metrics.find((m) => m.stage === "ocr-worker-ready")),
+    );
     await d
       .getByLabel("Contract name", { exact: true })
       .fill("Reviewed synthetic cold chain");
@@ -319,7 +359,7 @@ async function save(d) {
     db.close();
     assert.deepEqual(errors, []);
     console.log(
-      "PASS v0.8.0 native synthetic window capture -> offline Tesseract -> editable unsaved fields; explicit OCR save and corrections; evidence preview; reprocess without recapture/auto-overwrite; identity-preserving attachment/no duplicate; unresolved recovery/deletion; one-shot failure + explicit Capture again; restart/FK. No real gameplay. Profile: " +
+      "PASS capture review -> offline Tesseract -> editable unsaved fields; explicit OCR save and corrections; evidence preview; reprocess without recapture/auto-overwrite; identity-preserving attachment/no duplicate; unresolved recovery/deletion; one-shot failure + explicit Capture again; restart/FK. No real gameplay. Profile: " +
         profile,
     );
   } catch (e) {

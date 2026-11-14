@@ -15,6 +15,8 @@ export function OcrSettings({
   const setPage = useCargoStore((s) => s.setPage),
     [confirm, setConfirm] = useState(false);
   if (!state) return <p>{error ?? "Loading OCR capability…"}</p>;
+  if (state.initializing)
+    return <p role="status">Initializing capture and recovery…</p>;
   const s = state.settings;
   const mayCaptureDisplay = (mode: string) =>
     mode === "Display" ||
