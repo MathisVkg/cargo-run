@@ -1,115 +1,58 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
-import { HardDrive, CircleHelp } from "lucide-react";
+import { useEffect } from "react";
 import { TopBar } from "./components/layout/TopBar";
-import { Sidebar } from "./components/navigation/Navigation";
+import { BottomNavigation } from "./components/navigation/BottomNavigation";
 import { useCargoStore, initializeCargoStore } from "./stores/useCargoStore";
-import Dashboard from "./pages/Dashboard";
-import Manifest from "./pages/Manifest";
+import { initializeOcrStore } from "./stores/useOcrStore";
 import Contracts from "./pages/Contracts";
+import Cargo from "./pages/Cargo";
 import History from "./pages/History";
 import Settings from "./pages/Settings";
-import ScanReview from "./pages/ScanReview";
-import { initializeOcrStore } from "./stores/useOcrStore";
-import { navigationModeForWidth } from "./utils/navigation";
-const subscribeWidth = (callback: () => void) => {
-  window.addEventListener("resize", callback);
-  return () => window.removeEventListener("resize", callback);
-};
+import { ContractEditor } from "./components/contracts/ContractEditor";
+import { RetainedInventory } from "./components/cargo/RetainedInventory";
 export default function App() {
-  const width = useSyncExternalStore(subscribeWidth, () => window.innerWidth);
-  const preferred = useCargoStore((s) => s.preferences.navigationMode);
-  const setPreferences = useCargoStore((s) => s.setPreferences);
-  const [narrowOpen, setNarrowOpen] = useState(false);
-  const narrow = width < 1200;
-  const navigationMode = navigationModeForWidth(width, preferred, narrowOpen);
-  const page = useCargoStore((s) => s.page);
-  const setPage = useCargoStore((s) => s.setPage);
-  const sampleMode = useCargoStore((s) => s.sampleMode);
-  useEffect(() => setNarrowOpen(false), [narrow]);
-  const toggleNavigation = () => {
-    if (narrow) {
-      setNarrowOpen((v) => !v);
-      return;
-    } else
-      void setPreferences({
-        navigationMode: navigationMode === "hidden" ? "compact" : "hidden",
-      });
-  };
-  const ready = useCargoStore((s) => s.ready);
-  const error = useCargoStore((s) => s.actionError);
-  const dismissError = useCargoStore((s) => s.dismissError);
+  const page = useCargoStore((s) => s.page),
+    ready = useCargoStore((s) => s.ready),
+    error = useCargoStore((s) => s.actionError),
+    dismiss = useCargoStore((s) => s.dismissError);
   useEffect(() => {
-    const cargo = initializeCargoStore();
-    const ocr = initializeOcrStore();
+    const a = initializeCargoStore(),
+      b = initializeOcrStore();
     return () => {
-      cargo();
-      ocr();
+      a();
+      b();
     };
   }, []);
   return (
-    <div className="app-shell">
-      <TopBar onMenu={toggleNavigation} navigationMode={navigationMode} />
-      <div className="workspace">
-        <Sidebar mode={navigationMode} width={width} />
-        <main key={page} className="page-content">
-          {error && (
-            <div className="notice error" role="alert">
-              <span>{error}</span>
-              <button className="button" onClick={dismissError}>
-                Dismiss
-              </button>
-            </div>
-          )}
-          {!ready && (
-            <div className="notice" role="status">
-              Loading saved operations…
-            </div>
-          )}
-          {sampleMode && (
-            <div className="sample-banner">
-              <span className="sample-dot" />
-              SAMPLE DATA{" "}
-              <span>
-                Demonstration mode · remove samples before log tracking
-              </span>
-              <button onClick={() => setPage("Settings")}>
-                Manage in Settings
-              </button>
-            </div>
-          )}
-          {page === "Dashboard" ? (
-            <Dashboard />
-          ) : page === "Manifest" ? (
-            <Manifest />
-          ) : page === "Contracts" ? (
-            <Contracts />
-          ) : page === "History" ? (
-            <History />
-          ) : page === "Scan Review" ? (
-            <ScanReview />
-          ) : (
-            <Settings />
-          )}
-        </main>
-      </div>
-      <footer className="statusbar">
-        <span>
-          <span className="status-dot" />
-          LOCAL OPERATIONS <span className="status-divider">/</span>
-          {page === "Scan Review" ? "SCAN HISTORY" : page.toUpperCase()}
-        </span>
-        <span>
-          <HardDrive size={12} />
-          SQLite · Local storage
-          <button
-            onClick={() => setPage("Settings")}
-            aria-label="Application information"
-          >
-            <CircleHelp size={13} />
-          </button>
-          <span className="status-divider">/</span>v0.7.1
-        </span>
-      </footer>
+    <div className="app-shell foundation-shell">
+      <TopBar />
+      <main className="page-content" key={page}>
+        {!ready ? (
+          <p role="status">Loading saved operations…</p>
+        ) : (
+          <>
+            {error && (
+              <div className="notice error" role="alert">
+                <span>{error}</span>
+                <button className="button small" onClick={dismiss}>
+                  Dismiss
+                </button>
+              </div>
+            )}
+            {page === "Cargo" ? (
+              <Cargo />
+            ) : page === "History" ? (
+              <History />
+            ) : page === "Settings" ? (
+              <Settings />
+            ) : (
+              <Contracts />
+            )}
+          </>
+        )}
+      </main>
+      <BottomNavigation />
+      <ContractEditor />
+      <RetainedInventory />
     </div>
   );
 }

@@ -1,4 +1,24 @@
-# Cargo Run v0.7.1 — Task 07.1 handoff
+# Cargo Run v0.8.0 — Task 08 handoff
+
+The four-section gameplay foundation is implemented. Main/preload/SQLite and existing business services are retained. Contracts is the startup section; the fixed bottom navigation never hides. Dashboard, Manifest and Scan History are not routed as destinations. Their superseded files are retained for the explicitly deferred cleanup task.
+
+The top bar exposes ship capacity, Add Contract and Windows controls. Minimum size is 480 × 560. Contracts/History share a compact expandable ledger; Cargo uses destination-aware required-SCU aggregation and an isolated symbolic grid. Settings contains preserved automation, capture and safe data services. Retained physical cargo and immutable saved runs remain accessible outside the primary cargo plan.
+
+The shared editor supports manual entry, one-shot game-window capture, correction, original evidence, explicit attachment/conflict/identity/removal confirmations and saved-image reprocessing. Editor captures cannot auto-import, including after restart. Fresh Window requests fail closed rather than substituting the foreground app or rewriting saved capture policy. Other capture/automatic paths retain their existing behavior.
+
+No schema migration: version 9 remains. New optional capture JSON field `reviewMode: "Editor"` plus two trusted IPC methods add review-only intent; explicit saves still use the existing transactional review implementation. No live user database/captures/Game.log was changed. No recognition engine, contract matching, earning calculation or physical progress algorithm was replaced.
+
+[Full changed-file list, architecture notes, exact validation/manual steps, screenshots and known limitations](docs/task08-validation.md).
+
+Validation: all **385 original tests** plus **7 new tests** pass (**392 / 30 files**), alongside TypeScript, lint and production build. The current desktop matrix is `redesign-desktop.cjs`, `redesign-ocr-desktop.cjs`, migrated `automatic-desktop.cjs`, and independent `window-desktop.cjs`. Current npm aliases select the applicable redesigned suites. Historical page-selector scripts remain for Task 09, not as claims that removed UI routes still work. New suites cover the replacement workflows and existing backend unit coverage remains intact.
+
+Actual renderer dimensions: 1440 × 900 landscape, 720 × 1100 portrait, 480 × 562 at the requested new minimum (Windows/DPI rounding), maximized 2560 × 1392 on a 3840 × 2160/150% desktop. Screenshots are generated under `work/ui-v080/` and were visually inspected. Native offline OCR/editor and monitored automatic capture used controlled synthetic windows, not the real game.
+
+Deferred: final visual polish, physical in-game shortcut/Vulkan verification, exact ship geometry/packing/3D/routes, performance and repository cleanup, installer/release packaging. No commit/publication was made.
+
+Previous handoffs below are historical and do not override the Task 08 interface/workflow.
+
+## Historical handoff: Cargo Run v0.7.1 — Task 07.1 handoff
 
 ## Task 07.1 scope
 

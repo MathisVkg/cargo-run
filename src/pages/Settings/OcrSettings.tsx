@@ -39,9 +39,9 @@ export function OcrSettings({
         <ShortcutControls diagnosticsOnly />
         <CapturePolicyControls section="advanced" />
         <p className="form-note">
-          Parser boxes, raw OCR and recognition warnings are available in Scan
-          Review. Experimental input backends remain development-only and
-          unchanged.
+          Parser boxes, raw OCR and recognition warnings are available in the
+          contract editor under Advanced. Experimental input backends remain
+          development-only and unchanged.
         </p>
         {error && <p className="form-error">{error}</p>}
       </div>
@@ -105,8 +105,8 @@ export function OcrSettings({
       </div>
       <p>
         Accepted contracts import automatically when the fields, coverage and
-        identity are clear. Scan History shows only issues that need your help.
-        Works without Game.log monitoring.
+        identity are clear. Needs review in Contracts keeps captures that need
+        your help. Works without Game.log monitoring.
       </p>
       {!state.engine.available && (
         <p className="form-error">{state.engine.error}</p>
@@ -185,8 +185,8 @@ export function OcrSettings({
         >
           Capture now
         </button>
-        <button className="button" onClick={() => setPage("Scan Review")}>
-          Open Scan History
+        <button className="button" onClick={() => setPage("Contracts")}>
+          Open Needs review in Contracts
         </button>
       </div>
       <p className="form-note">

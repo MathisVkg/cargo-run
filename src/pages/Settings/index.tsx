@@ -1,134 +1,122 @@
-import { CargoWorkflow } from "./CargoWorkflow";
 import { useState } from "react";
-import { Rocket, Database, Info, Trash2 } from "lucide-react";
-import { PageHeader, Badge } from "../../components/ui";
-import { Overlay } from "../../components/ui/Overlay";
 import { useCargoStore } from "../../stores/useCargoStore";
-import { LogMonitoring } from "./LogMonitoring";
 import { ShipSelector } from "../../components/ships/ShipSelector";
-import { shipCatalog } from "../../data/ships";
-import { LocalDataManagement } from "./LocalDataManagement";
 import { OcrSettings } from "./OcrSettings";
+import { CargoWorkflow } from "./CargoWorkflow";
+import { LogMonitoring } from "./LogMonitoring";
+import { LocalDataManagement } from "./LocalDataManagement";
+import { Overlay } from "../../components/ui/Overlay";
 export default function Settings() {
-  const databasePath = useCargoStore((s) => s.databasePath);
-  const contracts = useCargoStore((s) => s.contracts);
-  const loadSamples = useCargoStore((s) => s.loadSamples);
-  const tracking = useCargoStore((s) => s.tracking);
-  const sampleMode = useCargoStore((s) => s.sampleMode);
-  const clear = useCargoStore((s) => s.clearSampleData);
-  const [confirm, setConfirm] = useState(false);
+  const database = useCargoStore((s) => s.databasePath),
+    sample = useCargoStore((s) => s.sampleMode),
+    removeSamples = useCargoStore((s) => s.clearSampleData),
+    loadSamples = useCargoStore((s) => s.loadSamples),
+    contracts = useCargoStore((s) => s.contracts),
+    tracking = useCargoStore((s) => s.tracking),
+    inventory = useCargoStore((s) => s.showRetainedInventory),
+    [remove, setRemove] = useState(false);
   return (
     <>
-      <PageHeader
-        eyebrow="SYSTEM / SETTINGS"
-        title="Settings"
-        description="Your local operations environment."
-      />
-      <div className="settings-grid">
-        <OcrSettings />
-        <details className="panel setting-card monitoring-settings">
-          <summary>Game.log Monitoring</summary>
-          <LogMonitoring />
+      <header className="foundation-page-heading">
+        <div>
+          <p className="eyebrow">APPLICATION</p>
+          <h1>Settings</h1>
+        </div>
+      </header>
+      <div className="foundation-settings">
+        <details className="settings-section" open>
+          <summary>General</summary>
+          <div className="settings-section-body">
+            <h2>Ship preferences</h2>
+            <p>
+              Select a ship; favorites and recent ships are available in the
+              picker. Existing cargo stays assigned to its recorded ship.
+            </p>
+            <ShipSelector />
+            <h2>Window behavior</h2>
+            <p>
+              Frameless window with independent content scrolling. Four-section
+              navigation always stays visible, including portrait windows.
+            </p>
+          </div>
         </details>
-        <section className="panel setting-card">
-          <div className="setting-icon">
-            <Rocket size={21} />
+        <details className="settings-section" open>
+          <summary>Capture &amp; OCR</summary>
+          <div className="settings-section-body">
+            <p>
+              Add Contract captures the Star Citizen window once for review
+              before saving. Shortcut and automatic capture retain the settings
+              below.
+            </p>
+            <OcrSettings />
+            <details className="settings-troubleshooting">
+              <summary>OCR troubleshooting</summary>
+              <OcrSettings section="advanced" />
+            </details>
           </div>
-          <h2>Ship &amp; Fleet</h2>
-          <p>Capacity updates across your current operations.</p>
-          <ShipSelector />
-          <p className="form-note">
-            {shipCatalog.coverage.flightReady} flight-ready ships;{" "}
-            {shipCatalog.coverage.eligible} positive-SCU entries. Star Citizen
-            Wiki · {shipCatalog.version} · CC BY-SA 4.0. Cargo SCU is a planning
-            reference; custom and existing selections are retained.
-          </p>
-        </section>
-        <section className="panel setting-card">
-          <div className="setting-icon">
-            <Database size={21} />
+        </details>
+        <details className="settings-section">
+          <summary>Automation</summary>
+          <div className="settings-section-body">
+            <CargoWorkflow />
+            <LogMonitoring />
           </div>
-          <h2>Storage &amp; Captures</h2>
-          <OcrSettings section="storage" />
-          <p>
-            Contracts, objectives, runs, ship selection, monitoring
-            configuration, and event checkpoints are saved locally in SQLite.
-          </p>
-          <Badge tone="green">SQLite persistence active</Badge>
-          <p className="log-path">{databasePath}</p>
-          {!sampleMode &&
-            !contracts.length &&
-            !tracking.enabled &&
-            tracking.accepted === 0 && (
-              <button
-                className="button sample-clear"
-                onClick={() => void loadSamples()}
-              >
+        </details>
+        <details className="settings-section">
+          <summary>Data Management</summary>
+          <div className="settings-section-body">
+            <p className="log-path">{database}</p>
+            <button className="button" onClick={inventory}>
+              Open retained inventory
+            </button>
+            <LocalDataManagement />
+            <details className="settings-capture-storage">
+              <summary>Capture storage &amp; retention</summary>
+              <OcrSettings section="storage" />
+            </details>
+            {!contracts.length && !tracking.enabled && !sample && (
+              <button className="button" onClick={() => void loadSamples()}>
                 Load demonstration contracts
               </button>
             )}
-          {sampleMode && (
-            <button
-              className="button sample-clear"
-              onClick={() => setConfirm(true)}
-            >
-              <Trash2 size={14} />
-              Remove sample contracts
-            </button>
-          )}
-          <p className="form-note">
-            Manual entries are preserved when sample contracts are removed.
-            Closed run snapshots are retained. Sample and live tracking cannot
-            run together.
-          </p>
-        </section>
-        <CargoWorkflow />
-        <LocalDataManagement />
-        <details className="panel setting-card advanced-panel">
-          <summary>About &amp; Diagnostics</summary>
-          <OcrSettings section="advanced" />
-          <LogMonitoring diagnosticsOnly />
+            {sample && (
+              <button className="button danger" onClick={() => setRemove(true)}>
+                Remove sample contracts
+              </button>
+            )}
+          </div>
         </details>
-        <section className="panel setting-card app-info">
-          <div className="setting-icon">
-            <Info size={21} />
-          </div>
-          <div>
-            <h2>
-              Cargo Run <Badge>0.7.1</Badge>
-            </h2>
-            <p>Fleet Operations 2.0 · Local OCR and optional Game.log</p>
-            <p className="form-note">
-              Independent companion application. Not affiliated with Cloud
-              Imperium Games or Roberts Space Industries.
+        <details className="settings-section">
+          <summary>About &amp; Diagnostics</summary>
+          <div className="settings-section-body">
+            <h2>Cargo Run 0.8.0</h2>
+            <p>
+              Local Windows companion · SQLite · offline OCR. Independent
+              application, not affiliated with Cloud Imperium Games.
             </p>
+            <LogMonitoring diagnosticsOnly />
           </div>
-        </section>
+        </details>
       </div>
       <Overlay
-        open={confirm}
-        onClose={() => setConfirm(false)}
-        side="center"
+        open={remove}
+        onClose={() => setRemove(false)}
         title="Remove sample contracts?"
-        subtitle="LOCAL DATA"
+        side="center"
       >
         <div className="dialog-body">
-          <p>
-            This removes only sample contracts from the current ledger and
-            manifest. Your manual entries and saved run snapshots remain in this
-            database.
-          </p>
-          <p>Removed sample contracts do not return automatically.</p>
+          Only demonstration contracts are removed. Manual entries and saved
+          runs remain.
         </div>
         <div className="dialog-actions">
-          <button className="button" onClick={() => setConfirm(false)}>
+          <button className="button" onClick={() => setRemove(false)}>
             Cancel
           </button>
           <button
             className="button danger"
-            onClick={() => {
-              clear();
-              setConfirm(false);
+            onClick={async () => {
+              await removeSamples();
+              setRemove(false);
             }}
           >
             Remove sample contracts

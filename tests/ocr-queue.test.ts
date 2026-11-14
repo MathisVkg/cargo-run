@@ -109,6 +109,7 @@ function setup(
   );
   queues.push(queue);
   return {
+    backend,
     queue,
     db,
     repository,
@@ -153,6 +154,57 @@ afterEach(async () => {
   }
 });
 describe("capture queue and scoped shortcuts", () => {
+  it("editor capture targets the game window once without changing saved capture policy", async () => {
+    const s = setup();
+    await s.queue.initialize();
+    const policy = s.queue.snapshot().policy;
+    s.queue.configurePolicy({
+      ...policy,
+      source: "Display",
+      allowDisplayFallback: true,
+    });
+    const spy = vi.spyOn(s.backend, "capture");
+    const { captureId } = await s.queue.captureEditor();
+    await until(() => s.repository.get(captureId)?.status === "Processed");
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0][3]).toEqual({
+      mode: "Window",
+      allowDisplayFallback: false,
+    });
+    expect(s.repository.get(captureId)?.reviewMode).toBe("Editor");
+    expect(s.queue.snapshot().policy.source).toBe("Display");
+    await new Promise((r) => setTimeout(r, 30));
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+  it("failed editor capture never retries itself", async () => {
+    const s = setup();
+    await s.queue.initialize();
+    s.setCaptureFail(true);
+    const spy = vi.spyOn(s.backend, "capture");
+    const { captureId } = await s.queue.captureEditor();
+    expect(s.repository.get(captureId)?.status).toBe("Failed");
+    await new Promise((r) => setTimeout(r, 35));
+    expect(spy).toHaveBeenCalledTimes(1);
+    s.setCaptureFail(false);
+    const next = await s.queue.captureEditor();
+    expect(next.captureId).not.toBe(captureId);
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+  it("editor reprocessing saves its review intent and does not take another screenshot", async () => {
+    const s = setup();
+    await s.queue.initialize();
+    const { captureId } = await s.queue.captureEditor();
+    await until(() => s.repository.get(captureId)?.status === "Processed");
+    s.queue.reprocess(captureId, true);
+    await until(
+      () =>
+        s.repository.get(captureId)?.recovery?.status === "Unchanged" ||
+        s.repository.get(captureId)?.recovery?.status === "Improved",
+    );
+    expect(s.order).toEqual([captureId]);
+    expect(s.repository.get(captureId)?.reviewMode).toBe("Editor");
+  });
+
   it("captures in request order and recognizes serially while allowing rapid captures", async () => {
     const s = setup();
     await s.queue.initialize();

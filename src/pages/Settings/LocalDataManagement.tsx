@@ -28,7 +28,9 @@ const options = [
       "Remove contracts, runs, captures/images, event history, requests and checkpoints. Keep ships, favorites and configuration. Monitoring stays stopped.",
   },
 ] as const;
-export function LocalDataManagement() {
+export function LocalDataManagement({
+  historyOnly = false,
+}: { historyOnly?: boolean } = {}) {
   const revision = useCargoStore((s) => s.revision);
   const showRetainedInventory = useCargoStore((s) => s.showRetainedInventory);
   const [stats, setStats] = useState<LocalDataStats | null>(null),
@@ -136,9 +138,9 @@ export function LocalDataManagement() {
               .join(" · ")}
           </p>
           <p>
-            Open Cargo Manifest, select the assigned ship, then unload cargo or
-            correct its onboard quantity downward. Full reset remains available
-            with backup and RESET confirmation.
+            Open retained inventory, select the assigned ship, then unload cargo
+            or correct its onboard quantity downward. Full reset remains
+            available with backup and RESET confirmation.
           </p>
           <button
             className="button"
@@ -150,21 +152,23 @@ export function LocalDataManagement() {
         </div>
       )}
       <div className="local-data-actions">
-        {options.map((o) => (
-          <div key={o.mode}>
-            <div>
-              <h3>{o.label}</h3>
-              <p className="form-note">{o.detail}</p>
+        {options
+          .filter((o) => !historyOnly || o.mode !== "reset")
+          .map((o) => (
+            <div key={o.mode}>
+              <div>
+                <h3>{o.label}</h3>
+                <p className="form-note">{o.detail}</p>
+              </div>
+              <button
+                className="button danger"
+                disabled={busy}
+                onClick={() => void open(o.mode)}
+              >
+                {o.label}
+              </button>
             </div>
-            <button
-              className="button danger"
-              disabled={busy}
-              onClick={() => void open(o.mode)}
-            >
-              {o.label}
-            </button>
-          </div>
-        ))}
+          ))}
       </div>
       {result && (
         <div role="status" className="notice">

@@ -468,6 +468,8 @@ export class TrackingService {
     const repo = new CaptureRepository(this.database);
     let c = repo.get(captureId);
     if (!c?.observation) return null;
+    // Editor observations remain recoverable evidence until the player explicitly saves.
+    if (c.reviewMode === "Editor" && !resolution) return null;
     if (
       resolution &&
       options.observationHash !== versionOf([c.result, c.observation])

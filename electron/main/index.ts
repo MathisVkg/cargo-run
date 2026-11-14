@@ -37,8 +37,8 @@ function createWindow(): void {
     title: "Cargo Run",
     width: 1440,
     height: 900,
-    minWidth: 1100,
-    minHeight: 700,
+    minWidth: 480,
+    minHeight: 560,
     frame: false,
     backgroundColor: "#141820",
     show: false,
@@ -173,6 +173,7 @@ else
       );
       register("ocr:reparse", (id) => ocr.reparse(id));
       register("ocr:reprocess", (id) => ocr.reprocess(id));
+      register("ocr:reprocessEditor", (id) => ocr.reprocess(id, true));
       register("ocr:policy", (input) => ocr.configurePolicy(input));
       register("ocr:cleanup", () => ocr.cleanup());
       register("ocr:issue", (input) => service.scanIssue(input), true);
@@ -223,6 +224,7 @@ else
       register("ocr:state", () => ocr.snapshot());
       register("ocr:configure", (settings) => ocr.configure(settings));
       register("ocr:capture", () => ocr.capture("Manual"));
+      register("ocr:captureEditor", () => ocr.captureEditor());
       register("ocr:retry", (id) => ocr.retry(id));
       register("ocr:delete", (id) => ocr.delete(id));
       register("ocr:clear", () => ocr.clear());

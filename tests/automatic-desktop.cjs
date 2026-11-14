@@ -7,8 +7,37 @@ const { _electron } = require("playwright"),
 fs.mkdirSync("work", { recursive: true });
 const folder = fs.mkdtempSync(path.resolve("work/automatic-desktop-")),
   log = path.join(folder, "Game.log"),
-  fixtureExe = path.join(folder, "OcrFixture.exe");
+  fixtureExe = path.join(folder, "StarCitizen.exe");
 fs.writeFileSync(log, "");
+const existingGame = execFileSync(
+  "powershell.exe",
+  [
+    "-NoProfile",
+    "-Command",
+    "@(Get-Process -Name StarCitizen -ErrorAction SilentlyContinue).Count",
+  ],
+  { encoding: "utf8", windowsHide: true },
+).trim();
+if (Number(existingGame) > 0)
+  throw Error(
+    "This synthetic test requires no real Star Citizen process; no user game process is controlled.",
+  );
+// A game-window source keeps this fixture isolated from unrelated foreground content.
+const fixtureSource = path.join(folder, "AutomaticWindowFixture.cs");
+fs.writeFileSync(
+  fixtureSource,
+  fs
+    .readFileSync("tests/native/OcrFixture.cs", "utf8")
+    .replace("TopMost=true", "TopMost=false")
+    .replace(
+      "FormBorderStyle=FormBorderStyle.None",
+      "FormBorderStyle=FormBorderStyle.Sizable",
+    )
+    .replace(
+      "Bounds=Screen.PrimaryScreen.Bounds",
+      "Bounds=new Rectangle(80,80,Screen.PrimaryScreen.WorkingArea.Width-160,Screen.PrimaryScreen.WorkingArea.Height-160)",
+    ),
+);
 execFileSync(
   path.join(
     process.env.SystemRoot,
@@ -21,7 +50,7 @@ execFileSync(
     "/reference:System.Drawing.dll",
     "/reference:System.Windows.Forms.dll",
     "/out:" + fixtureExe,
-    path.resolve("tests/native/OcrFixture.cs"),
+    fixtureSource,
   ],
   { windowsHide: true, stdio: "inherit" },
 );
@@ -66,7 +95,7 @@ function accept(n) {
       BrowserWindow.getAllWindows()[0].setSize(1200, 800),
     );
     await page
-      .getByRole("heading", { name: "Cargo Operations", exact: true })
+      .getByRole("heading", { name: "Contracts", exact: true })
       .waitFor();
     await until(async () => !!(await state()).displays.length, 10000);
     let s = await state();
@@ -88,7 +117,10 @@ function accept(n) {
         autoEnabled: true,
         delaySeconds: 1,
         maxAttempts: 1,
-        autoSource: "Display",
+        source: "Window",
+        autoSource: "Window",
+        autoSourceOverride: false,
+        allowDisplayFallback: false,
       },
     );
     // Stub only the native picker selection; reader/parser/transaction/observer/scheduler/capture/OCR are real.
@@ -101,16 +133,20 @@ function accept(n) {
     await page.evaluate(() => window.cargoRun.chooseLog());
     await page.evaluate(() => window.cargoRun.startMonitoring());
     await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].minimize(),
+      BrowserWindow.getAllWindows()[0].show(),
     );
     fixture = spawn(fixtureExe, [], {
       stdio: ["pipe", "pipe", "pipe"],
-      windowsHide: true,
+      windowsHide: false,
     });
     createInterface({ input: fixture.stdout }).on("line", (line) =>
       lines.push(line),
     );
     await until(() => lines.includes("READY"), 10000);
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].focus(),
+    );
+    await page.waitForTimeout(200);
     accept(1);
     accept(1);
     accept(2);
@@ -138,7 +174,7 @@ function accept(n) {
     const capture = s.captures.find((c) => c.screenshot);
     assert.equal(capture.validation, "ReviewUnassociated");
     assert.equal(capture.trigger.association, "Unverified");
-    assert.equal(capture.backend, "Display");
+    assert.equal(capture.backend, "Window");
     assert.equal(capture.observation.objectives.length, 4);
     assert.equal(
       (await page.evaluate(() => window.cargoRun.getState())).contracts.length,
@@ -173,30 +209,21 @@ function accept(n) {
       w.restore();
       w.show();
     });
-    if (
-      await page
-        .getByLabel("Hide navigation", { exact: true })
-        .first()
-        .isVisible()
-    )
-      await page.getByLabel("Hide navigation", { exact: true }).first().click();
-    await page.getByLabel("Open navigation", { exact: true }).click();
     await page
       .getByRole("navigation", { name: "Main navigation" })
-      .getByRole("button", { name: /^Scan History/ })
+      .getByRole("button", { name: "Contracts", exact: true })
       .click();
-    const observed = page
-      .locator(".scan-history-entry")
-      .filter({ hasText: "Frontier Supply" })
-      .first();
-    await observed.getByText("Advanced", { exact: true }).click();
+    await page.locator(".needs-review > summary").click();
+    const observed = page.locator('[data-capture-id="' + capture.id + '"]');
     await observed
-      .getByText("Inspect raw OCR evidence", { exact: true })
+      .getByRole("button", { name: "Review capture", exact: true })
       .click();
-    assert.match(
-      await observed.locator(".ocr-raw").last().innerText(),
-      /Unverified/,
-    );
+    const editor = page.getByRole("dialog", {
+      name: "Add Contract",
+      exact: true,
+    });
+    await editor.getByText("Advanced · OCR evidence", { exact: true }).click();
+    assert.match(await editor.locator(".ocr-raw").innerText(), /Unverified/);
     await page.screenshot({
       path: "work/automatic-review-v033.png",
       animations: "disabled",
@@ -242,7 +269,7 @@ function accept(n) {
       BrowserWindow.getAllWindows()[0].setSize(1200, 800),
     );
     await page
-      .getByRole("heading", { name: "Cargo Operations", exact: true })
+      .getByRole("heading", { name: "Contracts", exact: true })
       .waitFor();
     const restarted = await state();
     assert.equal(restarted.policy.source, "Automatic");
@@ -254,14 +281,6 @@ function accept(n) {
       ),
       before,
     );
-    if (
-      await page
-        .getByLabel("Hide navigation", { exact: true })
-        .first()
-        .isVisible()
-    )
-      await page.getByLabel("Hide navigation", { exact: true }).first().click();
-    await page.getByLabel("Open navigation", { exact: true }).click();
     await page
       .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name: /^Settings/ })

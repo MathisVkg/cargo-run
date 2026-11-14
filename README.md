@@ -1,4 +1,21 @@
-# Cargo Run 0.7.1 — Fleet Operations 2.0
+# Cargo Run 0.8.0 — Gameplay foundation
+
+Cargo Run now has four fixed bottom sections: **Contracts, Cargo, History and Settings**. The Windows title bar keeps ship/SCU selection, Add Contract and standard window controls. Layouts adapt to portrait monitors and a reduced 480 × 560 minimum.
+
+- **Contracts:** compact active ledger with expandable company/reward/objective/source/screenshot details and manual completion, edit and abandonment.
+- **Add Contract:** opens one shared manual/OCR editor and attempts one Star Citizen window capture. Recognized fields remain unsaved until reviewed; typed changes are preserved while OCR runs. Capture failure leaves manual entry available. Capture again explicitly requests one new frame.
+- **Needs review:** unresolved captures open that same editor for correction, explicit attachment or guarded deletion. Saved-image reprocessing and technical evidence remain available; no separate Scan History page.
+- **Cargo:** route-aware pickup/delivery aggregation, total required SCU against selected capacity, optional reminders and a clearly symbolic 2D capacity grid. Physical records remain preserved in a Settings recovery surface.
+- **History:** completed/abandoned records, confirmed earnings, known completed SCU, search/filter/pagination, saved run snapshots and backed-up cleanup.
+- **Settings:** existing ship, capture/OCR, optional automation/Game.log, retention, diagnostics and guarded data-management tools. Automatic completion remains Beta and Off by default.
+
+SQLite remains **schema 9**, with no migration. Editor observations gain an optional persisted review-only marker; existing recognition, identity, duplicate, provenance, cargo and transaction safeguards remain. No repository cleanup or packaging is included.
+
+See [Task 08 validation, changed files, screenshots, manual steps and limitations](docs/task08-validation.md). Current checks: `npm run typecheck`, `npm run lint`, `npm test` (**392 tests / 30 files**) and `npm run test:desktop` (build plus four current Windows suites). Native tests use owned synthetic windows and disposable profiles; real Star Citizen gameplay/shortcut delivery remains a manual check.
+
+Historical release notes below describe previous interfaces; this v0.8.0 section takes precedence.
+
+## Historical release: Cargo Run 0.7.1 — Fleet Operations 2.0
 
 ## UI refinement (v0.7.1)
 

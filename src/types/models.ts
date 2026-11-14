@@ -2,6 +2,7 @@ export type ContractStatus = "Active" | "Completed" | "Abandoned";
 export type ContractSource = "Log" | "OCR" | "Manual";
 export type DataOrigin = "Sample" | "Manual" | "Log" | "OCR";
 export type Page =
+  | "Cargo"
   | "Dashboard"
   | "Manifest"
   | "Contracts"

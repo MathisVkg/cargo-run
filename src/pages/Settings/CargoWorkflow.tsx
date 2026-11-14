@@ -7,13 +7,6 @@ export function CargoWorkflow() {
     [message, setMessage] = useState("");
   return (
     <>
-      <section className="panel setting-card cargo-workflow">
-        <h2>Cargo Workflow</h2>
-        <p>
-          Mark pickups and deliveries as reminders. Record physical cargo in
-          Manifest; checklist marks never change cargo or earnings.
-        </p>
-      </section>
       <section className="panel setting-card experimental-settings">
         <h2>Experimental Automation</h2>
         <label className="checkbox-label">

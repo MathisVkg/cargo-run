@@ -48,6 +48,7 @@ export interface DesktopBridge {
   ocrResetShortcutDiagnostics(): Promise<OcrSnapshot>;
   ocrReparse(id: string): Promise<OcrSnapshot>;
   ocrReprocess(id: string): Promise<OcrSnapshot>;
+  ocrReprocessEditor(id: string): Promise<OcrSnapshot>;
   ocrConfigurePolicy(
     policy: import("./capturePolicy").CapturePolicy,
   ): Promise<OcrSnapshot>;
@@ -55,6 +56,7 @@ export interface DesktopBridge {
   ocrState(): Promise<OcrSnapshot>;
   ocrConfigure(settings: CaptureSettings): Promise<OcrSnapshot>;
   ocrCapture(): Promise<OcrSnapshot>;
+  ocrCaptureEditor(): Promise<{ captureId: string; state: OcrSnapshot }>;
   ocrRetry(id: string): Promise<OcrSnapshot>;
   ocrDelete(id: string): Promise<OcrSnapshot>;
   ocrClear(): Promise<OcrSnapshot>;

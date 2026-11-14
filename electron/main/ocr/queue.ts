@@ -336,6 +336,11 @@ export class OcrQueue {
     this.retention.cleanup(this.policy, this.automatic.protectedIds());
     return this.publish();
   }
+  async captureEditor() {
+    const captureId = randomUUID();
+    const state = await this.capture("Manual", undefined, captureId);
+    return { captureId, state };
+  }
   async capture(
     source: "Shortcut" | "Manual" | "Automatic",
     extra?: {
@@ -343,6 +348,7 @@ export class OcrQueue {
       mode: CaptureMode;
       valid: () => boolean;
     },
+    editor: string | false = false,
   ): Promise<OcrSnapshot> {
     if (this.closing) throw Error("Capture service is shutting down.");
     if (this.recording)
@@ -391,7 +397,7 @@ export class OcrQueue {
       return reject(
         "Screenshot storage is near its 512 MiB limit. Delete captures before continuing.",
       );
-    const id = randomUUID(),
+    const id = editor || randomUUID(),
       settings = { ...this.settings },
       policy = { ...this.policy };
     const record: CaptureRecord = {
@@ -399,9 +405,12 @@ export class OcrQueue {
       capturedAt: new Date().toISOString(),
       requestedAt: new Date().toISOString(),
       source,
-      requestedSource: extra?.mode ?? policy.source,
+      ...(editor ? { reviewMode: "Editor" as const } : {}),
+      requestedSource: editor ? "Window" : (extra?.mode ?? policy.source),
       backend:
-        (extra?.mode ?? policy.source) === "Display" ? "Display" : "Window",
+        !editor && (extra?.mode ?? policy.source) === "Display"
+          ? "Display"
+          : "Window",
       fallback: false,
       trigger: extra?.trigger,
       validation: extra ? "Pending" : undefined,
@@ -440,8 +449,8 @@ export class OcrQueue {
           settings.displayId,
           false,
           {
-            mode: extra?.mode ?? policy.source,
-            allowDisplayFallback: policy.allowDisplayFallback,
+            mode: editor ? "Window" : (extra?.mode ?? policy.source),
+            allowDisplayFallback: editor ? false : policy.allowDisplayFallback,
           },
         );
         if (extra && !extra.valid()) {
@@ -684,9 +693,17 @@ export class OcrQueue {
       return false;
     }
   }
-  reprocess(id: unknown) {
+  reprocess(id: unknown, editor = false) {
     if (this.closing) throw Error("OCR service is shutting down.");
-    const c = this.record(id);
+    let c = this.record(id);
+    if (editor) {
+      if (["Captured", "Processing"].includes(c.status))
+        throw Error(
+          "Recognition is already running; wait before reprocessing in the editor.",
+        );
+      c = { ...c, reviewMode: "Editor" };
+      this.repository.put(c);
+    }
     if (["Captured", "Processing"].includes(c.status)) return this.snapshot();
     const startedAt = new Date().toISOString(),
       recovery = {

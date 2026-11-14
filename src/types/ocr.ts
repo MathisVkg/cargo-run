@@ -69,6 +69,8 @@ export interface ContractObservation {
   acceptanceTimestamp: null;
 }
 export interface CaptureRecord {
+  /** Editor captures require an explicit reviewed save, including after restart. */
+  reviewMode?: "Editor";
   recovery?: {
     id: string;
     status: "Queued" | "Processing" | "Improved" | "Unchanged" | "Failed";

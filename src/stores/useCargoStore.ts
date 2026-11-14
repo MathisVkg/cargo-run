@@ -6,6 +6,9 @@ import type { AppSnapshot } from "../types/tracking";
 export { createCargoStore, validateDraft } from "./cargoDomain";
 interface RendererState extends AppSnapshot {
   page: Page;
+  editorRequest: { id: number; contractId?: string; captureId?: string } | null;
+  openEditor(contractId?: string, captureId?: string): void;
+  closeEditor(): void;
   retainedInventoryRequest: number;
   showRetainedInventory(): void;
   ready: boolean;
@@ -96,19 +99,34 @@ async function call(action: () => Promise<AppSnapshot>): Promise<void> {
 }
 const quiet = (action: () => Promise<AppSnapshot>): Promise<void> =>
   call(action).catch(() => {});
+let editorSequence = 0;
 export const cargoStore = createStore<RendererState>(() => ({
   ...initial,
-  page: "Dashboard",
+  page: "Contracts",
+  editorRequest: null,
+  openEditor: (contractId, captureId) =>
+    cargoStore.setState({
+      editorRequest: { id: ++editorSequence, contractId, captureId },
+    }),
+  closeEditor: () => cargoStore.setState({ editorRequest: null }),
   retainedInventoryRequest: 0,
   showRetainedInventory: () =>
     cargoStore.setState((s) => ({
-      page: "Manifest",
+      page: "Settings",
       retainedInventoryRequest: s.retainedInventoryRequest + 1,
     })),
   ready: false,
   actionError: null,
   pending: 0,
-  setPage: (page) => cargoStore.setState({ page }),
+  setPage: (page) =>
+    cargoStore.setState({
+      page:
+        page === "Dashboard" || page === "Manifest"
+          ? "Cargo"
+          : page === "Scan Review"
+            ? "Contracts"
+            : page,
+    }),
   setPreferences: (patch) => quiet(() => window.cargoRun.setPreferences(patch)),
   selectShip: (id) => quiet(() => window.cargoRun.selectShip(id)),
   resolveLifecycle: (input) =>
